@@ -1,0 +1,208 @@
+.guide-page {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.guide-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+  padding: 60px 0;
+  color: white;
+  text-align: center;
+}
+
+.guide-header h1 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.guide-header p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.guide-content {
+  padding: 60px 0;
+}
+
+.guide-section {
+  margin-bottom: 60px;
+}
+
+.guide-section h2 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1e3a8a;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.quick-guides {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.quick-guide-card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.quick-guide-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 24px rgba(30, 58, 138, 0.15);
+}
+
+.guide-icon {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: white;
+  margin: 0 auto 20px;
+}
+
+.quick-guide-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 12px;
+}
+
+.quick-guide-card p {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.process-step {
+  display: flex;
+  gap: 24px;
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.process-step:hover {
+  box-shadow: 0 4px 20px rgba(30, 58, 138, 0.12);
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-content h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 12px;
+}
+
+.step-content p {
+  font-size: 15px;
+  color: #64748b;
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+
+.step-content p:last-child {
+  margin-bottom: 0;
+}
+
+.step-content p strong {
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.faq-section {
+  background: white;
+  border-radius: 16px;
+  padding: 48px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.faq-item {
+  padding: 24px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border-left: 4px solid #3b82f6;
+  transition: all 0.3s ease;
+}
+
+.faq-item:hover {
+  background: #f0f9ff;
+  transform: translateX(4px);
+}
+
+.faq-item:last-child {
+  margin-bottom: 0;
+}
+
+.faq-item h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 12px;
+}
+
+.faq-item p {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+@media (max-width: 1024px) {
+  .quick-guides {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .guide-header h1 {
+    font-size: 28px;
+  }
+
+  .guide-section h2 {
+    font-size: 24px;
+  }
+
+  .quick-guides {
+    grid-template-columns: 1fr;
+  }
+
+  .process-step {
+    flex-direction: column;
+    padding: 24px;
+  }
+
+  .faq-section {
+    padding: 32px 24px;
+  }
+}
