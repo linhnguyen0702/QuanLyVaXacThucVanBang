@@ -29,7 +29,7 @@ const VerificationPage = () => {
       <div className="verification-banner">
         {/* Left Shield Watermark */}
         <div className="banner-watermark watermark-left">
-          <svg width="240" height="240" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="180" height="180" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M9 11L11 13L15 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
             <line x1="5" y1="8" x2="19" y2="8" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2"/>

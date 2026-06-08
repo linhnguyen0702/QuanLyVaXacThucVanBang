@@ -1,7 +1,7 @@
 .verification-page {
   background: #f4f7fc;
   min-height: 100vh;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 /* Banner Styling */
@@ -40,7 +40,7 @@
 }
 
 .verification-banner h1 {
-  color: #0c2340;
+  color: #07205c;
   font-size: 38px;
   font-weight: 800;
   margin-bottom: 12px;
@@ -75,8 +75,9 @@
 .verify-card {
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 52, 142, 0.03),
-              0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow:
+    0 10px 30px rgba(0, 52, 142, 0.03),
+    0 1px 3px rgba(0, 0, 0, 0.02);
   border: 1px solid #eef2f6;
   overflow: hidden;
   display: flex;
@@ -208,9 +209,15 @@
 }
 
 @keyframes scan {
-  0% { top: 0; }
-  50% { top: 100%; }
-  100% { top: 0; }
+  0% {
+    top: 0;
+  }
+  50% {
+    top: 100%;
+  }
+  100% {
+    top: 0;
+  }
 }
 
 .qr-placeholder-svg {
@@ -447,7 +454,8 @@
 }
 
 /* Right Sidebar Styling */
-.guide-card, .notice-card {
+.guide-card,
+.notice-card {
   background: #ffffff;
   border-radius: 16px;
   padding: 28px;
@@ -484,7 +492,13 @@
   top: 24px;
   bottom: 24px;
   width: 2px;
-  background: repeating-linear-gradient(to bottom, #cbd5e1, #cbd5e1 4px, transparent 4px, transparent 8px);
+  background: repeating-linear-gradient(
+    to bottom,
+    #cbd5e1,
+    #cbd5e1 4px,
+    transparent 4px,
+    transparent 8px
+  );
 }
 
 .step-item {
@@ -589,17 +603,19 @@
   .verification-banner h1 {
     font-size: 28px;
   }
-  
+
   .feature-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
-  .qr-section, .code-section {
+
+  .qr-section,
+  .code-section {
     padding: 30px 20px;
   }
-  
-  .watermark-left, .watermark-right {
+
+  .watermark-left,
+  .watermark-right {
     display: none;
   }
 }

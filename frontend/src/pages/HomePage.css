@@ -17,7 +17,7 @@
 
 /* ── Centered container ── */
 .hp-container {
-  max-width: 1120px;
+  max-width: 1270px;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
@@ -30,7 +30,7 @@
    ============================================================ */
 .hp-top-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 334px;
+  grid-template-columns: minmax(0, 1fr) 400px;
   gap: 12px;
   align-items: stretch;
 }
