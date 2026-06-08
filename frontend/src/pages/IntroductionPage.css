@@ -222,7 +222,7 @@
 
 .contact-info p strong {
   color: #1e40af;
-  min-width: 140px;
+  min-width: 15px;
 }
 
 @media (max-width: 768px) {

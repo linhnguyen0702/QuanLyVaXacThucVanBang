@@ -6,7 +6,6 @@ import {
   FaUserGraduate, FaUniversity, FaBirthdayCake, FaIdCard,
   FaCalendarAlt, FaGraduationCap
 } from 'react-icons/fa'
-import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import './VerifyPage.css'
 
@@ -65,8 +64,6 @@ const VerifyPage = () => {
 
   return (
     <div className="verify-page">
-      <Navbar />
-
       {/* Breadcrumb */}
       <div className="breadcrumb-bar">
         <div className="verify-container">

@@ -29,7 +29,7 @@ const Footer = () => {
               </div>
             </div>
             <p className="footer-copyright">
-              © 2024. Bản quyền thuộc về Hệ thống.
+              © 2026. Bản quyền thuộc về Hệ thống.
             </p>
           </div>
 

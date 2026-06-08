@@ -16,7 +16,6 @@ import {
   FaChevronRight,
   FaFileAlt,
 } from "react-icons/fa";
-import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "./HomePage.css";
 
@@ -125,8 +124,6 @@ const HomePage = () => {
 
   return (
     <div className="hp-root">
-      <Navbar />
-
       <div className="hp-body">
         <div className="hp-container">
           <div className="hp-top-grid">

@@ -2,9 +2,12 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
+// Components
+import Navbar from './components/Navbar'
+
 // Pages
 import HomePage from './pages/HomePage'
-import VerifyPage from './pages/VerifyPage'
+import VerificationPage from './pages/VerificationPage'
 import GuidePage from './pages/GuidePage'
 import LoginPage from './pages/LoginPage'
 import CertificateListPage from './pages/CertificateListPage'
@@ -25,9 +28,11 @@ function App() {
         draggable
         pauseOnHover
       />
+      <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/verify" element={<VerifyPage />} />
+        <Route path="/verify" element={<VerificationPage />} />
+        <Route path="/verification" element={<VerificationPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/certificates" element={<CertificateListPage />} />

@@ -6,6 +6,7 @@ import {
   FaQuestionCircle,
   FaInfoCircle,
   FaUser,
+  FaHome,
 } from "react-icons/fa";
 import "./Header.css";
 
@@ -34,7 +35,7 @@ const Header = () => {
 
         <nav className="nav-menu">
           <Link to="/" className={`nav-link${isActive("/") ? " active" : ""}`}>
-            <FaShieldAlt className="nav-icon" />
+            <FaHome className="nav-icon" />
             <span>Trang chủ</span>
           </Link>
           <Link

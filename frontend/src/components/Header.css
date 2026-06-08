@@ -1,41 +1,42 @@
 .header {
-  background: linear-gradient(180deg, #0a2f69 0%, #0a2a61 100%);
+  background: #001529; /* Deep dark blue matching screenshot */
   padding: 0;
-  box-shadow: 0 2px 14px rgba(4, 12, 33, 0.32);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   position: sticky;
   top: 0;
   z-index: 1000;
 }
 
 .header-container {
-  max-width: 1120px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1.5rem;
   height: 72px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.8rem;
   text-decoration: none;
   color: white;
 }
 
 .logo-icon {
-  width: 42px;
-  height: 42px;
-  background: linear-gradient(135deg, #173f87, #4d8ff0);
+  width: 44px;
+  height: 44px;
+  background: radial-gradient(circle, #1e3a8a 0%, #0d9488 100%); /* Crest look */
+  border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
-  box-shadow: 0 0 16px rgba(37, 99, 235, 0.4);
+  font-size: 1.2rem;
+  box-shadow: 0 0 12px rgba(13, 148, 136, 0.4);
 }
 
 .logo-text {
@@ -44,16 +45,16 @@
 }
 
 .logo-title {
-  font-size: 0.68rem;
+  font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .logo-subtitle {
-  font-size: 0.64rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #d9e8ff;
+  color: #e2e8f0;
   letter-spacing: 0.5px;
 }
 
@@ -61,25 +62,24 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 0.12rem;
+  gap: 1.5rem;
   justify-content: center;
+  height: 100%;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.72rem;
+  gap: 0.5rem;
+  padding: 0;
+  height: 100%;
   color: #cbd5e1;
   text-decoration: none;
-  font-size: 0.84rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  border-radius: 0;
-  transition:
-    color 0.2s ease,
-    border-color 0.2s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
 }
 
 .nav-link:hover {
@@ -88,23 +88,24 @@
 
 .nav-link.active {
   color: #ffffff;
-  border-bottom-color: #9ac1ff;
+  border-bottom-color: #ffffff;
+  font-weight: 600;
 }
 
 .nav-icon {
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .btn-login {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.48rem 1.18rem;
+  padding: 8px 18px;
   background: transparent;
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 8px;
-  font-size: 0.84rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -114,7 +115,7 @@
 .btn-login:hover {
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  border-color: rgba(255, 255, 255, 0.8);
+  border-color: white;
 }
 
 @media (max-width: 1024px) {
@@ -123,22 +124,24 @@
   }
 
   .nav-link {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.8rem;
+    padding: 0 0.6rem;
+    font-size: 0.85rem;
   }
 
   .logo-title {
-    font-size: 0.64rem;
+    font-size: 0.75rem;
   }
 
   .logo-subtitle {
-    font-size: 0.6rem;
+    font-size: 0.7rem;
   }
 }
 
 @media (max-width: 768px) {
   .header-container {
     flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
   }
 
   .nav-menu {
@@ -147,6 +150,7 @@
     justify-content: center;
     overflow-x: auto;
     padding: 8px 0;
+    height: 48px;
   }
 
   .nav-link span {
@@ -154,10 +158,11 @@
   }
 
   .nav-link {
-    padding: 8px;
+    padding: 0 12px;
+    height: 100%;
   }
 
   .nav-icon {
-    font-size: 1rem;
+    font-size: 1.2rem;
   }
 }

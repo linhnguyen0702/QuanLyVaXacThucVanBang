@@ -20,9 +20,8 @@ const Navbar = () => {
   const navLinks = [
     { path: '/', label: 'Trang chủ', icon: <FaHome /> },
     { path: '/verify', label: 'Xác thực văn bằng', icon: <FaCheckCircle /> },
-    { path: '/certificates', label: 'Danh sách văn bằng', icon: <FaList /> },
     { path: '/guide', label: 'Hướng dẫn', icon: <FaQuestionCircle /> },
-    { path: '/about', label: 'Giới thiệu', icon: <FaInfoCircle /> },
+    { path: '/introduction', label: 'Giới thiệu', icon: <FaInfoCircle /> },
   ]
 
   const isActive = (path) => location.pathname === path

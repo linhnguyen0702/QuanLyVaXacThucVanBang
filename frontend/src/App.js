@@ -1,7 +1,6 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { useLocation } from "react-router-dom";
-import Header from "./components/Header";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import HomePage from "./pages/HomePage";
 import VerificationPage from "./pages/VerificationPage";
@@ -18,10 +17,11 @@ function AppLayout() {
 
   return (
     <div className="App">
-      {!isHomePage && <Header />}
+      <Navbar />
       <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/verify" element={<VerificationPage />} />
           <Route path="/verification" element={<VerificationPage />} />
           <Route path="/guide" element={<GuidePage />} />
           <Route path="/introduction" element={<IntroductionPage />} />
