@@ -29,17 +29,11 @@
   text-decoration: none;
 }
 
-.footer-logo-icon {
+.footer-logo-image {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #2d6fe8 0%, #5ca1ff 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
+  object-fit: contain;
   flex-shrink: 0;
-  box-shadow: 0 0 18px rgba(59, 130, 246, 0.34);
 }
 
 .footer-logo-title {

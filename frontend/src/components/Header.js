@@ -1,7 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  FaShieldAlt,
   FaCheckCircle,
   FaQuestionCircle,
   FaInfoCircle,
@@ -24,9 +23,7 @@ const Header = () => {
     <header className="header">
       <div className="header-container">
         <Link to="/" className="logo">
-          <div className="logo-icon">
-            <FaShieldAlt />
-          </div>
+          <img src="/logo.png" alt="Logo" className="logo-image" />
           <div className="logo-text">
             <div className="logo-title">HỆ THỐNG QUẢN LÝ & XÁC THỰC</div>
             <div className="logo-subtitle">VĂN BẰNG, CHỨNG CHỈ SỐ</div>

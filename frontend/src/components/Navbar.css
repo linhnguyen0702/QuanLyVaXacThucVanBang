@@ -27,18 +27,10 @@
   flex-shrink: 0;
 }
 
-.logo-icon {
+.navbar-logo-image {
   width: 44px;
   height: 44px;
-  background: radial-gradient(circle, #1e3a8a 0%, #0d9488 100%);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.2rem;
-  box-shadow: 0 0 12px rgba(13, 148, 136, 0.4);
+  object-fit: contain;
 }
 
 .logo-text {

@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  FaShieldAlt,
+  FaCheckCircle,
   FaFacebookF,
   FaYoutube,
   FaLinkedinIn,
@@ -16,9 +16,7 @@ const Footer = () => {
         <div className="footer-content">
           <div className="footer-section">
             <div className="footer-logo">
-              <div className="footer-logo-icon">
-                <FaShieldAlt />
-              </div>
+              <img src="/logo.png" alt="Logo" className="footer-logo-image" />
               <div className="footer-logo-text">
                 <div className="footer-logo-title">
                   HỆ THỐNG QUẢN LÝ & XÁC THỰC
@@ -101,7 +99,7 @@ const Footer = () => {
               </a>
             </div>
             <div className="blockchain-badge">
-              <FaShieldAlt />
+              <FaCheckCircle />
               <div>
                 <div className="badge-title">Đã xác thực bởi</div>
                 <div className="badge-subtitle">Blockchain</div>

@@ -1,39 +1,35 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { 
-  FaShieldAlt, 
-  FaHome, 
-  FaCheckCircle, 
-  FaList, 
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  FaHome,
+  FaCheckCircle,
   FaQuestionCircle,
-  FaInfoCircle, 
+  FaInfoCircle,
   FaUser,
   FaBars,
-  FaTimes
-} from 'react-icons/fa'
-import './Navbar.css'
+  FaTimes,
+} from "react-icons/fa";
+import "./Navbar.css";
 
 const Navbar = () => {
-  const location = useLocation()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { path: '/', label: 'Trang chủ', icon: <FaHome /> },
-    { path: '/verify', label: 'Xác thực văn bằng', icon: <FaCheckCircle /> },
-    { path: '/guide', label: 'Hướng dẫn', icon: <FaQuestionCircle /> },
-    { path: '/introduction', label: 'Giới thiệu', icon: <FaInfoCircle /> },
-  ]
+    { path: "/", label: "Trang chủ", icon: <FaHome /> },
+    { path: "/verify", label: "Xác thực văn bằng", icon: <FaCheckCircle /> },
+    { path: "/guide", label: "Hướng dẫn", icon: <FaQuestionCircle /> },
+    { path: "/introduction", label: "Giới thiệu", icon: <FaInfoCircle /> },
+  ];
 
-  const isActive = (path) => location.pathname === path
+  const isActive = (path) => location.pathname === path;
 
   return (
     <nav className="navbar">
       <div className="navbar-container">
         {/* Logo */}
         <Link to="/" className="navbar-logo">
-          <div className="logo-icon">
-            <FaShieldAlt />
-          </div>
+          <img src="/logo.png" alt="Logo" className="navbar-logo-image" />
           <div className="logo-text">
             <span className="logo-title">HỆ THỐNG QUẢN LÝ & XÁC THỰC</span>
             <span className="logo-subtitle">VĂN BẰNG, CHỨNG CHỈ SỐ</span>
@@ -46,7 +42,7 @@ const Navbar = () => {
             <li key={link.path}>
               <Link
                 to={link.path}
-                className={`nav-link ${isActive(link.path) ? 'active' : ''}`}
+                className={`nav-link ${isActive(link.path) ? "active" : ""}`}
               >
                 {link.icon}
                 <span>{link.label}</span>
@@ -62,7 +58,7 @@ const Navbar = () => {
         </Link>
 
         {/* Mobile Menu Toggle */}
-        <button 
+        <button
           className="mobile-menu-btn"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle menu"
@@ -79,7 +75,7 @@ const Navbar = () => {
               <li key={link.path}>
                 <Link
                   to={link.path}
-                  className={`mobile-nav-link ${isActive(link.path) ? 'active' : ''}`}
+                  className={`mobile-nav-link ${isActive(link.path) ? "active" : ""}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.icon}
@@ -88,8 +84,8 @@ const Navbar = () => {
               </li>
             ))}
             <li>
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 className="mobile-login-btn"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -101,7 +97,7 @@ const Navbar = () => {
         </div>
       )}
     </nav>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;
