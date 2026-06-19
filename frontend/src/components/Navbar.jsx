@@ -22,7 +22,11 @@ const Navbar = () => {
     { path: "/introduction", label: "Giới thiệu", icon: <FaInfoCircle /> },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) =>
+    path === "/guide"
+      ? location.pathname === "/guide" ||
+        location.pathname.startsWith("/guide/")
+      : location.pathname === path;
 
   return (
     <nav className="navbar">

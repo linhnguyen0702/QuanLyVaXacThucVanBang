@@ -156,7 +156,7 @@ const IntroductionPage = () => {
             <h2>Liên hệ</h2>
             <div className="contact-info">
               <p><strong>Hotline:</strong> 0368251814</p>
-              <p><strong>Email:</strong> linhntt.22810310159@epu.edu.vn</p>
+              <p><strong>Email:</strong> linhyang0702@gmail.com</p>
               <p><strong>Thời gian làm việc:</strong> Thứ 2 - Thứ 6: 8:00 - 17:30</p>
             </div>
           </section>

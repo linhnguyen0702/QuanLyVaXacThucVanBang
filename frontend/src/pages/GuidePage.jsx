@@ -15,9 +15,7 @@ import {
   FaUserPlus,
   FaSignInAlt,
   FaList,
-  FaCheckCircle,
   FaDownload,
-  FaFileAlt,
   FaShieldAlt,
 } from "react-icons/fa";
 import "./GuidePage.css";
@@ -273,11 +271,11 @@ export default function GuidePage() {
                 <div className="gp-contact-list">
                   <div className="gp-contact-row">
                     <FaPhone className="gp-contact-icon" />
-                    <span>1900 1234</span>
+                    <span>0368251814</span>
                   </div>
                   <div className="gp-contact-row">
                     <FaEnvelope className="gp-contact-icon" />
-                    <span>hotro@vanbangso.edu.vn</span>
+                    <span>linhyang0702@gmail.com</span>
                   </div>
                   <div className="gp-contact-row">
                     <FaClock className="gp-contact-icon" />

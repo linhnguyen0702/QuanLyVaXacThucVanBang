@@ -17,7 +17,11 @@ const Header = () => {
     navigate("/login");
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) =>
+    path === "/guide"
+      ? location.pathname === "/guide" ||
+        location.pathname.startsWith("/guide/")
+      : location.pathname === path;
 
   return (
     <header className="header">

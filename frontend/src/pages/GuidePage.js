@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FaSearch,
   FaChevronRight,
@@ -21,12 +22,12 @@ import {
 import "./GuidePage.css";
 
 const MENU_ITEMS = [
-  { icon: <FaBook />, label: "Giới thiệu chung", active: true },
-  { icon: <FaUserGraduate />, label: "Hướng dẫn cho Sinh viên" },
-  { icon: <FaUniversity />, label: "Hướng dẫn cho Nhà trường" },
-  { icon: <FaQrcode />, label: "Xác thực văn bằng" },
-  { icon: <FaQuestionCircle />, label: "Câu hỏi thường gặp" },
-  { icon: <FaHeadset />, label: "Liên hệ hỗ trợ" },
+  { icon: <FaBook />, label: "Giới thiệu chung", to: "/guide", active: true },
+  { icon: <FaUserGraduate />, label: "Hướng dẫn cho Sinh viên", to: "/guide/student" },
+  { icon: <FaUniversity />, label: "Hướng dẫn cho Nhà trường", href: "#school" },
+  { icon: <FaQrcode />, label: "Xác thực văn bằng", to: "/verify" },
+  { icon: <FaQuestionCircle />, label: "Câu hỏi thường gặp", href: "#faq" },
+  { icon: <FaHeadset />, label: "Liên hệ hỗ trợ", href: "#support" },
 ];
 
 const QUICK_GUIDES = [
@@ -34,25 +35,25 @@ const QUICK_GUIDES = [
     icon: <FaUserGraduate />,
     title: "1. Dành cho Sinh viên",
     desc: "Hướng dẫn tra cứu, xem và tải văn bằng, chứng chỉ số.",
-    link: "#student",
+    to: "/guide/student",
   },
   {
     icon: <FaUniversity />,
     title: "2. Dành cho Nhà trường",
     desc: "Hướng dẫn cấp, quản lý và ký số văn bằng, chứng chỉ.",
-    link: "#school",
+    href: "#school",
   },
   {
     icon: <FaQrcode />,
     title: "3. Xác thực văn bằng",
     desc: "Hướng dẫn xác thực văn bằng, chứng chỉ nhanh chóng.",
-    link: "#verify",
+    to: "/verify",
   },
   {
     icon: <FaQuestionCircle />,
     title: "4. Câu hỏi thường gặp",
     desc: "Giải đáp các thắc mắc thường gặp khi sử dụng hệ thống.",
-    link: "#faq",
+    href: "#faq",
   },
 ];
 
@@ -117,6 +118,17 @@ export default function GuidePage() {
   const [search, setSearch] = useState("");
   const bannerImage = `${process.env.PUBLIC_URL}/pannerhuongdan.png`;
 
+  const renderGuideLink = (item, className, children) =>
+    item.to ? (
+      <Link className={className} to={item.to}>
+        {children}
+      </Link>
+    ) : (
+      <a className={className} href={item.href}>
+        {children}
+      </a>
+    );
+
   return (
     <div className="gp-root">
       <div className="gp-body">
@@ -170,9 +182,15 @@ export default function GuidePage() {
                     key={i}
                     className={`gp-nav-item${m.active ? " active" : ""}`}
                   >
-                    <span className="gp-nav-icon">{m.icon}</span>
-                    <span className="gp-nav-label">{m.label}</span>
-                    <FaChevronRight className="gp-nav-arr" />
+                    {renderGuideLink(
+                      m,
+                      "gp-nav-link",
+                      <>
+                        <span className="gp-nav-icon">{m.icon}</span>
+                        <span className="gp-nav-label">{m.label}</span>
+                        <FaChevronRight className="gp-nav-arr" />
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -191,9 +209,13 @@ export default function GuidePage() {
                     </div>
                     <div className="gp-qg-title">{g.title}</div>
                     <div className="gp-qg-desc">{g.desc}</div>
-                    <a href={g.link} className="gp-qg-btn">
-                      Xem hướng dẫn <FaChevronRight className="gp-qg-btn-arr" />
-                    </a>
+                    {renderGuideLink(
+                      g,
+                      "gp-qg-btn",
+                      <>
+                        Xem hướng dẫn <FaChevronRight className="gp-qg-btn-arr" />
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -203,7 +225,7 @@ export default function GuidePage() {
             <div className="gp-card gp-card--stretch" id="faq">
               <div className="gp-card-hd gp-card-hd--row">
                 <span>CÂU HỎI THƯỜNG GẶP</span>
-                <a href="#" className="gp-card-more">
+                <a href="#faq" className="gp-card-more">
                   Xem tất cả
                 </a>
               </div>
@@ -256,7 +278,7 @@ export default function GuidePage() {
             </section>
 
             {/* [3,2] LIÊN HỆ HỖ TRỢ */}
-            <div className="gp-card gp-card--stretch">
+            <div className="gp-card gp-card--stretch" id="support">
               <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
               <p className="gp-ct-desc">
                 Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh
@@ -266,11 +288,11 @@ export default function GuidePage() {
                 <div className="gp-ct-list">
                   <div className="gp-ct-row">
                     <FaPhone className="gp-ct-icon" />
-                    <span>1900 1234</span>
+                    <span>0368251814</span>
                   </div>
                   <div className="gp-ct-row">
                     <FaEnvelope className="gp-ct-icon" />
-                    <span>hotro@vanbangso.edu.vn</span>
+                    <span>linhyang0702@gmail.com</span>
                   </div>
                   <div className="gp-ct-row">
                     <FaClock className="gp-ct-icon" />
