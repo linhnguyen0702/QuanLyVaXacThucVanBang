@@ -9,7 +9,6 @@ import {
   FaFileAlt,
   FaGraduationCap,
   FaHeadset,
-  FaInfoCircle,
   FaListAlt,
   FaLock,
   FaPhoneAlt,
