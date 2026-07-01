@@ -628,3 +628,252 @@
     display: none;
   }
 }
+
+/* The banner's total height equals its padding-block (60px × 2) + content height.
+   We measure approximately 172–180px and sync the menu-card min-height accordingly.
+   The card naturally fills its flex row in the vp-layout grid. */
+:root {
+  --vp-banner-h: 172px;
+}
+
+.vp-layout {
+  max-width: 1400px;
+  margin: 28px auto 40px;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 264px 1fr 300px;
+  grid-template-rows: auto 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Sidebar is a single flex column – card 1 height matches banner */
+.vp-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vp-sidebar-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 2px 8px rgba(0, 40, 120, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Card 1 — min-height is overridden below after layout declaration */
+.vp-menu-card-placeholder {}
+
+.vp-card-hd {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f2553;
+  letter-spacing: 0.6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #edf1fb;
+  background: #f8faff;
+  flex-shrink: 0;
+}
+
+.vp-card-hd--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vp-card-more {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1a56db;
+  text-decoration: none;
+}
+.vp-card-more:hover { text-decoration: underline; }
+
+/* Nav menu fills remaining space evenly */
+.vp-nav-menu {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.vp-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  border-bottom: 1px solid #f4f7fd;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+}
+.vp-nav-item:last-child { border-bottom: none; }
+.vp-nav-item:hover { background: #f0f5ff; color: #1a56db; }
+.vp-nav-item.active { background: #e8efff; color: #1a56db; font-weight: 600; }
+
+.vp-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  color: inherit;
+  text-decoration: none;
+}
+.vp-nav-icon {
+  font-size: 13px;
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.vp-nav-label { flex: 1; }
+.vp-nav-arr { font-size: 9px; color: #94a3b8; }
+
+/* FAQ list */
+.vp-faq-list { padding: 0; }
+.vp-faq-item { border-bottom: 1px solid #f1f5fb; }
+.vp-faq-item:last-child { border-bottom: none; }
+
+.vp-faq-q {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  font-family: inherit;
+  text-align: left;
+  line-height: 1.45;
+  transition: background 0.15s, color 0.15s;
+}
+.vp-faq-q:hover { background: #f8faff; color: #1a56db; }
+.vp-faq-item.open .vp-faq-q { color: #1a56db; font-weight: 600; }
+.vp-faq-arr { font-size: 9px; flex-shrink: 0; margin-top: 3px; color: #94a3b8; }
+.vp-faq-a {
+  padding: 8px 14px 12px;
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.6;
+  border-top: 1px solid #f1f5fb;
+}
+
+/* Contact card */
+.vp-ct-desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.55;
+  padding: 10px 14px 0;
+  margin: 0;
+}
+.vp-ct-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 14px;
+  gap: 12px;
+}
+.vp-ct-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+}
+.vp-ct-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+.vp-ct-icon { color: #1a56db; font-size: 12px; flex-shrink: 0; }
+
+.vp-ct-avatar { flex-shrink: 0; }
+.vp-ct-avatar-ring {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: rgba(26, 86, 219, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: vp-ring-pulse 3s ease-in-out infinite;
+}
+@keyframes vp-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(26,86,219,0.2); }
+  50%       { box-shadow: 0 0 0 6px rgba(26,86,219,0.06); }
+}
+.vp-ct-avatar-circle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3a8cff 0%, #0d47d9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(13,71,217,0.35);
+}
+.vp-ct-avatar-icon { font-size: 22px; color: #fff; }
+
+/* ── Middle main ── */
+.vp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Right column ── */
+.vp-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Remove old verification-wrapper now replaced by vp-layout */
+.verification-wrapper { display: none; }
+
+/* The sidebar menu card syncs its height via the banner's padding.
+   banner padding-block = 60px × 2; title ≈ 46px; p ≈ 26px  → ~192px total.
+   We use 192px so the card height matches precisely. */
+.vp-menu-card {
+  min-height: 192px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .vp-layout {
+    grid-template-columns: 240px 1fr 280px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .vp-layout {
+    grid-template-columns: 1fr;
+  }
+  .vp-sidebar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .vp-menu-card { min-height: auto; }
+}
+
+@media (max-width: 768px) {
+  .vp-sidebar {
+    grid-template-columns: 1fr;
+  }
+  .vp-layout { padding: 0 16px; }
+}

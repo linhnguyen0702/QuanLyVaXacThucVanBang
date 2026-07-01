@@ -1,13 +1,10 @@
-import { FaUser, FaGraduationCap, FaDownload, FaQrcode, FaSignOutAlt } from 'react-icons/fa'
+import { FaUser, FaGraduationCap, FaDownload, FaQrcode } from 'react-icons/fa'
 import { Link } from 'react-router-dom'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
 import './StudentDashboard.css'
 
 const StudentDashboard = () => {
   return (
     <div className="dashboard-page">
-      <Navbar />
       <div className="dashboard-main">
         <div className="dashboard-container">
           <h1 className="dashboard-title">Dashboard - Sinh viên</h1>
@@ -35,9 +32,8 @@ const StudentDashboard = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   )
 }
 
-export default StudentDashboard
+export default StudentDashboard;

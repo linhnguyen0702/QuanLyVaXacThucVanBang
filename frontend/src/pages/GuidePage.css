@@ -25,7 +25,7 @@
   display: grid;
   grid-template-columns: 1fr 296px;
   gap: 12px;
-  align-items: stretch; /* stretch columns to equal height */
+  align-items: stretch; /* items in same row auto stretch to equal height */
 }
 
 /* stretch modifiers – make card/section fill the row height */
@@ -357,6 +357,7 @@
   border: 1px solid #dde5f5;
   box-shadow: 0 2px 8px rgba(0, 40, 120, 0.05);
   padding: 18px 18px 22px;
+  min-height: 220px;
 }
 
 .gp-section-heading {
@@ -567,6 +568,7 @@
   border: 1px solid #dde5f5;
   box-shadow: 0 2px 8px rgba(0, 40, 120, 0.05);
   overflow: hidden;
+  min-height: 220px;
 }
 
 .gp-card-hd {
@@ -713,23 +715,23 @@
 }
 
 .gp-ct-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: #64748b;
-  line-height: 1.55;
-  padding: 6px 5px 8px;
+  line-height: 1.5;
+  padding: 4px 5px 6px;
   margin: 0;
 }
 .gp-ct-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   flex: 1;
 }
 .gp-ct-row {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-size: 12.5px;
+  gap: 8px;
+  font-size: 12px;
   font-weight: 500;
   color: #374151;
 }
@@ -744,8 +746,8 @@
   flex-shrink: 0;
 }
 .gp-ct-avatar-ring {
-  width: 84px;
-  height: 84px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: rgba(26, 86, 219, 0.06);
   display: flex;
@@ -759,19 +761,19 @@
     box-shadow: 0 0 0 0 rgba(26, 86, 219, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(26, 86, 219, 0.06);
+    box-shadow: 0 0 0 6px rgba(26, 86, 219, 0.06);
   }
 }
 .gp-ct-avatar-circle {
-  width: 72px;
-  height: 72px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: linear-gradient(135deg, #3a8cff 0%, #0d47d9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow:
-    0 6px 20px rgba(13, 71, 217, 0.4),
+    0 5px 15px rgba(13, 71, 217, 0.3),
     0 0 0 3px rgba(56, 140, 255, 0.12);
   transition: transform 0.2s;
 }
@@ -779,7 +781,7 @@
   transform: scale(1.06);
 }
 .gp-ct-avatar-icon {
-  font-size: 28px;
+  font-size: 24px;
   color: #ffffff;
 }
 
@@ -830,7 +832,7 @@
   }
   .gp-sidebar {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 @media (max-width: 820px) {
@@ -855,6 +857,9 @@
   .gp-qg-grid {
     grid-template-columns: 1fr;
   }
+  .gp-sidebar {
+    grid-template-columns: 1fr;
+  }
   .gp-workflow {
     flex-direction: column;
     gap: 20px;
@@ -872,6 +877,20 @@
 .gp-card--stretch {
   display: flex;
   flex-direction: column;
+}
+
+/* ── Nav menu fills remaining card height ── */
+.gp-card--stretch .gp-nav-menu {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.gp-card--stretch .gp-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 36px;
 }
 
 /* ════════════════════════════════
@@ -921,7 +940,7 @@
 
 /* Tab Content Layout Container */
 .gp-tab-content-wrap {
-  margin-top: 14px;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -962,7 +981,9 @@
   align-items: center;
   text-align: center;
   box-shadow: 0 2px 6px rgba(0, 40, 120, 0.03);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .gp-step-card:hover {
@@ -1344,23 +1365,48 @@
 }
 
 .gp-hero-student {
-  background: linear-gradient(90deg, #fff 0%, #f9fbff 52%, rgba(223, 237, 255, 0.75) 100%);
+  background: linear-gradient(
+    90deg,
+    #fff 0%,
+    #f9fbff 52%,
+    rgba(223, 237, 255, 0.75) 100%
+  );
 }
 
 .gp-hero-school {
-  background: linear-gradient(90deg, #fff 0%, #faf8ff 52%, rgba(243, 232, 255, 0.75) 100%);
+  background: linear-gradient(
+    90deg,
+    #fff 0%,
+    #faf8ff 52%,
+    rgba(243, 232, 255, 0.75) 100%
+  );
 }
 
 .gp-hero-verify {
-  background: linear-gradient(90deg, #fff 0%, #f6fdf9 52%, rgba(209, 250, 229, 0.75) 100%);
+  background: linear-gradient(
+    90deg,
+    #fff 0%,
+    #f6fdf9 52%,
+    rgba(209, 250, 229, 0.75) 100%
+  );
 }
 
 .gp-hero-faq {
-  background: linear-gradient(90deg, #fff 0%, #f8fafc 52%, rgba(241, 245, 249, 0.75) 100%);
+  background: linear-gradient(
+    90deg,
+    #fff 0%,
+    #f8fafc 52%,
+    rgba(241, 245, 249, 0.75) 100%
+  );
 }
 
 .gp-hero-support {
-  background: linear-gradient(90deg, #fff 0%, #f0f7ff 52%, rgba(219, 234, 254, 0.75) 100%);
+  background: linear-gradient(
+    90deg,
+    #fff 0%,
+    #f0f7ff 52%,
+    rgba(219, 234, 254, 0.75) 100%
+  );
 }
 
 .gp-hero-avatar-ring {
@@ -1411,8 +1457,38 @@
   box-sizing: border-box;
 }
 
-/* Stretch last card in sidebar to match columns height */
-.gp-sidebar > :last-child {
-  flex-grow: 1;
+/* First card in sidebar (Mục hướng dẫn) matches hero min-height.
+   Hero has padding 32px top+bottom + ~80px content ≈ 144px min, but
+   gp-hero has min-height:240px — so mirror that here. */
+.gp-sidebar > .gp-card:first-child {
+  min-height: 365px;
+}
+.gp-sidebar > .gp-card:first-child .gp-nav-menu {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.gp-sidebar > .gp-card:first-child .gp-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 32px;
 }
 
+/* In the verify/faq/support layout the grid has 2 direct children
+   (gp-left-col + gp-sidebar). We want them to stretch to equal height. */
+.gp-grid > .gp-left-col,
+.gp-grid > .gp-sidebar {
+  align-self: stretch;
+}
+
+.gp-sidebar .gp-card--stretch {
+  flex: 1;
+  height: auto;
+}
+
+.gp-left-col .gp-section--stretch {
+  flex: 1;
+  height: auto;
+}

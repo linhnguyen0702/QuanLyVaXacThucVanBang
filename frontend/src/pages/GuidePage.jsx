@@ -46,25 +46,25 @@ const QUICK_GUIDES = [
   {
     icon: <FaUserGraduate />,
     title: "1. Dành cho Sinh viên",
-    desc: "Hướng dẫn tra cứu, xem và tải văn bằng, chứng chỉ số.",
+    desc: "Hướng dẫn chi tiết cách đăng nhập tài khoản, tra cứu danh sách văn bằng cá nhân, xem thông tin chi tiết và tải xuống bản PDF văn bằng có chữ ký số.",
     tabId: "student",
   },
   {
     icon: <FaUniversity />,
     title: "2. Dành cho Nhà trường",
-    desc: "Hướng dẫn cấp, quản lý và ký số văn bằng, chứng chỉ.",
+    desc: "Hướng dẫn quy trình kết nối ví Blockchain, nhập dữ liệu danh sách người tốt nghiệp, ký số điện tử và phê duyệt phát hành văn bằng lên Blockchain.",
     tabId: "school",
   },
   {
     icon: <FaQrcode />,
     title: "3. Xác thực văn bằng",
-    desc: "Hướng dẫn xác thực văn bằng, chứng chỉ nhanh chóng.",
+    desc: "Quy trình kiểm tra, đối chiếu tính toàn vẹn dữ liệu văn bằng bằng cách quét mã QR hoặc nhập trực tiếp mã số văn bằng để xác minh nguồn gốc chính gốc.",
     tabId: "verify",
   },
   {
     icon: <FaQuestionCircle />,
     title: "4. Câu hỏi thường gặp",
-    desc: "Giải đáp các thắc mắc thường gặp khi sử dụng hệ thống.",
+    desc: "Giải đáp nhanh các thắc mắc phổ biến về quy chế hoạt động, tính pháp lý của văn bằng số, cách xử lý khi quên mật khẩu hoặc thông tin bị sai lệch.",
     tabId: "faq",
   },
 ];
@@ -342,104 +342,103 @@ export default function GuidePage() {
   });
 
   // Render Sidebar Cards
-  const renderSidebarCards = () => {
-    return (
-      <>
-        {/* MỤC HƯỚNG DẪN */}
-        <div className="gp-card gp-card--stretch">
-          <div className="gp-card-hd">MỤC HƯỚNG DẪN</div>
-          <ul className="gp-nav-menu">
-            {MENU_ITEMS.map((m) => (
-              <li
-                key={m.id}
-                className={`gp-nav-item${activeTab === m.id ? " active" : ""}`}
-                onClick={() => {
-                  switchTab(m.id);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              >
-                <div className="gp-nav-link">
-                  <span className="gp-nav-icon">{m.icon}</span>
-                  <span className="gp-nav-label">{m.label}</span>
-                  <FaChevronRight className="gp-nav-arr" />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+  const renderSidebarMenuCard = () => (
+    <div className="gp-card gp-card--stretch">
+      <div className="gp-card-hd">MỤC HƯỚNG DẪN</div>
+      <ul className="gp-nav-menu">
+        {MENU_ITEMS.map((m) => (
+          <li
+            key={m.id}
+            className={`gp-nav-item${activeTab === m.id ? " active" : ""}`}
+            onClick={() => {
+              switchTab(m.id);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
+            <div className="gp-nav-link">
+              <span className="gp-nav-icon">{m.icon}</span>
+              <span className="gp-nav-label">{m.label}</span>
+              <FaChevronRight className="gp-nav-arr" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 
-        {/* CÂU HỎI THƯỜNG GẶP */}
-        <div className="gp-card gp-card--stretch" id="faq">
-          <div className="gp-card-hd gp-card-hd--row">
-            <span>CÂU HỎI NHANH</span>
-            <button 
-              onClick={() => {
-                switchTab("faq");
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }} 
-              className="gp-card-more"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+  const renderSidebarOtherCards = () => (
+    <>
+      {/* CÂU HỎI THƯỜNG GẶP */}
+      <div className="gp-card" id="faq">
+        <div className="gp-card-hd gp-card-hd--row">
+          <span>CÂU HỎI NHANH</span>
+          <button 
+            onClick={() => {
+              switchTab("faq");
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }} 
+            className="gp-card-more"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Xem tất cả
+          </button>
+        </div>
+        <div className="gp-faq">
+          {SIDEBAR_FAQS.map((f, i) => (
+            <div
+              key={i}
+              className={`gp-faq-item${sidebarFaqOpen === i ? " open" : ""}`}
             >
-              Xem tất cả
-            </button>
-          </div>
-          <div className="gp-faq">
-            {SIDEBAR_FAQS.map((f, i) => (
-              <div
-                key={i}
-                className={`gp-faq-item${sidebarFaqOpen === i ? " open" : ""}`}
+              <button
+                className="gp-faq-q"
+                onClick={() => setSidebarFaqOpen(sidebarFaqOpen === i ? null : i)}
               >
-                <button
-                  className="gp-faq-q"
-                  onClick={() => setSidebarFaqOpen(sidebarFaqOpen === i ? null : i)}
-                >
-                  <span>{f.q}</span>
-                  {sidebarFaqOpen === i ? (
-                    <FaChevronDown className="gp-faq-arr" />
-                  ) : (
-                    <FaChevronRight className="gp-faq-arr" />
-                  )}
-                </button>
-                {sidebarFaqOpen === i && <div className="gp-faq-a">{f.a}</div>}
-              </div>
-            ))}
-          </div>
+                <span>{f.q}</span>
+                {sidebarFaqOpen === i ? (
+                  <FaChevronDown className="gp-faq-arr" />
+                ) : (
+                  <FaChevronRight className="gp-faq-arr" />
+                )}
+              </button>
+              {sidebarFaqOpen === i && <div className="gp-faq-a">{f.a}</div>}
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* LIÊN HỆ HỖ TRỢ */}
-        <div className="gp-card gp-card--stretch" id="support">
-          <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
-          <p className="gp-ct-desc">
-            Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh
-            bên dưới.
-          </p>
-          <div className="gp-ct-body">
-            <div className="gp-ct-list">
-              <div className="gp-ct-row">
-                <FaPhone className="gp-ct-icon" />
-                <span>0368 251 814</span>
-              </div>
-              <div className="gp-ct-row">
-                <FaEnvelope className="gp-ct-icon" />
-                <span>linhyang0702@gmail.com</span>
-              </div>
-              <div className="gp-ct-row">
-                <FaClock className="gp-ct-icon" />
-                <span style={{ fontSize: '11.5px' }}>T2 – T6: 8:00 – 17:30</span>
-              </div>
+      {/* LIÊN HỆ HỖ TRỢ */}
+      <div className="gp-card" id="support">
+        <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
+        <p className="gp-ct-desc">
+          Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh
+          bên dưới.
+        </p>
+        <div className="gp-ct-body">
+          <div className="gp-ct-list">
+            <div className="gp-ct-row">
+              <FaPhone className="gp-ct-icon" />
+              <span>0368 251 814</span>
             </div>
-            <div className="gp-ct-avatar">
-              <div className="gp-ct-avatar-ring">
-                <div className="gp-ct-avatar-circle">
-                  <FaHeadset className="gp-ct-avatar-icon" />
-                </div>
+            <div className="gp-ct-row">
+              <FaEnvelope className="gp-ct-icon" />
+              <span>linhyang0702@gmail.com</span>
+            </div>
+            <div className="gp-ct-row">
+              <FaClock className="gp-ct-icon" />
+              <span style={{ fontSize: '11.5px' }}>T2 – T6: 8:00 – 17:30</span>
+            </div>
+          </div>
+          <div className="gp-ct-avatar">
+            <div className="gp-ct-avatar-ring">
+              <div className="gp-ct-avatar-circle">
+                <FaHeadset className="gp-ct-avatar-icon" />
               </div>
             </div>
           </div>
         </div>
-      </>
-    );
-  };
+      </div>
+    </>
+  );
 
   // Render New Tabs content (School, Verify, FAQ, Support)
   const renderNewTabs = () => {
@@ -811,9 +810,17 @@ export default function GuidePage() {
 
         <div className="gp-body">
           <div className="gp-container">
-            <div className="gp-grid">
-              {/* Row 1, Col 1: HERO BANNER */}
-              <div className="gp-hero gp-hero--stretch">
+            {/* ROW 1: Hero and Menu Card */}
+            <div className="gp-grid" style={{ marginBottom: '12px' }}>
+              <div
+                className="gp-hero gp-hero--stretch"
+                style={{
+                  backgroundImage: `url(${bannerImage})`,
+                  backgroundPosition: "center",
+                  backgroundSize: "cover",
+                  backgroundRepeat: "no-repeat",
+                }}
+              >
                 {/* Decorative circles */}
                 <span className="gp-hero-circle gp-hero-circle--1" />
                 <span className="gp-hero-circle gp-hero-circle--2" />
@@ -851,140 +858,59 @@ export default function GuidePage() {
                 </div>
               </div>
 
-              {/* Row 1, Col 2: MỤC HƯỚNG DẪN */}
-              <div className="gp-card gp-card--stretch">
-                <div className="gp-card-hd">MỤC HƯỚNG DẪN</div>
-                <ul className="gp-nav-menu">
-                  {MENU_ITEMS.map((m) => (
-                    <li
-                      key={m.id}
-                      className={`gp-nav-item${activeTab === m.id ? " active" : ""}`}
-                      onClick={() => {
-                        switchTab(m.id);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                    >
-                      <div className="gp-nav-link">
-                        <span className="gp-nav-icon">{m.icon}</span>
-                        <span className="gp-nav-label">{m.label}</span>
-                        <FaChevronRight className="gp-nav-arr" />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {/* MỤC HƯỚNG DẪN */}
+              {renderSidebarMenuCard()}
+            </div>
 
-              {/* Row 2, Col 1: HƯỚNG DẪN NHANH */}
-              <section className="gp-section gp-section--stretch" id="student">
-                <h2 className="gp-section-heading">HƯỚNG DẪN NHANH</h2>
-                <div className="gp-qg-grid">
-                  {QUICK_GUIDES.map((g, i) => (
-                    <div key={i} className="gp-qg-card" onClick={() => switchTab(g.tabId)}>
-                      <div className="gp-qg-icon-ring">
-                        <span className="gp-qg-icon">{g.icon}</span>
-                      </div>
-                      <div className="gp-qg-title">{g.title}</div>
-                      <div className="gp-qg-desc">{g.desc}</div>
-                      <button className="gp-qg-btn">
-                        Xem hướng dẫn <FaChevronRight className="gp-qg-btn-arr" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Row 2, Col 2: CÂU HỎI THƯỜNG GẶP */}
-              <div className="gp-card gp-card--stretch" id="faq">
-                <div className="gp-card-hd gp-card-hd--row">
-                  <span>CÂU HỎI NHANH</span>
-                  <button 
-                    onClick={() => {
-                      switchTab("faq");
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }} 
-                    className="gp-card-more"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                  >
-                    Xem tất cả
-                  </button>
-                </div>
-                <div className="gp-faq">
-                  {SIDEBAR_FAQS.map((f, i) => (
-                    <div
-                      key={i}
-                      className={`gp-faq-item${sidebarFaqOpen === i ? " open" : ""}`}
-                    >
-                      <button
-                        className="gp-faq-q"
-                        onClick={() => setSidebarFaqOpen(sidebarFaqOpen === i ? null : i)}
-                      >
-                        <span>{f.q}</span>
-                        {sidebarFaqOpen === i ? (
-                          <FaChevronDown className="gp-faq-arr" />
-                        ) : (
-                          <FaChevronRight className="gp-faq-arr" />
-                        )}
-                      </button>
-                      {sidebarFaqOpen === i && <div className="gp-faq-a">{f.a}</div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Row 3, Col 1: QUY TRÌNH SỬ DỤNG HỆ THỐNG */}
-              <section className="gp-section gp-section--stretch" id="workflow-section">
-                <h2 className="gp-section-heading">QUY TRÌNH SỬ DỤNG HỆ THỐNG</h2>
-                <div className="gp-workflow">
-                  {WORKFLOW.map((s, i) => (
-                    <div key={i} className="gp-wf-col">
-                      <div className="gp-wf-icon-wrap">
-                        <div className="gp-wf-icon">{s.icon}</div>
-                        <div className="gp-wf-num">{s.num}</div>
-                      </div>
-                      <div className="gp-wf-title">{s.title}</div>
-                      <div className="gp-wf-desc">{s.desc}</div>
-                      {i < WORKFLOW.length - 1 && (
-                        <div className="gp-wf-connector" aria-hidden="true">
-                          <span className="gp-wf-dashes" />
-                          <FaChevronRight className="gp-wf-arr" />
+            {/* ROW 2: Main Content and Remaining Sidebar */}
+            <div className="gp-grid">
+              <div className="gp-left-col">
+                <section className="gp-section gp-section--stretch" id="student">
+                  <h2 className="gp-section-heading">HƯỚNG DẪN NHANH</h2>
+                  <div className="gp-qg-grid">
+                    {QUICK_GUIDES.map((g, i) => (
+                      <div key={i} className="gp-qg-card" onClick={() => switchTab(g.tabId)}>
+                        <div className="gp-qg-icon-ring">
+                          <span className="gp-qg-icon">{g.icon}</span>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Row 3, Col 2: LIÊN HỆ HỖ TRỢ */}
-              <div className="gp-card gp-card--stretch" id="support">
-                <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
-                <p className="gp-ct-desc">
-                  Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh
-                  bên dưới.
-                </p>
-                <div className="gp-ct-body">
-                  <div className="gp-ct-list">
-                    <div className="gp-ct-row">
-                      <FaPhone className="gp-ct-icon" />
-                      <span>0368 251 814</span>
-                    </div>
-                    <div className="gp-ct-row">
-                      <FaEnvelope className="gp-ct-icon" />
-                      <span>linhyang0702@gmail.com</span>
-                    </div>
-                    <div className="gp-ct-row">
-                      <FaClock className="gp-ct-icon" />
-                      <span style={{ fontSize: '11.5px' }}>T2 – T6: 8:00 – 17:30</span>
-                    </div>
-                  </div>
-                  <div className="gp-ct-avatar">
-                    <div className="gp-ct-avatar-ring">
-                      <div className="gp-ct-avatar-circle">
-                        <FaHeadset className="gp-ct-avatar-icon" />
+                        <div className="gp-qg-title">{g.title}</div>
+                        <div className="gp-qg-desc">{g.desc}</div>
+                        <button className="gp-qg-btn">
+                          Xem hướng dẫn <FaChevronRight className="gp-qg-btn-arr" />
+                        </button>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                </div>
+                </section>
+
+                {/* QUY TRÌNH SỬ DỤNG HỆ THỐNG */}
+                <section className="gp-section" id="workflow-section">
+                  <h2 className="gp-section-heading">QUY TRÌNH SỬ DỤNG HỆ THỐNG</h2>
+                  <div className="gp-workflow">
+                    {WORKFLOW.map((s, i) => (
+                      <div key={i} className="gp-wf-col">
+                        <div className="gp-wf-icon-wrap">
+                          <div className="gp-wf-icon">{s.icon}</div>
+                          <div className="gp-wf-num">{s.num}</div>
+                        </div>
+                        <div className="gp-wf-title">{s.title}</div>
+                        <div className="gp-wf-desc">{s.desc}</div>
+                        {i < WORKFLOW.length - 1 && (
+                          <div className="gp-wf-connector" aria-hidden="true">
+                            <span className="gp-wf-dashes" />
+                            <FaChevronRight className="gp-wf-arr" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
               </div>
+
+              {/* RIGHT COLUMN (SIDEBAR) */}
+              <aside className="gp-sidebar">
+                {renderSidebarOtherCards()}
+              </aside>
             </div>
           </div>
         </div>
@@ -1058,29 +984,37 @@ export default function GuidePage() {
           </div>
         )}
 
-        <div className="student-guide__container">
-          <div className="student-guide__layout">
-            <div className="student-guide__main">
-              {/* Hero Banner */}
-              <section
-                className="student-guide__hero"
-                style={{
-                  backgroundImage: `url(${heroBg})`,
-                  backgroundPosition: "right center",
-                  backgroundSize: "66% auto",
-                  backgroundRepeat: "no-repeat",
-                }}
-              >
-                <div className="student-guide__hero-copy">
-                  <div className="student-guide__hero-icon">
-                    {heroIcon}
-                  </div>
-                  <div>
-                    <h1>{heroTitle}</h1>
-                    <p>{heroSub}</p>
-                  </div>
+        <div className="gp-container">
+          {/* ROW 1: Hero and Menu Card */}
+          <div className="gp-grid" style={{ marginBottom: '12px' }}>
+            {/* Hero Banner */}
+            <section
+              className="student-guide__hero"
+              style={{
+                backgroundImage: `url(${heroBg})`,
+                backgroundPosition: "right center",
+                backgroundSize: "66% auto",
+                backgroundRepeat: "no-repeat",
+              }}
+            >
+              <div className="student-guide__hero-copy">
+                <div className="student-guide__hero-icon">
+                  {heroIcon}
                 </div>
-              </section>
+                <div>
+                  <h1>{heroTitle}</h1>
+                  <p>{heroSub}</p>
+                </div>
+              </div>
+            </section>
+            
+            {/* Menu Card */}
+            {renderSidebarMenuCard()}
+          </div>
+
+          {/* ROW 2: Main Content and Remaining Sidebar */}
+          <div className="gp-grid">
+            <div className="gp-left-col">
 
               {/* Steps Process */}
               <section className="student-guide__process" id="student-process">
@@ -1134,8 +1068,8 @@ export default function GuidePage() {
             </div>
 
             {/* Sidebar inside Student guide layout */}
-            <aside className="student-guide__sidebar">
-              {renderSidebarCards()}
+            <aside className="gp-sidebar">
+              {renderSidebarOtherCards()}
             </aside>
           </div>
         </div>
@@ -1173,30 +1107,37 @@ export default function GuidePage() {
 
       <div className="gp-body">
         <div className="gp-container">
+          {/* ROW 1: Hero and Menu Card */}
+          <div className="gp-grid" style={{ marginBottom: '12px' }}>
+            {/* HERO BANNER FOR ACTIVE TAB */}
+            <div className={`gp-hero gp-hero--stretch ${hero.className}`}>
+              <div className="gp-hero-text">
+                <h1 className="gp-hero-title">{hero.title}</h1>
+                <p className="gp-hero-sub">{hero.sub}</p>
+              </div>
+
+              <div className="gp-hero-avatar-ring">
+                <div className="gp-hero-avatar-circle">
+                  {hero.icon}
+                </div>
+              </div>
+            </div>
+
+            {/* MENU CARD */}
+            {renderSidebarMenuCard()}
+          </div>
+
+          {/* ROW 2: Main Content and Remaining Sidebar */}
           <div className="gp-grid">
             {/* LEFT COLUMN */}
             <div className="gp-left-col">
-              {/* HERO BANNER FOR ACTIVE TAB */}
-              <div className={`gp-hero ${hero.className}`}>
-                <div className="gp-hero-text">
-                  <h1 className="gp-hero-title">{hero.title}</h1>
-                  <p className="gp-hero-sub">{hero.sub}</p>
-                </div>
-
-                <div className="gp-hero-avatar-ring">
-                  <div className="gp-hero-avatar-circle">
-                    {hero.icon}
-                  </div>
-                </div>
-              </div>
-
               {/* TAB CONTENT */}
               {renderNewTabs()}
             </div>
 
             {/* RIGHT COLUMN (SIDEBAR) */}
             <aside className="gp-sidebar">
-              {renderSidebarCards()}
+              {renderSidebarOtherCards()}
             </aside>
           </div>
         </div>

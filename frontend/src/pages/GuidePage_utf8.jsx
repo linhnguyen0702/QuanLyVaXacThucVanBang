@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FaSearch,
@@ -46,25 +46,25 @@ const QUICK_GUIDES = [
   {
     icon: <FaUserGraduate />,
     title: "1. Dành cho Sinh viên",
-    desc: "Hướng dẫn chi tiết cách đăng nhập tài khoản, tra cứu danh sách văn bằng cá nhân, xem thông tin chi tiết và tải xuống bản PDF văn bằng có chữ ký số.",
+    desc: "Hướng dẫn tra cứu, xem và tải văn bằng, chứng chỉ số.",
     tabId: "student",
   },
   {
     icon: <FaUniversity />,
     title: "2. Dành cho Nhà trường",
-    desc: "Hướng dẫn quy trình kết nối ví Blockchain, nhập dữ liệu danh sách người tốt nghiệp, ký số điện tử và phê duyệt phát hành văn bằng lên Blockchain.",
+    desc: "Hướng dẫn cấp, quản lý và ký số văn bằng, chứng chỉ.",
     tabId: "school",
   },
   {
     icon: <FaQrcode />,
     title: "3. Xác thực văn bằng",
-    desc: "Quy trình kiểm tra, đối chiếu tính toàn vẹn dữ liệu văn bằng bằng cách quét mã QR hoặc nhập trực tiếp mã số văn bằng để xác minh nguồn gốc chính gốc.",
+    desc: "Hướng dẫn xác thực văn bằng, chứng chỉ nhanh chóng.",
     tabId: "verify",
   },
   {
     icon: <FaQuestionCircle />,
     title: "4. Câu hỏi thường gặp",
-    desc: "Giải đáp nhanh các thắc mắc phổ biến về quy chế hoạt động, tính pháp lý của văn bằng số, cách xử lý khi quên mật khẩu hoặc thông tin bị sai lệch.",
+    desc: "Giải đáp các thắc mắc thường gặp khi sử dụng hệ thống.",
     tabId: "faq",
   },
 ];
@@ -368,75 +368,76 @@ export default function GuidePage() {
 
   const renderSidebarOtherCards = () => (
     <>
-      {/* CÂU HỎI THƯỜNG GẶP */}
-      <div className="gp-card" id="faq">
-        <div className="gp-card-hd gp-card-hd--row">
-          <span>CÂU HỎI NHANH</span>
-          <button 
-            onClick={() => {
-              switchTab("faq");
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }} 
-            className="gp-card-more"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            Xem tất cả
-          </button>
-        </div>
-        <div className="gp-faq">
-          {SIDEBAR_FAQS.map((f, i) => (
-            <div
-              key={i}
-              className={`gp-faq-item${sidebarFaqOpen === i ? " open" : ""}`}
-            >
-              <button
-                className="gp-faq-q"
-                onClick={() => setSidebarFaqOpen(sidebarFaqOpen === i ? null : i)}
-              >
-                <span>{f.q}</span>
-                {sidebarFaqOpen === i ? (
-                  <FaChevronDown className="gp-faq-arr" />
-                ) : (
-                  <FaChevronRight className="gp-faq-arr" />
-                )}
-              </button>
-              {sidebarFaqOpen === i && <div className="gp-faq-a">{f.a}</div>}
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* LIÊN HỆ HỖ TRỢ */}
-      <div className="gp-card" id="support">
-        <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
-        <p className="gp-ct-desc">
-          Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh
-          bên dưới.
-        </p>
-        <div className="gp-ct-body">
-          <div className="gp-ct-list">
-            <div className="gp-ct-row">
-              <FaPhone className="gp-ct-icon" />
-              <span>0368 251 814</span>
-            </div>
-            <div className="gp-ct-row">
-              <FaEnvelope className="gp-ct-icon" />
-              <span>linhyang0702@gmail.com</span>
-            </div>
-            <div className="gp-ct-row">
-              <FaClock className="gp-ct-icon" />
-              <span style={{ fontSize: '11.5px' }}>T2 – T6: 8:00 – 17:30</span>
-            </div>
+        {/* CÂU HỎI THƯỜNG GẶP */}
+        <div className="gp-card gp-card--stretch" id="faq">
+          <div className="gp-card-hd gp-card-hd--row">
+            <span>CÂU HỎI NHANH</span>
+            <button 
+              onClick={() => {
+                switchTab("faq");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }} 
+              className="gp-card-more"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Xem tất cả
+            </button>
           </div>
-          <div className="gp-ct-avatar">
-            <div className="gp-ct-avatar-ring">
-              <div className="gp-ct-avatar-circle">
-                <FaHeadset className="gp-ct-avatar-icon" />
+          <div className="gp-faq">
+            {SIDEBAR_FAQS.map((f, i) => (
+              <div
+                key={i}
+                className={`gp-faq-item${sidebarFaqOpen === i ? " open" : ""}`}
+              >
+                <button
+                  className="gp-faq-q"
+                  onClick={() => setSidebarFaqOpen(sidebarFaqOpen === i ? null : i)}
+                >
+                  <span>{f.q}</span>
+                  {sidebarFaqOpen === i ? (
+                    <FaChevronDown className="gp-faq-arr" />
+                  ) : (
+                    <FaChevronRight className="gp-faq-arr" />
+                  )}
+                </button>
+                {sidebarFaqOpen === i && <div className="gp-faq-a">{f.a}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* LIÊN HỆ HỖ TRỢ */}
+        <div className="gp-card gp-card--stretch" id="support">
+          <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
+          <p className="gp-ct-desc">
+            Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh
+            bên dưới.
+          </p>
+          <div className="gp-ct-body">
+            <div className="gp-ct-list">
+              <div className="gp-ct-row">
+                <FaPhone className="gp-ct-icon" />
+                <span>0368 251 814</span>
+              </div>
+              <div className="gp-ct-row">
+                <FaEnvelope className="gp-ct-icon" />
+                <span>linhyang0702@gmail.com</span>
+              </div>
+              <div className="gp-ct-row">
+                <FaClock className="gp-ct-icon" />
+                <span style={{ fontSize: '11.5px' }}>T2 – T6: 8:00 – 17:30</span>
+              </div>
+            </div>
+            <div className="gp-ct-avatar">
+              <div className="gp-ct-avatar-ring">
+                <div className="gp-ct-avatar-circle">
+                  <FaHeadset className="gp-ct-avatar-icon" />
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
     </>
   );
 
@@ -812,15 +813,8 @@ export default function GuidePage() {
           <div className="gp-container">
             {/* ROW 1: Hero and Menu Card */}
             <div className="gp-grid" style={{ marginBottom: '12px' }}>
-              <div
-                className="gp-hero gp-hero--stretch"
-                style={{
-                  backgroundImage: `url(${bannerImage})`,
-                  backgroundPosition: "center",
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                }}
-              >
+              {/* HERO BANNER */}
+              <div className="gp-hero gp-hero--stretch">
                 {/* Decorative circles */}
                 <span className="gp-hero-circle gp-hero-circle--1" />
                 <span className="gp-hero-circle gp-hero-circle--2" />
@@ -884,7 +878,7 @@ export default function GuidePage() {
                 </section>
 
                 {/* QUY TRÌNH SỬ DỤNG HỆ THỐNG */}
-                <section className="gp-section" id="workflow-section">
+                <section className="gp-section gp-section--stretch" id="workflow-section">
                   <h2 className="gp-section-heading">QUY TRÌNH SỬ DỤNG HỆ THỐNG</h2>
                   <div className="gp-workflow">
                     {WORKFLOW.map((s, i) => (
@@ -921,7 +915,7 @@ export default function GuidePage() {
   // ════════════════════════════════════════════════════════════════════════
   // 2. DÀNH CHO TAB HƯỚNG DẪN SINH VIÊN - Bố cục của StudentGuidePage
   // ════════════════════════════════════════════════════════════════════════
-  if (activeTab === "student" || activeTab === "school") {
+  if (activeTab === "student") {
     const isStudent = activeTab === "student";
     const heroIcon = isStudent ? <FaGraduationCap /> : <FaUniversity />;
     const heroTitle = isStudent ? "HƯỚNG DẪN SỬ DỤNG" : "HƯỚNG DẪN CHO NHÀ TRƯỜNG";
@@ -984,9 +978,9 @@ export default function GuidePage() {
           </div>
         )}
 
-        <div className="gp-container">
+        <div className="student-guide__container">
           {/* ROW 1: Hero and Menu Card */}
-          <div className="gp-grid" style={{ marginBottom: '12px' }}>
+          <div className="student-guide__layout" style={{ marginBottom: '12px' }}>
             {/* Hero Banner */}
             <section
               className="student-guide__hero"
@@ -1013,8 +1007,8 @@ export default function GuidePage() {
           </div>
 
           {/* ROW 2: Main Content and Remaining Sidebar */}
-          <div className="gp-grid">
-            <div className="gp-left-col">
+          <div className="student-guide__layout">
+            <div className="student-guide__main">
 
               {/* Steps Process */}
               <section className="student-guide__process" id="student-process">
@@ -1068,7 +1062,7 @@ export default function GuidePage() {
             </div>
 
             {/* Sidebar inside Student guide layout */}
-            <aside className="gp-sidebar">
+            <aside className="student-guide__sidebar">
               {renderSidebarOtherCards()}
             </aside>
           </div>

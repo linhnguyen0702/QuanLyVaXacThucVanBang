@@ -1,13 +1,10 @@
 import { FaUniversity, FaPlus, FaList, FaCheckCircle } from 'react-icons/fa'
 import { Link } from 'react-router-dom'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
 import './StudentDashboard.css'
 
 const SchoolDashboard = () => {
   return (
     <div className="dashboard-page">
-      <Navbar />
       <div className="dashboard-main">
         <div className="dashboard-container">
           <h1 className="dashboard-title">Dashboard - Nhà trường</h1>
@@ -35,9 +32,8 @@ const SchoolDashboard = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   )
 }
 
-export default SchoolDashboard
+export default SchoolDashboard;
