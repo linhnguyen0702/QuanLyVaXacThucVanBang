@@ -95,39 +95,50 @@ const SIDEBAR_FAQS = [
 const ALL_FAQS = [
   {
     category: "legal",
-    question: "Văn bằng, chứng chỉ số trên hệ thống này có giá trị pháp lý không?",
-    answer: "Có. Văn bằng số được ký bằng chữ ký số hợp pháp của cơ sở đào tạo (Nhà trường), đảm bảo tính toàn vẹn và chống chối bỏ theo quy định của Luật Giao dịch điện tử. Văn bằng số này có giá trị sử dụng tương đương với văn bằng bản giấy truyền thống."
+    question:
+      "Văn bằng, chứng chỉ số trên hệ thống này có giá trị pháp lý không?",
+    answer:
+      "Có. Văn bằng số được ký bằng chữ ký số hợp pháp của cơ sở đào tạo (Nhà trường), đảm bảo tính toàn vẹn và chống chối bỏ theo quy định của Luật Giao dịch điện tử. Văn bằng số này có giá trị sử dụng tương đương với văn bằng bản giấy truyền thống.",
   },
   {
     category: "tech",
     question: "Làm sao để biết văn bằng được cấp bởi hệ thống là thật?",
-    answer: "Mỗi văn bằng được lưu trữ một mã hash duy nhất trên Blockchain Ethereum. Khi thực hiện xác thực (quét QR hoặc nhập mã), hệ thống sẽ tính toán mã hash của văn bằng hiện tại và so sánh trực tiếp với mã hash gốc đã được ghi nhận trên Blockchain. Nếu hai mã này khớp nhau và trạng thái hợp lệ, văn bằng được xác nhận là thật."
+    answer:
+      "Mỗi văn bằng được lưu trữ một mã hash duy nhất trên Blockchain Ethereum. Khi thực hiện xác thực (quét QR hoặc nhập mã), hệ thống sẽ tính toán mã hash của văn bằng hiện tại và so sánh trực tiếp với mã hash gốc đã được ghi nhận trên Blockchain. Nếu hai mã này khớp nhau và trạng thái hợp lệ, văn bằng được xác nhận là thật.",
   },
   {
     category: "user",
     question: "Tôi có thể tải văn bằng, chứng chỉ số của mình ở đâu?",
-    answer: "Sau khi đăng nhập vào hệ thống bằng tài khoản sinh viên được nhà trường cấp, bạn hãy truy cập vào mục 'Văn bằng của tôi' trên thanh menu. Tại đây, danh sách các văn bằng của bạn sẽ hiện ra, và bạn có thể nhấn vào biểu tượng Tải xuống (Download) để tải về tệp PDF văn bằng có chứa chữ ký số."
+    answer:
+      "Sau khi đăng nhập vào hệ thống bằng tài khoản sinh viên được nhà trường cấp, bạn hãy truy cập vào mục 'Văn bằng của tôi' trên thanh menu. Tại đây, danh sách các văn bằng của bạn sẽ hiện ra, và bạn có thể nhấn vào biểu tượng Tải xuống (Download) để tải về tệp PDF văn bằng có chứa chữ ký số.",
   },
   {
     category: "tech",
-    question: "Cơ sở giáo dục (Nhà trường) cần chuẩn bị gì để tham gia hệ thống?",
-    answer: "Nhà trường cần đăng ký tài khoản quản trị trên hệ thống, được cấp địa chỉ ví Blockchain (Ethereum) đã được phê duyệt làm đại diện hợp pháp trên Smart Contract. Đồng thời, nhà trường cần chuẩn bị khóa bí mật của ví để thực hiện ký số và thanh toán phí gas cho các giao dịch ghi dữ liệu lên Blockchain."
+    question:
+      "Cơ sở giáo dục (Nhà trường) cần chuẩn bị gì để tham gia hệ thống?",
+    answer:
+      "Nhà trường cần đăng ký tài khoản quản trị trên hệ thống, được cấp địa chỉ ví Blockchain (Ethereum) đã được phê duyệt làm đại diện hợp pháp trên Smart Contract. Đồng thời, nhà trường cần chuẩn bị khóa bí mật của ví để thực hiện ký số và thanh toán phí gas cho các giao dịch ghi dữ liệu lên Blockchain.",
   },
   {
     category: "user",
-    question: "Nếu phát hiện thông tin trên văn bằng số bị sai thì phải làm thế nào?",
-    answer: "Sinh viên cần liên hệ ngay với Phòng Đào tạo của nhà trường để yêu cầu chỉnh sửa. Nhà trường sẽ thực hiện thu hồi (revoke) văn bằng cũ trên Blockchain và cấp phát một văn bằng mới có mã định danh và mã băm mới đã được hiệu chỉnh thông tin chính xác."
+    question:
+      "Nếu phát hiện thông tin trên văn bằng số bị sai thì phải làm thế nào?",
+    answer:
+      "Sinh viên cần liên hệ ngay với Phòng Đào tạo của nhà trường để yêu cầu chỉnh sửa. Nhà trường sẽ thực hiện thu hồi (revoke) văn bằng cũ trên Blockchain và cấp phát một văn bằng mới có mã định danh và mã băm mới đã được hiệu chỉnh thông tin chính xác.",
   },
   {
     category: "tech",
-    question: "Mạng lưới Blockchain công khai có làm lộ thông tin cá nhân của tôi không?",
-    answer: "Hoàn toàn không. Công nghệ Blockchain trong hệ thống chỉ lưu trữ mã băm mật mã (cryptographic hash) của văn bằng và mã định danh giao dịch, không lưu thông tin cá nhân chi tiết dưới dạng văn bản rõ. Thông tin cá nhân chi tiết của bạn được lưu trữ bảo mật tại cơ sở dữ liệu riêng tư của nhà trường và hệ thống, chỉ hiển thị khi có yêu cầu truy xuất và xác thực hợp lệ."
+    question:
+      "Mạng lưới Blockchain công khai có làm lộ thông tin cá nhân của tôi không?",
+    answer:
+      "Hoàn toàn không. Công nghệ Blockchain trong hệ thống chỉ lưu trữ mã băm mật mã (cryptographic hash) của văn bằng và mã định danh giao dịch, không lưu thông tin cá nhân chi tiết dưới dạng văn bản rõ. Thông tin cá nhân chi tiết của bạn được lưu trữ bảo mật tại cơ sở dữ liệu riêng tư của nhà trường và hệ thống, chỉ hiển thị khi có yêu cầu truy xuất và xác thực hợp lệ.",
   },
   {
     category: "user",
     question: "Nhà tuyển dụng có cần tài khoản để xác thực văn bằng không?",
-    answer: "Không cần. Nhà tuyển dụng hoặc bất kỳ bên thứ ba nào chỉ cần truy cập trang 'Xác thực văn bằng' công khai của hệ thống để quét mã QR trên bằng hoặc nhập mã số văn bằng trực tiếp để nhận kết quả xác minh tức thì từ Blockchain."
-  }
+    answer:
+      "Không cần. Nhà tuyển dụng hoặc bất kỳ bên thứ ba nào chỉ cần truy cập trang 'Xác thực văn bằng' công khai của hệ thống để quét mã QR trên bằng hoặc nhập mã số văn bằng trực tiếp để nhận kết quả xác minh tức thì từ Blockchain.",
+  },
 ];
 
 const WORKFLOW = [
@@ -167,27 +178,32 @@ const STUDENT_STEPS = [
   {
     icon: <FaSignInAlt />,
     title: "Đăng nhập tài khoản",
-    description: "Đăng nhập vào hệ thống bằng tài khoản email được nhà trường cung cấp khi tốt nghiệp.",
+    description:
+      "Đăng nhập vào hệ thống bằng tài khoản email được nhà trường cung cấp khi tốt nghiệp.",
   },
   {
     icon: <FaListAlt />,
     title: "Xem danh sách văn bằng",
-    description: "Tại mục “Danh sách văn bằng”, sinh viên có thể xem tất cả văn bằng, chứng chỉ đã được cấp.",
+    description:
+      "Tại mục “Danh sách văn bằng”, sinh viên có thể xem tất cả văn bằng, chứng chỉ đã được cấp.",
   },
   {
     icon: <FaFileAlt />,
     title: "Xem chi tiết văn bằng",
-    description: "Nhấn vào văn bằng để xem thông tin chi tiết, gồm: thông tin văn bằng, mã định danh, thời gian cấp và nhà trường cấp.",
+    description:
+      "Nhấn vào văn bằng để xem thông tin chi tiết, gồm: thông tin văn bằng, mã định danh, thời gian cấp và nhà trường cấp.",
   },
   {
     icon: <FaDownload />,
     title: "Tải văn bằng (Bản PDF)",
-    description: "Tải văn bằng, chứng chỉ số về thiết bị dưới dạng tệp PDF có chữ ký số của nhà trường.",
+    description:
+      "Tải văn bằng, chứng chỉ số về thiết bị dưới dạng tệp PDF có chữ ký số của nhà trường.",
   },
   {
     icon: <FaShareAlt />,
     title: "Chia sẻ văn bằng",
-    description: "Sử dụng mã QR hoặc đường link chia sẻ để gửi cho nhà tuyển dụng hay các bên cần xác thực.",
+    description:
+      "Sử dụng mã QR hoặc đường link chia sẻ để gửi cho nhà tuyển dụng hay các bên cần xác thực.",
   },
 ];
 
@@ -195,27 +211,32 @@ const SCHOOL_STEPS = [
   {
     icon: <FaUserPlus />,
     title: "Kết nối ví Blockchain",
-    description: "Nhà trường đăng nhập và kết nối ví điện tử MetaMask chứa địa chỉ ví đã được ủy quyền trên Smart Contract.",
+    description:
+      "Nhà trường đăng nhập và kết nối ví điện tử MetaMask chứa địa chỉ ví đã được ủy quyền trên Smart Contract.",
   },
   {
     icon: <FaListAlt />,
     title: "Quản lý danh sách",
-    description: "Tải lên danh sách sinh viên đủ điều kiện tốt nghiệp thông qua bảng nhập liệu hoặc file Excel mẫu.",
+    description:
+      "Tải lên danh sách sinh viên đủ điều kiện tốt nghiệp thông qua bảng nhập liệu hoặc file Excel mẫu.",
   },
   {
     icon: <FaShieldAlt />,
     title: "Tạo và Ký số văn bằng",
-    description: "Hệ thống tính toán mã băm (hash) của văn bằng, đại diện nhà trường tiến hành duyệt và ký số điện tử.",
+    description:
+      "Hệ thống tính toán mã băm (hash) của văn bằng, đại diện nhà trường tiến hành duyệt và ký số điện tử.",
   },
   {
     icon: <FaCube />,
     title: "Ghi lên Blockchain",
-    description: "Thực hiện giao dịch ghi mã băm văn bằng lên mạng lưới Ethereum, tạo ra bản ghi vĩnh viễn và không thể sửa đổi.",
+    description:
+      "Thực hiện giao dịch ghi mã băm văn bằng lên mạng lưới Ethereum, tạo ra bản ghi vĩnh viễn và không thể sửa đổi.",
   },
   {
     icon: <FaQrcode />,
     title: "Cấp phát tới sinh viên",
-    description: "Hệ thống tạo mã QR duy nhất và tự động gửi thông báo tài khoản nhận văn bằng số đến sinh viên qua email.",
+    description:
+      "Hệ thống tạo mã QR duy nhất và tự động gửi thông báo tài khoản nhận văn bằng số đến sinh viên qua email.",
   },
 ];
 
@@ -223,17 +244,20 @@ const VERIFY_STEPS = [
   {
     icon: <FaQrcode />,
     title: "Cách 1: Quét mã QR",
-    description: "Sử dụng camera điện thoại hoặc webcam máy tính để quét mã QR được in trực tiếp trên văn bằng số.",
+    description:
+      "Sử dụng camera điện thoại hoặc webcam máy tính để quét mã QR được in trực tiếp trên văn bằng số.",
   },
   {
     icon: <FaKeyboard />,
     title: "Cách 2: Nhập mã xác thực",
-    description: "Truy cập trang xác thực, nhập mã số văn bằng được in trên chứng chỉ (VD: UNI2024-000123) để đối chiếu.",
+    description:
+      "Truy cập trang xác thực, nhập mã số văn bằng được in trên chứng chỉ (VD: UNI2024-000123) để đối chiếu.",
   },
   {
     icon: <FaFileAlt />,
     title: "Cách 3: Tải file văn bằng",
-    description: "Tải lên tệp PDF văn bằng số để hệ thống tính toán mã băm tự động và so sánh với dữ liệu gốc trên Blockchain.",
+    description:
+      "Tải lên tệp PDF văn bằng số để hệ thống tính toán mã băm tự động và so sánh với dữ liệu gốc trên Blockchain.",
   },
 ];
 
@@ -243,7 +267,7 @@ export default function GuidePage() {
   const [activeTab, setActiveTab] = useState("general");
   const [sidebarFaqOpen, setSidebarFaqOpen] = useState(null);
   const [search, setSearch] = useState("");
-  
+
   // States for FAQ Tab
   const [faqSearch, setFaqSearch] = useState("");
   const [faqCat, setFaqCat] = useState("all");
@@ -256,12 +280,12 @@ export default function GuidePage() {
     phone: "",
     role: "student",
     subject: "",
-    message: ""
+    message: "",
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formSuccess, setFormSuccess] = useState(false);
   const [formError, setFormError] = useState("");
-  
+
   // Custom Toast State
   const [toastMsg, setToastMsg] = useState(null);
 
@@ -295,18 +319,23 @@ export default function GuidePage() {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.subject ||
+      !formData.message
+    ) {
       setFormError("Vui lòng điền đầy đủ các trường thông tin bắt buộc (*).");
       return;
     }
     setFormError("");
     setFormLoading(true);
-    
+
     setTimeout(() => {
       setFormLoading(false);
       setFormSuccess(true);
@@ -316,10 +345,13 @@ export default function GuidePage() {
         phone: "",
         role: "student",
         subject: "",
-        message: ""
+        message: "",
       });
-      
-      setToastMsg({ type: 'success', text: 'Yêu cầu hỗ trợ của bạn đã được gửi đi thành công!' });
+
+      setToastMsg({
+        type: "success",
+        text: "Yêu cầu hỗ trợ của bạn đã được gửi đi thành công!",
+      });
       setTimeout(() => setToastMsg(null), 4000);
     }, 1500);
   };
@@ -334,9 +366,10 @@ export default function GuidePage() {
   };
 
   // Filter FAQs based on tab filters
-  const filteredFaqs = ALL_FAQS.filter(item => {
-    const matchesSearch = item.question.toLowerCase().includes(faqSearch.toLowerCase()) || 
-                          item.answer.toLowerCase().includes(faqSearch.toLowerCase());
+  const filteredFaqs = ALL_FAQS.filter((item) => {
+    const matchesSearch =
+      item.question.toLowerCase().includes(faqSearch.toLowerCase()) ||
+      item.answer.toLowerCase().includes(faqSearch.toLowerCase());
     const matchesCategory = faqCat === "all" || item.category === faqCat;
     return matchesSearch && matchesCategory;
   });
@@ -352,7 +385,7 @@ export default function GuidePage() {
             className={`gp-nav-item${activeTab === m.id ? " active" : ""}`}
             onClick={() => {
               switchTab(m.id);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
             <div className="gp-nav-link">
@@ -372,13 +405,18 @@ export default function GuidePage() {
       <div className="gp-card" id="faq">
         <div className="gp-card-hd gp-card-hd--row">
           <span>CÂU HỎI NHANH</span>
-          <button 
+          <button
             onClick={() => {
               switchTab("faq");
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }} 
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             className="gp-card-more"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
           >
             Xem tất cả
           </button>
@@ -391,7 +429,9 @@ export default function GuidePage() {
             >
               <button
                 className="gp-faq-q"
-                onClick={() => setSidebarFaqOpen(sidebarFaqOpen === i ? null : i)}
+                onClick={() =>
+                  setSidebarFaqOpen(sidebarFaqOpen === i ? null : i)
+                }
               >
                 <span>{f.q}</span>
                 {sidebarFaqOpen === i ? (
@@ -410,8 +450,8 @@ export default function GuidePage() {
       <div className="gp-card" id="support">
         <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
         <p className="gp-ct-desc">
-          Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh
-          bên dưới.
+          Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh bên
+          dưới.
         </p>
         <div className="gp-ct-body">
           <div className="gp-ct-list">
@@ -425,7 +465,7 @@ export default function GuidePage() {
             </div>
             <div className="gp-ct-row">
               <FaClock className="gp-ct-icon" />
-              <span style={{ fontSize: '11.5px' }}>T2 – T6: 8:00 – 17:30</span>
+              <span style={{ fontSize: "11.5px" }}>T2 – T6: 8:00 – 17:30</span>
             </div>
           </div>
           <div className="gp-ct-avatar">
@@ -447,15 +487,15 @@ export default function GuidePage() {
         return (
           <div className="gp-tab-content-wrap">
             <section className="gp-section">
-              <h2 className="gp-section-heading">QUY TRÌNH DÀNH CHO NHÀ TRƯỜNG</h2>
+              <h2 className="gp-section-heading">
+                QUY TRÌNH DÀNH CHO NHÀ TRƯỜNG
+              </h2>
               <div className="gp-steps-grid">
                 {SCHOOL_STEPS.map((step, index) => (
                   <div className="gp-step-card school" key={index}>
                     <span className="gp-step-badge">{index + 1}</span>
                     <div className="gp-step-title">{step.title}</div>
-                    <div className="gp-step-visual">
-                      {step.icon}
-                    </div>
+                    <div className="gp-step-visual">{step.icon}</div>
                     <p className="gp-step-desc">{step.description}</p>
                     {index < SCHOOL_STEPS.length - 1 && (
                       <div className="gp-step-arrow">
@@ -467,17 +507,36 @@ export default function GuidePage() {
               </div>
             </section>
 
-            <div className="student-guide__notice" style={{ borderColor: '#ddd6fe', background: 'linear-gradient(90deg, #faf5ff, #f3e8ff)' }}>
+            <div
+              className="student-guide__notice"
+              style={{
+                borderColor: "#ddd6fe",
+                background: "linear-gradient(90deg, #faf5ff, #f3e8ff)",
+              }}
+            >
               <div className="student-guide__notice-head">
-                <div className="student-guide__notice-icon" style={{ color: '#7c3aed' }}>
+                <div
+                  className="student-guide__notice-icon"
+                  style={{ color: "#7c3aed" }}
+                >
                   <FaShieldAlt />
                 </div>
-                <h3 style={{ color: '#6d28d9' }}>Lưu ý dành cho Nhà trường</h3>
+                <h3 style={{ color: "#6d28d9" }}>Lưu ý dành cho Nhà trường</h3>
               </div>
-              <ul style={{ color: '#4c1d95' }}>
-                <li>Mọi dữ liệu ghi lên Blockchain là bất biến và không thể xóa bỏ. Do đó, vui lòng rà soát kỹ thông tin sinh viên trước khi ký số.</li>
-                <li>Đảm bảo địa chỉ ví của nhà trường có đủ số dư ETH (Testnet Sepolia) để chi trả phí gas giao dịch.</li>
-                <li>Giữ bảo mật tuyệt đối mã khóa bí mật (Private Key) của ví trường học để tránh việc cấp phát văn bằng trái phép.</li>
+              <ul style={{ color: "#4c1d95" }}>
+                <li>
+                  Mọi dữ liệu ghi lên Blockchain là bất biến và không thể xóa
+                  bỏ. Do đó, vui lòng rà soát kỹ thông tin sinh viên trước khi
+                  ký số.
+                </li>
+                <li>
+                  Đảm bảo địa chỉ ví của nhà trường có đủ số dư ETH (Testnet
+                  Sepolia) để chi trả phí gas giao dịch.
+                </li>
+                <li>
+                  Giữ bảo mật tuyệt đối mã khóa bí mật (Private Key) của ví
+                  trường học để tránh việc cấp phát văn bằng trái phép.
+                </li>
               </ul>
             </div>
           </div>
@@ -487,15 +546,15 @@ export default function GuidePage() {
         return (
           <div className="gp-tab-content-wrap">
             <section className="gp-section">
-              <h2 className="gp-section-heading">CÁC PHƯƠNG THỨC XÁC THỰC VĂN BẰNG</h2>
+              <h2 className="gp-section-heading">
+                CÁC PHƯƠNG THỨC XÁC THỰC VĂN BẰNG
+              </h2>
               <div className="gp-steps-grid">
                 {VERIFY_STEPS.map((step, index) => (
                   <div className="gp-step-card verify" key={index}>
                     <span className="gp-step-badge">{index + 1}</span>
                     <div className="gp-step-title">{step.title}</div>
-                    <div className="gp-step-visual">
-                      {step.icon}
-                    </div>
+                    <div className="gp-step-visual">{step.icon}</div>
                     <p className="gp-step-desc">{step.description}</p>
                     {index < VERIFY_STEPS.length - 1 && (
                       <div className="gp-step-arrow">
@@ -508,14 +567,18 @@ export default function GuidePage() {
             </section>
 
             <section className="gp-section">
-              <h2 className="gp-section-heading">Ý NGHĨA CÁC TRẠNG THÁI XÁC THỰC</h2>
+              <h2 className="gp-section-heading">
+                Ý NGHĨA CÁC TRẠNG THÁI XÁC THỰC
+              </h2>
               <div className="gp-status-grid">
                 <div className="gp-status-card">
                   <div className="gp-status-header valid">
                     <FaCheckCircle /> VĂN BẰNG HỢP LỆ
                   </div>
                   <p className="gp-status-desc">
-                    Thông tin văn bằng tồn tại trên hệ thống Blockchain, mã hash khớp 100% và được ký số hợp lệ bởi nhà trường. Văn bằng có giá trị sử dụng.
+                    Thông tin văn bằng tồn tại trên hệ thống Blockchain, mã hash
+                    khớp 100% và được ký số hợp lệ bởi nhà trường. Văn bằng có
+                    giá trị sử dụng.
                   </p>
                 </div>
                 <div className="gp-status-card">
@@ -523,7 +586,9 @@ export default function GuidePage() {
                     <FaExclamationTriangle /> VĂN BẰNG BỊ THU HỒI
                   </div>
                   <p className="gp-status-desc">
-                    Văn bằng đã từng được cấp phát nhưng sau đó bị nhà trường thu hồi trên Blockchain (do phát hiện sai lệch thông tin hoặc vi phạm quy chế tốt nghiệp).
+                    Văn bằng đã từng được cấp phát nhưng sau đó bị nhà trường
+                    thu hồi trên Blockchain (do phát hiện sai lệch thông tin
+                    hoặc vi phạm quy chế tốt nghiệp).
                   </p>
                 </div>
                 <div className="gp-status-card">
@@ -531,7 +596,9 @@ export default function GuidePage() {
                     <FaTimesCircle /> KHÔNG HỢP LỆ / GIẢ MẠO
                   </div>
                   <p className="gp-status-desc">
-                    Thông tin văn bằng đã bị thay đổi (dù chỉ một ký tự) khiến mã hash không khớp, hoặc mã số văn bằng không tồn tại trên hệ thống Blockchain.
+                    Thông tin văn bằng đã bị thay đổi (dù chỉ một ký tự) khiến
+                    mã hash không khớp, hoặc mã số văn bằng không tồn tại trên
+                    hệ thống Blockchain.
                   </p>
                 </div>
               </div>
@@ -544,13 +611,13 @@ export default function GuidePage() {
           <div className="gp-tab-content-wrap">
             <section className="gp-section">
               <h2 className="gp-section-heading">CÂU HỎI THƯỜNG GẶP (FAQ)</h2>
-              
+
               <div className="gp-faq-search-bar">
                 <div className="gp-faq-input-wrap">
                   <FaSearch className="gp-faq-search-icon" />
-                  <input 
-                    type="text" 
-                    className="gp-faq-search-input" 
+                  <input
+                    type="text"
+                    className="gp-faq-search-input"
                     placeholder="Tìm kiếm câu hỏi hoặc câu trả lời..."
                     value={faqSearch}
                     onChange={(e) => setFaqSearch(e.target.value)}
@@ -559,10 +626,30 @@ export default function GuidePage() {
               </div>
 
               <div className="gp-faq-categories">
-                <button className={`gp-faq-cat-btn ${faqCat === 'all' ? 'active' : ''}`} onClick={() => setFaqCat('all')}>Tất cả</button>
-                <button className={`gp-faq-cat-btn ${faqCat === 'legal' ? 'active' : ''}`} onClick={() => setFaqCat('legal')}>Pháp lý</button>
-                <button className={`gp-faq-cat-btn ${faqCat === 'tech' ? 'active' : ''}`} onClick={() => setFaqCat('tech')}>Blockchain & Bảo mật</button>
-                <button className={`gp-faq-cat-btn ${faqCat === 'user' ? 'active' : ''}`} onClick={() => setFaqCat('user')}>Hướng dẫn sử dụng</button>
+                <button
+                  className={`gp-faq-cat-btn ${faqCat === "all" ? "active" : ""}`}
+                  onClick={() => setFaqCat("all")}
+                >
+                  Tất cả
+                </button>
+                <button
+                  className={`gp-faq-cat-btn ${faqCat === "legal" ? "active" : ""}`}
+                  onClick={() => setFaqCat("legal")}
+                >
+                  Pháp lý
+                </button>
+                <button
+                  className={`gp-faq-cat-btn ${faqCat === "tech" ? "active" : ""}`}
+                  onClick={() => setFaqCat("tech")}
+                >
+                  Blockchain & Bảo mật
+                </button>
+                <button
+                  className={`gp-faq-cat-btn ${faqCat === "user" ? "active" : ""}`}
+                  onClick={() => setFaqCat("user")}
+                >
+                  Hướng dẫn sử dụng
+                </button>
               </div>
 
               <div className="gp-faq-list-full">
@@ -570,7 +657,10 @@ export default function GuidePage() {
                   filteredFaqs.map((faq, index) => {
                     const isOpen = faqOpenIndex === index;
                     return (
-                      <div key={index} className={`gp-faq-item${isOpen ? " open" : ""}`}>
+                      <div
+                        key={index}
+                        className={`gp-faq-item${isOpen ? " open" : ""}`}
+                      >
                         <button
                           type="button"
                           className="gp-faq-q"
@@ -588,7 +678,14 @@ export default function GuidePage() {
                     );
                   })
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '30px 10px', color: '#64748b', fontSize: '13px' }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "30px 10px",
+                      color: "#64748b",
+                      fontSize: "13px",
+                    }}
+                  >
                     Không tìm thấy câu hỏi phù hợp với từ khóa của bạn.
                   </div>
                 )}
@@ -603,19 +700,50 @@ export default function GuidePage() {
             <div className="gp-support-container">
               <div className="gp-support-form-card">
                 <h3 className="gp-support-form-title">GỬI YÊU CẦU HỖ TRỢ</h3>
-                <p className="gp-support-form-subtitle">Chúng tôi sẽ phản hồi lại bạn sớm nhất có thể trong vòng 24h làm việc.</p>
-                
+                <p className="gp-support-form-subtitle">
+                  Chúng tôi sẽ phản hồi lại bạn sớm nhất có thể trong vòng 24h
+                  làm việc.
+                </p>
+
                 <form onSubmit={handleFormSubmit}>
-                  {formError && <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#b91c1c', padding: '10px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>{formError}</div>}
-                  {formSuccess && !toastMsg && <div style={{ background: '#ecfdf5', border: '1px solid #d1fae5', color: '#047857', padding: '10px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>Cảm ơn bạn! Yêu cầu hỗ trợ đã được gửi đi thành công.</div>}
+                  {formError && (
+                    <div
+                      style={{
+                        background: "#fef2f2",
+                        border: "1px solid #fee2e2",
+                        color: "#b91c1c",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        fontSize: "12.5px",
+                        marginBottom: "14px",
+                      }}
+                    >
+                      {formError}
+                    </div>
+                  )}
+                  {formSuccess && !toastMsg && (
+                    <div
+                      style={{
+                        background: "#ecfdf5",
+                        border: "1px solid #d1fae5",
+                        color: "#047857",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        fontSize: "12.5px",
+                        marginBottom: "14px",
+                      }}
+                    >
+                      Cảm ơn bạn! Yêu cầu hỗ trợ đã được gửi đi thành công.
+                    </div>
+                  )}
 
                   <div className="gp-form-grid">
                     <div className="gp-form-group">
                       <label className="gp-form-label">Họ và tên *</label>
-                      <input 
-                        type="text" 
-                        name="name" 
-                        className="gp-form-input" 
+                      <input
+                        type="text"
+                        name="name"
+                        className="gp-form-input"
                         placeholder="VD: Nguyễn Văn A"
                         value={formData.name}
                         onChange={handleFormChange}
@@ -624,10 +752,10 @@ export default function GuidePage() {
                     </div>
                     <div className="gp-form-group">
                       <label className="gp-form-label">Email liên hệ *</label>
-                      <input 
-                        type="email" 
-                        name="email" 
-                        className="gp-form-input" 
+                      <input
+                        type="email"
+                        name="email"
+                        className="gp-form-input"
                         placeholder="VD: email@example.com"
                         value={formData.email}
                         onChange={handleFormChange}
@@ -636,10 +764,10 @@ export default function GuidePage() {
                     </div>
                     <div className="gp-form-group">
                       <label className="gp-form-label">Số điện thoại</label>
-                      <input 
-                        type="tel" 
-                        name="phone" 
-                        className="gp-form-input" 
+                      <input
+                        type="tel"
+                        name="phone"
+                        className="gp-form-input"
                         placeholder="VD: 0368xxxxxx"
                         value={formData.phone}
                         onChange={handleFormChange}
@@ -647,8 +775,8 @@ export default function GuidePage() {
                     </div>
                     <div className="gp-form-group">
                       <label className="gp-form-label">Vai trò của bạn</label>
-                      <select 
-                        name="role" 
+                      <select
+                        name="role"
                         className="gp-form-select"
                         value={formData.role}
                         onChange={handleFormChange}
@@ -661,10 +789,10 @@ export default function GuidePage() {
                     </div>
                     <div className="gp-form-group full-width">
                       <label className="gp-form-label">Tiêu đề yêu cầu *</label>
-                      <input 
-                        type="text" 
-                        name="subject" 
-                        className="gp-form-input" 
+                      <input
+                        type="text"
+                        name="subject"
+                        className="gp-form-input"
                         placeholder="VD: Lỗi không hiển thị văn bằng, Cấp ví..."
                         value={formData.subject}
                         onChange={handleFormChange}
@@ -672,10 +800,12 @@ export default function GuidePage() {
                       />
                     </div>
                     <div className="gp-form-group full-width">
-                      <label className="gp-form-label">Nội dung chi tiết *</label>
-                      <textarea 
-                        name="message" 
-                        className="gp-form-textarea" 
+                      <label className="gp-form-label">
+                        Nội dung chi tiết *
+                      </label>
+                      <textarea
+                        name="message"
+                        className="gp-form-textarea"
                         placeholder="Vui lòng mô tả rõ sự cố hoặc câu hỏi bạn cần hỗ trợ..."
                         value={formData.message}
                         onChange={handleFormChange}
@@ -684,8 +814,18 @@ export default function GuidePage() {
                     </div>
                   </div>
 
-                  <button type="submit" className="gp-form-submit-btn" disabled={formLoading}>
-                    {formLoading ? "Đang gửi..." : <><FaPaperPlane /> Gửi yêu cầu</>}
+                  <button
+                    type="submit"
+                    className="gp-form-submit-btn"
+                    disabled={formLoading}
+                  >
+                    {formLoading ? (
+                      "Đang gửi..."
+                    ) : (
+                      <>
+                        <FaPaperPlane /> Gửi yêu cầu
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
@@ -718,12 +858,29 @@ export default function GuidePage() {
                   </div>
                 </div>
 
-                <div className="gp-support-info-card" style={{ background: '#f8fafc' }}>
-                  <h4 className="gp-support-info-card-title" style={{ color: '#475569' }}>
+                <div
+                  className="gp-support-info-card"
+                  style={{ background: "#f8fafc" }}
+                >
+                  <h4
+                    className="gp-support-info-card-title"
+                    style={{ color: "#475569" }}
+                  >
                     <FaShieldAlt /> HỖ TRỢ KÝ SỐ & VÍ
                   </h4>
-                  <p style={{ fontSize: '11.5px', color: '#64748b', lineHeight: '1.5', margin: 0 }}>
-                    Đối với các lỗi phát sinh trong quá trình thực hiện ký số Smart Contract hoặc lỗi ví MetaMask của Nhà trường, vui lòng cung cấp Mã trường học và Mã giao dịch (TxHash) gặp lỗi khi gửi yêu cầu để được đội ngũ kỹ thuật hỗ trợ kiểm tra và đối soát nhanh nhất.
+                  <p
+                    style={{
+                      fontSize: "11.5px",
+                      color: "#64748b",
+                      lineHeight: "1.5",
+                      margin: 0,
+                    }}
+                  >
+                    Đối với các lỗi phát sinh trong quá trình thực hiện ký số
+                    Smart Contract hoặc lỗi ví MetaMask của Nhà trường, vui lòng
+                    cung cấp Mã trường học và Mã giao dịch (TxHash) gặp lỗi khi
+                    gửi yêu cầu để được đội ngũ kỹ thuật hỗ trợ kiểm tra và đối
+                    soát nhanh nhất.
                   </p>
                 </div>
               </div>
@@ -744,35 +901,35 @@ export default function GuidePage() {
           title: "HƯỚNG DẪN CHO NHÀ TRƯỜNG",
           sub: "Cẩm nang kết nối ví, nhập danh sách, ký số và phát hành văn bằng lên Blockchain.",
           className: "gp-hero-school",
-          icon: <FaUniversity />
+          icon: <FaUniversity />,
         };
       case "verify":
         return {
           title: "XÁC THỰC VĂN BẰNG",
           sub: "Hướng dẫn quét QR, đối chiếu mã băm và kiểm tra tính hợp lệ của văn bằng.",
           className: "gp-hero-verify",
-          icon: <FaQrcode />
+          icon: <FaQrcode />,
         };
       case "faq":
         return {
           title: "CÂU HỎI THƯỜNG GẶP",
           sub: "Giải đáp các thắc mắc phổ biến về giá trị pháp lý và công nghệ Blockchain.",
           className: "gp-hero-faq",
-          icon: <FaQuestionCircle />
+          icon: <FaQuestionCircle />,
         };
       case "support":
         return {
           title: "LIÊN HỆ HỖ TRỢ",
           sub: "Gửi thông tin thắc mắc hoặc báo lỗi hệ thống để được hỗ trợ kỹ thuật kịp thời.",
           className: "gp-hero-support",
-          icon: <FaHeadset />
+          icon: <FaHeadset />,
         };
       default:
         return {
           title: "HƯỚNG DẪN SỬ DỤNG",
           sub: "Tìm hiểu cách sử dụng hệ thống Quản lý và Xác thực Văn bằng, Chứng chỉ số",
           className: "",
-          icon: <FaBook />
+          icon: <FaBook />,
         };
     }
   };
@@ -786,23 +943,25 @@ export default function GuidePage() {
     return (
       <div className="gp-root">
         {toastMsg && (
-          <div style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            background: '#10b981',
-            color: '#ffffff',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '13px',
-            fontWeight: 600,
-            animation: 'fadein 0.5s, fadeout 0.5s 3.5s'
-          }}>
+          <div
+            style={{
+              position: "fixed",
+              top: "20px",
+              right: "20px",
+              background: "#10b981",
+              color: "#ffffff",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "13px",
+              fontWeight: 600,
+              animation: "fadein 0.5s, fadeout 0.5s 3.5s",
+            }}
+          >
             <FaCheckCircle />
             <span>{toastMsg.text}</span>
           </div>
@@ -811,7 +970,7 @@ export default function GuidePage() {
         <div className="gp-body">
           <div className="gp-container">
             {/* ROW 1: Hero and Menu Card */}
-            <div className="gp-grid" style={{ marginBottom: '12px' }}>
+            <div className="gp-grid" style={{ marginBottom: "12px" }}>
               <div
                 className="gp-hero gp-hero--stretch"
                 style={{
@@ -839,22 +998,14 @@ export default function GuidePage() {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
-                    <button className="gp-search-btn" type="submit" aria-label="Tìm kiếm">
+                    <button
+                      className="gp-search-btn"
+                      type="submit"
+                      aria-label="Tìm kiếm"
+                    >
                       <FaSearch />
                     </button>
                   </form>
-                </div>
-
-                {/* Right decorative image: glowing book + shield */}
-                <div className="gp-hero-visual" aria-hidden="true">
-                  <div className="gp-hero-glow" />
-                  <div className="gp-hero-book">
-                    <FaBook className="gp-hero-book-icon" />
-                  </div>
-                  <div className="gp-hero-shield">
-                    <FaShieldAlt className="gp-hero-shield-icon" />
-                    <span className="gp-hero-shield-q">?</span>
-                  </div>
                 </div>
               </div>
 
@@ -865,18 +1016,26 @@ export default function GuidePage() {
             {/* ROW 2: Main Content and Remaining Sidebar */}
             <div className="gp-grid">
               <div className="gp-left-col">
-                <section className="gp-section gp-section--stretch" id="student">
+                <section
+                  className="gp-section gp-section--stretch"
+                  id="student"
+                >
                   <h2 className="gp-section-heading">HƯỚNG DẪN NHANH</h2>
                   <div className="gp-qg-grid">
                     {QUICK_GUIDES.map((g, i) => (
-                      <div key={i} className="gp-qg-card" onClick={() => switchTab(g.tabId)}>
+                      <div
+                        key={i}
+                        className="gp-qg-card"
+                        onClick={() => switchTab(g.tabId)}
+                      >
                         <div className="gp-qg-icon-ring">
                           <span className="gp-qg-icon">{g.icon}</span>
                         </div>
                         <div className="gp-qg-title">{g.title}</div>
                         <div className="gp-qg-desc">{g.desc}</div>
                         <button className="gp-qg-btn">
-                          Xem hướng dẫn <FaChevronRight className="gp-qg-btn-arr" />
+                          Xem hướng dẫn{" "}
+                          <FaChevronRight className="gp-qg-btn-arr" />
                         </button>
                       </div>
                     ))}
@@ -885,7 +1044,9 @@ export default function GuidePage() {
 
                 {/* QUY TRÌNH SỬ DỤNG HỆ THỐNG */}
                 <section className="gp-section" id="workflow-section">
-                  <h2 className="gp-section-heading">QUY TRÌNH SỬ DỤNG HỆ THỐNG</h2>
+                  <h2 className="gp-section-heading">
+                    QUY TRÌNH SỬ DỤNG HỆ THỐNG
+                  </h2>
                   <div className="gp-workflow">
                     {WORKFLOW.map((s, i) => (
                       <div key={i} className="gp-wf-col">
@@ -908,9 +1069,7 @@ export default function GuidePage() {
               </div>
 
               {/* RIGHT COLUMN (SIDEBAR) */}
-              <aside className="gp-sidebar">
-                {renderSidebarOtherCards()}
-              </aside>
+              <aside className="gp-sidebar">{renderSidebarOtherCards()}</aside>
             </div>
           </div>
         </div>
@@ -924,61 +1083,66 @@ export default function GuidePage() {
   if (activeTab === "student" || activeTab === "school") {
     const isStudent = activeTab === "student";
     const heroIcon = isStudent ? <FaGraduationCap /> : <FaUniversity />;
-    const heroTitle = isStudent ? "HƯỚNG DẪN SỬ DỤNG" : "HƯỚNG DẪN CHO NHÀ TRƯỜNG";
-    const heroSub = isStudent 
-      ? "Tìm hiểu cách tra cứu, quản lý và sử dụng văn bằng, chứng chỉ số được cấp trên hệ thống một cách hiệu quả." 
+    const heroTitle = isStudent
+      ? "HƯỚNG DẪN SỬ DỤNG"
+      : "HƯỚNG DẪN CHO NHÀ TRƯỜNG";
+    const heroSub = isStudent
+      ? "Tìm hiểu cách tra cứu, quản lý và sử dụng văn bằng, chứng chỉ số được cấp trên hệ thống một cách hiệu quả."
       : "Cẩm nang kết nối ví, nhập danh sách, ký số và phát hành văn bằng lên Blockchain.";
     const heroBg = isStudent ? studentBannerImage : bannerImage;
-    
-    const stepsTitle = isStudent 
-      ? "QUY TRÌNH TRA CỨU VÀ SỬ DỤNG VĂN BẰNG, CHỨNG CHỈ SỐ" 
+
+    const stepsTitle = isStudent
+      ? "QUY TRÌNH TRA CỨU VÀ SỬ DỤNG VĂN BẰNG, CHỨNG CHỈ SỐ"
       : "QUY TRÌNH DÀNH CHO NHÀ TRƯỜNG";
     const stepsData = isStudent ? STUDENT_STEPS : SCHOOL_STEPS;
-    
-    const noticeTitle = isStudent ? "Lưu ý quan trọng" : "Lưu ý dành cho Nhà trường";
-    const noticeStyle = isStudent 
-      ? {} 
-      : { borderColor: '#ddd6fe', background: 'linear-gradient(90deg, #faf5ff, #f3e8ff)' };
-    const noticeHeadStyle = isStudent 
-      ? {} 
-      : { color: '#6d28d9' };
-    const noticeIconStyle = isStudent 
-      ? {} 
-      : { color: '#7c3aed' };
-    const noticeListStyle = isStudent 
-      ? {} 
-      : { color: '#4c1d95' };
-      
-    const noticeItems = isStudent ? [
-      "Văn bằng, chứng chỉ số do nhà trường cấp trên hệ thống có giá trị tương đương văn bằng bản giấy.",
-      "Thông tin văn bằng được lưu trữ và bảo mật bằng công nghệ Blockchain, không thể tự ý sửa đổi hoặc làm giả.",
-      "Nếu phát hiện sai sót, vui lòng liên hệ nhà trường để được hỗ trợ."
-    ] : [
-      "Mọi dữ liệu ghi lên Blockchain là bất biến và không thể xóa bỏ. Do đó, vui lòng rà soát kỹ thông tin sinh viên trước khi ký số.",
-      "Đảm bảo địa chỉ ví của nhà trường có đủ số dư ETH (Testnet Sepolia) để chi trả phí gas giao dịch.",
-      "Giữ bảo mật tuyệt đối mã khóa bí mật (Private Key) của ví trường học để tránh việc cấp phát văn bằng trái phép."
-    ];
+
+    const noticeTitle = isStudent
+      ? "Lưu ý quan trọng"
+      : "Lưu ý dành cho Nhà trường";
+    const noticeStyle = isStudent
+      ? {}
+      : {
+          borderColor: "#ddd6fe",
+          background: "linear-gradient(90deg, #faf5ff, #f3e8ff)",
+        };
+    const noticeHeadStyle = isStudent ? {} : { color: "#6d28d9" };
+    const noticeIconStyle = isStudent ? {} : { color: "#7c3aed" };
+    const noticeListStyle = isStudent ? {} : { color: "#4c1d95" };
+
+    const noticeItems = isStudent
+      ? [
+          "Văn bằng, chứng chỉ số do nhà trường cấp trên hệ thống có giá trị tương đương văn bằng bản giấy.",
+          "Thông tin văn bằng được lưu trữ và bảo mật bằng công nghệ Blockchain, không thể tự ý sửa đổi hoặc làm giả.",
+          "Nếu phát hiện sai sót, vui lòng liên hệ nhà trường để được hỗ trợ.",
+        ]
+      : [
+          "Mọi dữ liệu ghi lên Blockchain là bất biến và không thể xóa bỏ. Do đó, vui lòng rà soát kỹ thông tin sinh viên trước khi ký số.",
+          "Đảm bảo địa chỉ ví của nhà trường có đủ số dư ETH (Testnet Sepolia) để chi trả phí gas giao dịch.",
+          "Giữ bảo mật tuyệt đối mã khóa bí mật (Private Key) của ví trường học để tránh việc cấp phát văn bằng trái phép.",
+        ];
 
     return (
       <main className="student-guide">
         {toastMsg && (
-          <div style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            background: '#10b981',
-            color: '#ffffff',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '13px',
-            fontWeight: 600,
-            animation: 'fadein 0.5s, fadeout 0.5s 3.5s'
-          }}>
+          <div
+            style={{
+              position: "fixed",
+              top: "20px",
+              right: "20px",
+              background: "#10b981",
+              color: "#ffffff",
+              padding: "12px 20px",
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "13px",
+              fontWeight: 600,
+              animation: "fadein 0.5s, fadeout 0.5s 3.5s",
+            }}
+          >
             <FaCheckCircle />
             <span>{toastMsg.text}</span>
           </div>
@@ -986,7 +1150,7 @@ export default function GuidePage() {
 
         <div className="gp-container">
           {/* ROW 1: Hero and Menu Card */}
-          <div className="gp-grid" style={{ marginBottom: '12px' }}>
+          <div className="gp-grid" style={{ marginBottom: "12px" }}>
             {/* Hero Banner */}
             <section
               className="student-guide__hero"
@@ -998,16 +1162,14 @@ export default function GuidePage() {
               }}
             >
               <div className="student-guide__hero-copy">
-                <div className="student-guide__hero-icon">
-                  {heroIcon}
-                </div>
+                <div className="student-guide__hero-icon">{heroIcon}</div>
                 <div>
                   <h1>{heroTitle}</h1>
                   <p>{heroSub}</p>
                 </div>
               </div>
             </section>
-            
+
             {/* Menu Card */}
             {renderSidebarMenuCard()}
           </div>
@@ -1015,7 +1177,6 @@ export default function GuidePage() {
           {/* ROW 2: Main Content and Remaining Sidebar */}
           <div className="gp-grid">
             <div className="gp-left-col">
-
               {/* Steps Process */}
               <section className="student-guide__process" id="student-process">
                 <h2>{stepsTitle}</h2>
@@ -1052,8 +1213,14 @@ export default function GuidePage() {
 
                 {/* Important Notice */}
                 <div className="student-guide__notice" style={noticeStyle}>
-                  <div className="student-guide__notice-head" style={noticeHeadStyle}>
-                    <div className="student-guide__notice-icon" style={noticeIconStyle}>
+                  <div
+                    className="student-guide__notice-head"
+                    style={noticeHeadStyle}
+                  >
+                    <div
+                      className="student-guide__notice-icon"
+                      style={noticeIconStyle}
+                    >
                       <FaShieldAlt />
                     </div>
                     <h3>{noticeTitle}</h3>
@@ -1068,9 +1235,7 @@ export default function GuidePage() {
             </div>
 
             {/* Sidebar inside Student guide layout */}
-            <aside className="gp-sidebar">
-              {renderSidebarOtherCards()}
-            </aside>
+            <aside className="gp-sidebar">{renderSidebarOtherCards()}</aside>
           </div>
         </div>
       </main>
@@ -1083,23 +1248,25 @@ export default function GuidePage() {
   return (
     <div className="gp-root">
       {toastMsg && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          background: '#10b981',
-          color: '#ffffff',
-          padding: '12px 20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '13px',
-          fontWeight: 600,
-          animation: 'fadein 0.5s, fadeout 0.5s 3.5s'
-        }}>
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            background: "#10b981",
+            color: "#ffffff",
+            padding: "12px 20px",
+            borderRadius: "8px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "13px",
+            fontWeight: 600,
+            animation: "fadein 0.5s, fadeout 0.5s 3.5s",
+          }}
+        >
           <FaCheckCircle />
           <span>{toastMsg.text}</span>
         </div>
@@ -1108,7 +1275,7 @@ export default function GuidePage() {
       <div className="gp-body">
         <div className="gp-container">
           {/* ROW 1: Hero and Menu Card */}
-          <div className="gp-grid" style={{ marginBottom: '12px' }}>
+          <div className="gp-grid" style={{ marginBottom: "12px" }}>
             {/* HERO BANNER FOR ACTIVE TAB */}
             <div className={`gp-hero gp-hero--stretch ${hero.className}`}>
               <div className="gp-hero-text">
@@ -1117,9 +1284,7 @@ export default function GuidePage() {
               </div>
 
               <div className="gp-hero-avatar-ring">
-                <div className="gp-hero-avatar-circle">
-                  {hero.icon}
-                </div>
+                <div className="gp-hero-avatar-circle">{hero.icon}</div>
               </div>
             </div>
 
@@ -1136,9 +1301,7 @@ export default function GuidePage() {
             </div>
 
             {/* RIGHT COLUMN (SIDEBAR) */}
-            <aside className="gp-sidebar">
-              {renderSidebarOtherCards()}
-            </aside>
+            <aside className="gp-sidebar">{renderSidebarOtherCards()}</aside>
           </div>
         </div>
       </div>
