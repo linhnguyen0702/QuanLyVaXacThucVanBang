@@ -1,4 +1,4 @@
-@import "./GuidePage.css";
+@import "../Guide/GuidePage.css";
 
 /* Nav menu flex container */
 .gp-nav-menu {

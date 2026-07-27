@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import {
   FaQrcode,
   FaKeyboard,
@@ -12,56 +11,13 @@ import {
   FaSearch,
   FaBell,
   FaDatabase,
-  FaBook,
-  FaUserGraduate,
-  FaUniversity,
-  FaQuestionCircle,
-  FaHeadset,
-  FaChevronRight,
-  FaChevronDown,
-  FaPhone,
-  FaEnvelope,
-  FaClock,
 } from "react-icons/fa";
 
 import "./VerificationPage.css";
 
-const MENU_ITEMS = [
-  { path: "/guide", label: "Giới thiệu chung", icon: <FaBook /> },
-  { path: "/guide/student", label: "Hướng dẫn cho Sinh viên", icon: <FaUserGraduate /> },
-  { path: "/guide/school", label: "Hướng dẫn cho Nhà trường", icon: <FaUniversity /> },
-  { path: "/verify", label: "Xác thực văn bằng", icon: <FaQrcode />, active: true },
-  { path: "/guide/faq", label: "Câu hỏi thường gặp", icon: <FaQuestionCircle /> },
-  { path: "/guide/support", label: "Liên hệ hỗ trợ", icon: <FaHeadset /> },
-];
-
-const SIDEBAR_FAQS = [
-  {
-    q: "Làm sao để biết văn bằng được cấp bởi hệ thống là thật?",
-    a: "Mỗi văn bằng được lưu trữ mã hash trên Blockchain Ethereum. Bạn có thể xác thực bất kỳ lúc nào bằng cách quét mã QR hoặc nhập mã xác thực. Thông tin trên Blockchain là bất biến, không thể sửa đổi hay làm giả.",
-  },
-  {
-    q: "Văn bằng, chứng chỉ số có giá trị pháp lý không?",
-    a: "Văn bằng số được ký số bởi tổ chức cấp bằng, có đầy đủ giá trị pháp lý theo quy định hiện hành.",
-  },
-  {
-    q: "Tôi có thể tải văn bằng, chứng chỉ số ở đâu?",
-    a: "Sau khi đăng nhập với tư cách sinh viên, bạn có thể truy cập phần 'Văn bằng của tôi' trong Dashboard để tải xuống.",
-  },
-  {
-    q: "Nhà tuyển dụng có cần tài khoản để xác thực không?",
-    a: "Không cần. Nhà tuyển dụng chỉ cần truy cập trang Xác thực văn bằng công khai để quét mã QR hoặc nhập mã số, đối chiếu tức thì với Blockchain.",
-  },
-  {
-    q: "Làm thế nào để sửa thông tin văn bằng bị sai lệch?",
-    a: "Sinh viên cần liên hệ ngay với Phòng Đào tạo của nhà trường để yêu cầu chỉnh sửa. Nhà trường sẽ thu hồi văn bằng cũ và cấp lại bản ghi mới trên Blockchain.",
-  },
-];
-
 const VerificationPage = () => {
   const [activeTab, setActiveTab] = useState("qr");
   const [certificateCode, setCertificateCode] = useState("");
-  const [faqOpen, setFaqOpen] = useState(null);
 
   const handleVerify = () => {
     console.log(certificateCode);
@@ -108,67 +64,8 @@ const VerificationPage = () => {
         </div>
       </div>
 
-      {/* ── 3-COLUMN LAYOUT: sidebar | main | guide+notice ── */}
+      {/* ── 2-COLUMN LAYOUT: main | guide+notice ── */}
       <div className="vp-layout">
-
-        {/* ── LEFT SIDEBAR ── */}
-        <aside className="vp-sidebar">
-
-          {/* Card 1: Mục hướng dẫn — height synced with banner via CSS var */}
-          <div className="vp-sidebar-card vp-menu-card">
-            <div className="vp-card-hd">MỤC HƯỚNG DẪN</div>
-            <ul className="vp-nav-menu">
-              {MENU_ITEMS.map((item) => (
-                <li key={item.path} className={`vp-nav-item${item.active ? " active" : ""}`}>
-                  <Link to={item.path} className="vp-nav-link">
-                    <span className="vp-nav-icon">{item.icon}</span>
-                    <span className="vp-nav-label">{item.label}</span>
-                    <FaChevronRight className="vp-nav-arr" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Card 2: Câu hỏi nhanh 5 câu */}
-          <div className="vp-sidebar-card">
-            <div className="vp-card-hd vp-card-hd--row">
-              <span>CÂU HỎI NHANH</span>
-              <Link to="/guide/faq" className="vp-card-more">Xem tất cả</Link>
-            </div>
-            <div className="vp-faq-list">
-              {SIDEBAR_FAQS.map((f, i) => (
-                <div key={i} className={`vp-faq-item${faqOpen === i ? " open" : ""}`}>
-                  <button className="vp-faq-q" onClick={() => setFaqOpen(faqOpen === i ? null : i)}>
-                    <span>{f.q}</span>
-                    {faqOpen === i ? <FaChevronDown className="vp-faq-arr" /> : <FaChevronRight className="vp-faq-arr" />}
-                  </button>
-                  {faqOpen === i && <div className="vp-faq-a">{f.a}</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Card 3: Liên hệ hỗ trợ */}
-          <div className="vp-sidebar-card">
-            <div className="vp-card-hd">LIÊN HỆ HỖ TRỢ</div>
-            <p className="vp-ct-desc">Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh bên dưới.</p>
-            <div className="vp-ct-body">
-              <div className="vp-ct-list">
-                <div className="vp-ct-row"><FaPhone className="vp-ct-icon" /><span>0368 251 814</span></div>
-                <div className="vp-ct-row"><FaEnvelope className="vp-ct-icon" /><span>linhyang0702@gmail.com</span></div>
-                <div className="vp-ct-row"><FaClock className="vp-ct-icon" /><span>T2 – T6: 8:00 – 17:30</span></div>
-              </div>
-              <div className="vp-ct-avatar">
-                <div className="vp-ct-avatar-ring">
-                  <div className="vp-ct-avatar-circle">
-                    <FaHeadset className="vp-ct-avatar-icon" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
 
         {/* ── MIDDLE: verify card ── */}
         <div className="vp-main">

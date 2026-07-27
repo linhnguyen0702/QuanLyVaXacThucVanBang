@@ -190,7 +190,7 @@ const LoginPage = () => {
             </form>
 
             <div className="divider">
-              <span>Hoặc đăng nhập bằng</span>
+              <span>Hoặc</span>
             </div>
 
             <button type="button" className="btn btn-google" onClick={handleGoogleLogin}>

@@ -16,7 +16,7 @@ import {
   FaChevronRight,
   FaFileAlt,
 } from "react-icons/fa";
-import Footer from "../components/Footer";
+import Footer from "../../components/Footer/Footer";
 import "./HomePage.css";
 
 const stats = [
