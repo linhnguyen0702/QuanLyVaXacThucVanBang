@@ -138,7 +138,7 @@ function StudentGuidePage() {
                   <FaGraduationCap />
                 </div>
                 <div>
-                  <h1>HƯỚNG DẪN SỬ DỤNG</h1>
+                  <h1>HƯỚNG DẪN SỬ DỤNG </h1>
                   <p>
                     Tìm hiểu cách tra cứu, quản lý và sử dụng văn bằng, chứng
                     chỉ số được cấp trên hệ thống một cách hiệu quả.

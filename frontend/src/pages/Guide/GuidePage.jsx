@@ -23,6 +23,7 @@ import {
   FaTimesCircle,
   FaExclamationTriangle,
   FaPaperPlane,
+  FaCheck,
   FaListAlt,
   FaCube,
   FaLock,
@@ -138,6 +139,36 @@ const ALL_FAQS = [
     question: "Nhà tuyển dụng có cần tài khoản để xác thực văn bằng không?",
     answer:
       "Không cần. Nhà tuyển dụng hoặc bất kỳ bên thứ ba nào chỉ cần truy cập trang 'Xác thực văn bằng' công khai của hệ thống để quét mã QR trên bằng hoặc nhập mã số văn bằng trực tiếp để nhận kết quả xác minh tức thì từ Blockchain.",
+  },
+  {
+    category: "tech",
+    question: "Ví điện tử MetaMask đóng vai trò gì và tại sao cần thiết cho nhà trường?",
+    answer:
+      "MetaMask là ví tiền điện tử dùng để lưu trữ và quản lý địa chỉ ví Blockchain đại diện cho Nhà trường. Khi phát hành văn bằng, nhà trường sử dụng MetaMask để ký số xác thực giao dịch và thanh toán phí gas cho mạng lưới Blockchain. Việc này đảm bảo tính danh dự và nguồn gốc chính thức của văn bằng được cấp.",
+  },
+  {
+    category: "user",
+    question: "Làm thế nào để sinh viên có thể chia sẻ văn bằng số cho nhà tuyển dụng?",
+    answer:
+      "Sinh viên có hai cách để chia sẻ: một là sao chép liên kết chia sẻ trực tiếp (Share Link) từ trang chi tiết văn bằng gửi cho nhà tuyển dụng; hai là tải tệp PDF văn bằng số (có kèm mã QR in trên bằng) để nhà tuyển dụng tự quét mã QR và xác thực trên hệ thống.",
+  },
+  {
+    category: "legal",
+    question: "Dữ liệu văn bằng lưu trên Blockchain tồn tại trong bao lâu?",
+    answer:
+      "Blockchain có tính chất lưu trữ phi tập trung và bất biến, do đó các bản ghi mã băm (hash) đại diện cho văn bằng, chứng chỉ số của bạn sẽ tồn tại vĩnh viễn và không thể bị xóa bỏ hay thay đổi theo thời gian, ngay cả khi hệ thống dừng hoạt động.",
+  },
+  {
+    category: "tech",
+    question: "Phí gas là gì và nhà trường lấy tiền từ đâu để chi trả?",
+    answer:
+      "Phí gas là phí giao dịch để vận hành các thao tác ghi dữ liệu lên mạng lưới Blockchain (Ethereum). Phí này được chi trả bằng đồng Ether (ETH). Trong môi trường thử nghiệm (Testnet Sepolia), nhà trường có thể nhận ETH miễn phí từ các dịch vụ Faucet công cộng mà không cần chi trả tiền thật.",
+  },
+  {
+    category: "user",
+    question: "Tại sao khi nhập mã xác thực văn bằng hệ thống báo lỗi không tìm thấy?",
+    answer:
+      "Lỗi này thường xảy ra do nhập sai ký tự (nhầm lẫn giữa chữ O và số 0, hoặc chữ I và số 1) hoặc do văn bằng đó chưa được nhà trường ký số và hoàn tất giao dịch ghi lên Blockchain. Bạn cần kiểm tra kỹ lại mã số hoặc liên hệ nhà trường để xác nhận trạng thái phát hành.",
   },
 ];
 
@@ -291,6 +322,10 @@ export default function GuidePage() {
 
   const bannerImage = `${process.env.PUBLIC_URL}/pannerhuongdan.png`;
   const studentBannerImage = `${process.env.PUBLIC_URL}/bannerhuongdansv.png`;
+  const schoolBannerImage = `${process.env.PUBLIC_URL}/bannerhuongdannhatruong.png`;
+  const verifyBannerImage = `${process.env.PUBLIC_URL}/bannerhuongdanxacthuc.png`;
+  const faqBannerImage = `${process.env.PUBLIC_URL}/bannerhuongdancauhoi.png`;
+  const supportBannerImage = `${process.env.PUBLIC_URL}/bannerhuongdanlienhe.png`;
 
   useEffect(() => {
     const path = location.pathname;
@@ -421,7 +456,7 @@ export default function GuidePage() {
             Xem tất cả
           </button>
         </div>
-        <div className="gp-faq">
+        <div className={`gp-faq${sidebarFaqOpen !== null ? " gp-faq--open" : ""}`}>
           {SIDEBAR_FAQS.map((f, i) => (
             <div
               key={i}
@@ -446,37 +481,65 @@ export default function GuidePage() {
         </div>
       </div>
 
-      {/* LIÊN HỆ HỖ TRỢ */}
-      <div className="gp-card" id="support">
-        <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
-        <p className="gp-ct-desc">
-          Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh bên
-          dưới.
-        </p>
-        <div className="gp-ct-body">
-          <div className="gp-ct-list">
-            <div className="gp-ct-row">
-              <FaPhone className="gp-ct-icon" />
-              <span>0368 251 814</span>
+      {activeTab === "support" ? (
+        <div className="gp-card" id="workflow-support">
+          <div className="gp-card-hd">QUY TRÌNH HỖ TRỢ</div>
+          <div className="gp-support-flow-list">
+            <div className="gp-support-flow-item">
+              <span className="gp-flow-num">1</span>
+              <div>
+                <strong>Tiếp nhận yêu cầu</strong>
+                <p>Hệ thống ghi nhận và phân phối đến kỹ thuật viên chuyên trách.</p>
+              </div>
             </div>
-            <div className="gp-ct-row">
-              <FaEnvelope className="gp-ct-icon" />
-              <span>linhyang0702@gmail.com</span>
+            <div className="gp-support-flow-item">
+              <span className="gp-flow-num">2</span>
+              <div>
+                <strong>Xác minh & Đối soát</strong>
+                <p>Kiểm tra giao dịch trên Blockchain/MetaMask và liên hệ hỗ trợ.</p>
+              </div>
             </div>
-            <div className="gp-ct-row">
-              <FaClock className="gp-ct-icon" />
-              <span style={{ fontSize: "11.5px" }}>T2 – T6: 8:00 – 17:30</span>
-            </div>
-          </div>
-          <div className="gp-ct-avatar">
-            <div className="gp-ct-avatar-ring">
-              <div className="gp-ct-avatar-circle">
-                <FaHeadset className="gp-ct-avatar-icon" />
+            <div className="gp-support-flow-item">
+              <span className="gp-flow-num">3</span>
+              <div>
+                <strong>Hoàn tất xử lý</strong>
+                <p>Giải quyết triệt để sự cố và gửi phản hồi xác nhận qua email.</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="gp-card" id="support">
+          <div className="gp-card-hd">LIÊN HỆ HỖ TRỢ</div>
+          <p className="gp-ct-desc">
+            Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh bên
+            dưới.
+          </p>
+          <div className="gp-ct-body">
+            <div className="gp-ct-list">
+              <div className="gp-ct-row">
+                <FaPhone className="gp-ct-icon" />
+                <span>0368 251 814</span>
+              </div>
+              <div className="gp-ct-row">
+                <FaEnvelope className="gp-ct-icon" />
+                <span>linhyang0702@gmail.com</span>
+              </div>
+              <div className="gp-ct-row">
+                <FaClock className="gp-ct-icon" />
+                <span style={{ fontSize: "11.5px" }}>T2 – T6: 8:00 – 17:30</span>
+              </div>
+            </div>
+            <div className="gp-ct-avatar">
+              <div className="gp-ct-avatar-ring">
+                <div className="gp-ct-avatar-circle">
+                  <FaHeadset className="gp-ct-avatar-icon" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -545,11 +608,11 @@ export default function GuidePage() {
       case "verify":
         return (
           <div className="gp-tab-content-wrap">
-            <section className="gp-section">
+            <section className="gp-section gp-section--stretch">
               <h2 className="gp-section-heading">
                 CÁC PHƯƠNG THỨC XÁC THỰC VĂN BẰNG
               </h2>
-              <div className="gp-steps-grid">
+              <div className="gp-steps-grid gp-steps-grid--3cols">
                 {VERIFY_STEPS.map((step, index) => (
                   <div className="gp-step-card verify" key={index}>
                     <span className="gp-step-badge">{index + 1}</span>
@@ -609,7 +672,7 @@ export default function GuidePage() {
       case "faq":
         return (
           <div className="gp-tab-content-wrap">
-            <section className="gp-section">
+            <section className="gp-section gp-section--stretch">
               <h2 className="gp-section-heading">CÂU HỎI THƯỜNG GẶP (FAQ)</h2>
 
               <div className="gp-faq-search-bar">
@@ -835,6 +898,10 @@ export default function GuidePage() {
                   <h4 className="gp-support-info-card-title">
                     <FaHeadset /> THÔNG TIN LIÊN HỆ
                   </h4>
+                  <div className="gp-support-status">
+                    <span className="gp-status-pulse"></span>
+                    <span>Hỗ trợ trực tuyến: Sẵn sàng</span>
+                  </div>
                   <div className="gp-support-info-item">
                     <FaPhone className="gp-support-info-icon" />
                     <div className="gp-support-info-text">
@@ -873,15 +940,29 @@ export default function GuidePage() {
                       fontSize: "11.5px",
                       color: "#64748b",
                       lineHeight: "1.5",
-                      margin: 0,
+                      margin: "0 0 12px 0",
                     }}
                   >
                     Đối với các lỗi phát sinh trong quá trình thực hiện ký số
-                    Smart Contract hoặc lỗi ví MetaMask của Nhà trường, vui lòng
-                    cung cấp Mã trường học và Mã giao dịch (TxHash) gặp lỗi khi
-                    gửi yêu cầu để được đội ngũ kỹ thuật hỗ trợ kiểm tra và đối
-                    soát nhanh nhất.
+                    Smart Contract hoặc lỗi ví MetaMask của Nhà trường:
                   </p>
+                  <div className="gp-support-checklist">
+                    <div className="gp-checklist-item">
+                      <FaCheck className="gp-check-icon" />
+                      <span>Đảm bảo MetaMask đã chuyển mạng <strong>Sepolia</strong>.</span>
+                    </div>
+                    <div className="gp-checklist-item">
+                      <FaCheck className="gp-check-icon" />
+                      <span>Kiểm tra số dư ví phải có đủ <strong>ETH testnet</strong>.</span>
+                    </div>
+                    <div className="gp-checklist-item">
+                      <FaCheck className="gp-check-icon" />
+                      <span>Cung cấp <strong>Mã trường</strong> và <strong>TxHash</strong> khi gửi yêu cầu.</span>
+                    </div>
+                  </div>
+                  <div className="gp-support-tip">
+                    <strong>Mẹo:</strong> Điền đầy đủ thông tin kỹ thuật giúp tăng tốc độ xử lý của kỹ thuật viên lên gấp 2 lần.
+                  </div>
                 </div>
               </div>
             </div>
@@ -902,13 +983,21 @@ export default function GuidePage() {
           sub: "Cẩm nang kết nối ví, nhập danh sách, ký số và phát hành văn bằng lên Blockchain.",
           className: "gp-hero-school",
           icon: <FaUniversity />,
+          bg: schoolBannerImage,
         };
       case "verify":
         return {
-          title: "XÁC THỰC VĂN BẰNG",
-          sub: "Hướng dẫn quét QR, đối chiếu mã băm và kiểm tra tính hợp lệ của văn bằng.",
+          title: "HƯỚNG DẪN XÁC THỰC VĂN BẰNG",
+          sub: (
+            <>
+              Hướng dẫn quét QR, đối chiếu mã băm và kiểm tra tính hợp lệ
+              <br />
+              của văn bằng.
+            </>
+          ),
           className: "gp-hero-verify",
           icon: <FaQrcode />,
+          bg: verifyBannerImage,
         };
       case "faq":
         return {
@@ -916,6 +1005,7 @@ export default function GuidePage() {
           sub: "Giải đáp các thắc mắc phổ biến về giá trị pháp lý và công nghệ Blockchain.",
           className: "gp-hero-faq",
           icon: <FaQuestionCircle />,
+          bg: faqBannerImage,
         };
       case "support":
         return {
@@ -923,6 +1013,7 @@ export default function GuidePage() {
           sub: "Gửi thông tin thắc mắc hoặc báo lỗi hệ thống để được hỗ trợ kỹ thuật kịp thời.",
           className: "gp-hero-support",
           icon: <FaHeadset />,
+          bg: supportBannerImage,
         };
       default:
         return {
@@ -930,6 +1021,7 @@ export default function GuidePage() {
           sub: "Tìm hiểu cách sử dụng hệ thống Quản lý và Xác thực Văn bằng, Chứng chỉ số",
           className: "",
           icon: <FaBook />,
+          bg: bannerImage,
         };
     }
   };
@@ -1084,12 +1176,12 @@ export default function GuidePage() {
     const isStudent = activeTab === "student";
     const heroIcon = isStudent ? <FaGraduationCap /> : <FaUniversity />;
     const heroTitle = isStudent
-      ? "HƯỚNG DẪN SỬ DỤNG"
+      ? "HƯỚNG DẪN CHO SINH VIÊN"
       : "HƯỚNG DẪN CHO NHÀ TRƯỜNG";
     const heroSub = isStudent
       ? "Tìm hiểu cách tra cứu, quản lý và sử dụng văn bằng, chứng chỉ số được cấp trên hệ thống một cách hiệu quả."
       : "Cẩm nang kết nối ví, nhập danh sách, ký số và phát hành văn bằng lên Blockchain.";
-    const heroBg = isStudent ? studentBannerImage : bannerImage;
+    const heroBg = isStudent ? studentBannerImage : schoolBannerImage;
 
     const stepsTitle = isStudent
       ? "QUY TRÌNH TRA CỨU VÀ SỬ DỤNG VĂN BẰNG, CHỨNG CHỈ SỐ"
@@ -1155,10 +1247,11 @@ export default function GuidePage() {
             <section
               className="student-guide__hero"
               style={{
-                backgroundImage: `url(${heroBg})`,
-                backgroundPosition: "right center",
-                backgroundSize: "66% auto",
-                backgroundRepeat: "no-repeat",
+                backgroundImage: `linear-gradient(90deg, #ffffff 0%, #ffffff 30%, rgba(255, 255, 255, 0) 65%), url(${heroBg})`,
+                backgroundPosition: "center, calc(100% + 16px) center",
+                backgroundSize: "cover, 68% 108%",
+                backgroundRepeat: "no-repeat, no-repeat",
+                backgroundColor: "#ffffff",
               }}
             >
               <div className="student-guide__hero-copy">
@@ -1277,14 +1370,24 @@ export default function GuidePage() {
           {/* ROW 1: Hero and Menu Card */}
           <div className="gp-grid" style={{ marginBottom: "12px" }}>
             {/* HERO BANNER FOR ACTIVE TAB */}
-            <div className={`gp-hero gp-hero--stretch ${hero.className}`}>
-              <div className="gp-hero-text">
-                <h1 className="gp-hero-title">{hero.title}</h1>
-                <p className="gp-hero-sub">{hero.sub}</p>
-              </div>
-
-              <div className="gp-hero-avatar-ring">
-                <div className="gp-hero-avatar-circle">{hero.icon}</div>
+            <div
+              className="gp-hero-new"
+              style={{
+                backgroundImage: `linear-gradient(90deg, #ffffff 0%, #ffffff 30%, rgba(255, 255, 255, 0) 65%), url(${hero.bg})`,
+                backgroundPosition: "center, calc(100% + 16px) center",
+                backgroundSize: "cover, 68% 108%",
+                backgroundRepeat: "no-repeat, no-repeat",
+                backgroundColor: "#ffffff",
+              }}
+            >
+              <div className="gp-hero-new-copy">
+                <div className={`gp-hero-new-icon gp-hero-${activeTab}-icon`}>
+                  {hero.icon}
+                </div>
+                <div>
+                  <h1>{hero.title}</h1>
+                  <p>{hero.sub}</p>
+                </div>
               </div>
             </div>
 

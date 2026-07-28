@@ -62,7 +62,7 @@
   position: relative;
   z-index: 2;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   max-width: 610px;
   gap: 20px;
 }
@@ -78,6 +78,7 @@
   color: #0862e8;
   background: #f8fbff;
   font-size: 38px;
+  margin-top: 22px;
 }
 
 .student-guide__hero h1 {
