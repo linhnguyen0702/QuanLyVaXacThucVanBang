@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FaShieldAlt, FaUserGraduate, FaUniversity, FaEnvelope, 
   FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaEdit, 
-  FaCertificate, FaUsers, FaChartLine 
+  FaCertificate, FaUsers, FaChartLine, FaUserTie
 } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import './LoginPage.css';
@@ -22,6 +22,7 @@ const LoginPage = () => {
     if (userType === 'student') {
       navigate('/student/dashboard');
     } else {
+      localStorage.setItem('userRole', userType);
       navigate('/school/dashboard');
     }
   };
@@ -125,6 +126,13 @@ const LoginPage = () => {
                 >
                   <FaUniversity />
                   <span>Nhà trường</span>
+                </button>
+                <button
+                  className={`user-type-btn ${userType === 'officer' ? 'active' : ''}`}
+                  onClick={() => setUserType('officer')}
+                >
+                  <FaUserTie />
+                  <span>Cán bộ đào tạo</span>
                 </button>
               </div>
             </div>

@@ -1,0 +1,455 @@
+/* CSS styling for School Diploma Approval & Verification */
+
+.svc-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Overview cards for approval */
+.svc-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .svc-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tool card layout */
+.svc-main-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.svc-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Table pending states */
+.svc-badge-pending {
+  background-color: #fef3c7;
+  color: #d97706;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.svc-badge-approved {
+  background-color: #e6fdf0;
+  color: #15803d;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Details and Approval Modal */
+.svc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: svcModalFadeIn 0.25s ease-out;
+}
+
+@keyframes svcModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.svc-modal {
+  background-color: #ffffff;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 750px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: svcModalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes svcModalSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.svc-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.svc-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.svc-modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.svc-modal-close:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.svc-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.svc-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background-color: #f8fafc;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+/* Diploma Preview template */
+.svc-diploma-preview {
+  border: 8px double #d97706;
+  padding: 30px;
+  background-color: #fffbeb;
+  border-radius: 8px;
+  position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.svc-diploma-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.04;
+  color: #d97706;
+  pointer-events: none;
+}
+
+.svc-diploma-header {
+  text-align: center;
+  font-family: 'Times New Roman', serif;
+  margin-bottom: 24px;
+}
+
+.svc-diploma-nation {
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.svc-diploma-motto {
+  font-size: 12px;
+  margin-top: 4px;
+  border-bottom: 1px solid #d97706;
+  width: 160px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-bottom: 4px;
+}
+
+.svc-diploma-title {
+  text-align: center;
+  color: #92400e;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 16px 0;
+  font-family: 'Times New Roman', serif;
+}
+
+.svc-diploma-body {
+  font-family: 'Times New Roman', serif;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #451a03;
+  margin-bottom: 24px;
+}
+
+.svc-diploma-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 40px;
+  font-family: 'Times New Roman', serif;
+}
+
+.svc-diploma-sign {
+  text-align: center;
+}
+
+.svc-diploma-seal-spot {
+  position: relative;
+  width: 70px;
+  height: 70px;
+}
+
+.svc-diploma-seal {
+  position: absolute;
+  top: -15px;
+  left: 10px;
+  width: 60px;
+  height: 60px;
+  border: 2px dashed #ef4444;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ef4444;
+  font-size: 8px;
+  font-weight: bold;
+  transform: rotate(-10deg);
+  opacity: 0.7;
+}
+
+/* MetaMask Simulator popup */
+.svc-metamask-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: svcFadeIn 0.2s ease;
+}
+
+.svc-metamask-card {
+  width: 360px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  animation: svcPopupZoom 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes svcPopupZoom {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.svc-mm-header {
+  background-color: #f8fafc;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.svc-mm-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.svc-mm-fox {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.svc-mm-net-badge {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.svc-mm-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.svc-mm-account {
+  font-size: 12px;
+  background-color: #f1f5f9;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-family: monospace;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  width: 100%;
+}
+
+.svc-mm-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.svc-mm-desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.svc-mm-box {
+  background-color: #fffbeb;
+  border: 1px dashed #f59e0b;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 11.5px;
+  color: #b45309;
+  text-align: left;
+  max-height: 100px;
+  overflow-y: auto;
+  font-family: monospace;
+  width: 100%;
+}
+
+.svc-mm-footer {
+  display: flex;
+  border-top: 1px solid #e2e8f0;
+}
+
+.svc-mm-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+  background-color: #ffffff;
+}
+
+.svc-mm-btn.reject {
+  color: #ef4444;
+  border-right: 1px solid #e2e8f0;
+}
+
+.svc-mm-btn.reject:hover {
+  background-color: #fef2f2;
+}
+
+.svc-mm-btn.confirm {
+  color: #ffffff;
+  background-color: #f97316;
+}
+
+.svc-mm-btn.confirm:hover {
+  background-color: #ea580c;
+}
+
+/* Steps execution layout */
+.svc-steps-card {
+  padding: 20px;
+  border-radius: 10px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.svc-step-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.svc-step-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.svc-step-indicator.pending {
+  border: 2px solid #cbd5e1;
+  color: #94a3b8;
+  background-color: #ffffff;
+}
+
+.svc-step-indicator.active {
+  border: 2px solid #0f4cf5;
+  color: #0f4cf5;
+  background-color: #eff6ff;
+}
+
+.svc-step-indicator.done {
+  background-color: #10b981;
+  color: white;
+  border: 2px solid #10b981;
+}
+
+.svc-step-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.svc-step-text.active {
+  color: #0f4cf5;
+}
+
+.svc-step-text.done {
+  color: #1e293b;
+}
+
+.svc-step-text.pending {
+  color: #94a3b8;
+}

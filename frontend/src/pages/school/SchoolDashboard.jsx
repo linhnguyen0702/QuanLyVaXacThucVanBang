@@ -12,6 +12,7 @@ import SchoolOverview from './SchoolOverview';
 import SchoolCertificates from './SchoolCertificates';
 import SchoolStudents from './SchoolStudents';
 import SchoolPrograms from './SchoolPrograms';
+import SchoolVerifyCertificates from './SchoolVerifyCertificates';
 import SchoolStats from './SchoolStats';
 import SchoolHistory from './SchoolHistory';
 import SchoolReports from './SchoolReports';
@@ -33,7 +34,8 @@ const MENU_GROUPS = [
     items: [
       { id: 'certificates', label: 'Văn bằng', icon: <FaList /> },
       { id: 'students', label: 'Sinh viên', icon: <FaUserGraduate /> },
-      { id: 'program', label: 'Chương trình đào tạo', icon: <FaBook /> }
+      { id: 'program', label: 'Chương trình đào tạo', icon: <FaBook /> },
+      { id: 'verify-certificates', label: 'Xác thực văn bằng', icon: <FaShieldAlt /> }
     ]
   },
   {
@@ -69,6 +71,20 @@ const SchoolDashboard = () => {
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
+  const userRole = localStorage.getItem('userRole') || 'school';
+  const isOfficer = userRole === 'officer';
+
+  // Filter menu groups based on role
+  const filteredMenuGroups = MENU_GROUPS.map(group => {
+    if (isOfficer && group.title === 'Hệ thống') {
+      return {
+        ...group,
+        items: group.items.filter(item => !['users', 'roles', 'settings', 'logs'].includes(item.id))
+      };
+    }
+    return group;
+  });
+
   const handleCopyWallet = () => {
     navigator.clipboard.writeText('0xA3f2d9b7eC81452D819280dEAc429e');
     setCopiedWallet(true);
@@ -85,6 +101,8 @@ const SchoolDashboard = () => {
         return <SchoolStudents />;
       case 'program':
         return <SchoolPrograms />;
+      case 'verify-certificates':
+        return <SchoolVerifyCertificates />;
       case 'stats':
         return <SchoolStats />;
       case 'history':
@@ -126,7 +144,7 @@ const SchoolDashboard = () => {
         </div>
 
         <div className="sd-sidebar-content">
-          {MENU_GROUPS.map((group, gIdx) => (
+          {filteredMenuGroups.map((group, gIdx) => (
             <div key={gIdx} className="sd-menu-group">
               <div className="sd-group-title">{group.title}</div>
               {group.items.map((item) => (
@@ -196,13 +214,13 @@ const SchoolDashboard = () => {
             <div className="sd-user-menu-container">
               <div className="sd-user-menu" onClick={() => setShowUserDropdown(!showUserDropdown)}>
                 <img 
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150" 
+                  src={isOfficer ? "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150" : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150"} 
                   alt="Avatar" 
                   className="sd-user-avatar" 
                 />
                 <div className="sd-user-info">
-                  <span className="sd-user-name">Nguyễn Văn An</span>
-                  <span className="sd-user-role">Quản trị viên</span>
+                  <span className="sd-user-name">{isOfficer ? 'Lê Hoài Nam' : 'Nguyễn Văn An'}</span>
+                  <span className="sd-user-role">{isOfficer ? 'Cán bộ đào tạo' : 'Quản trị viên'}</span>
                 </div>
                 <FaChevronDown className="sd-user-chevron" />
               </div>
@@ -217,10 +235,12 @@ const SchoolDashboard = () => {
                     <FaLock className="sd-menu-icon" />
                     <span>Đổi mật khẩu</span>
                   </div>
-                  <div className="sd-dropdown-item" onClick={() => { setActiveTab('settings'); setShowUserDropdown(false); }}>
-                    <FaCog className="sd-menu-icon" />
-                    <span>Cài đặt</span>
-                  </div>
+                  {!isOfficer && (
+                    <div className="sd-dropdown-item" onClick={() => { setActiveTab('settings'); setShowUserDropdown(false); }}>
+                      <FaCog className="sd-menu-icon" />
+                      <span>Cài đặt</span>
+                    </div>
+                  )}
                   <div className="sd-dropdown-divider"></div>
                   <div className="sd-dropdown-item logout" onClick={() => { navigate('/login'); setShowUserDropdown(false); }}>
                     <FaSignOutAlt className="sd-menu-icon" />
