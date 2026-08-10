@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FaShieldAlt, FaBell, FaChevronDown, FaBars, FaTimes,
@@ -21,6 +21,7 @@ import SchoolRoles from './SchoolRoles';
 import SchoolSettings from './SchoolSettings';
 import SchoolLogs from './SchoolLogs';
 import SchoolProfile from './SchoolProfile';
+import SchoolNotifications from './SchoolNotifications';
 
 const MENU_GROUPS = [
   {
@@ -53,6 +54,7 @@ const MENU_GROUPS = [
       { id: 'roles', label: 'Vai trò & Phân quyền', icon: <FaShieldAlt /> },
       { id: 'settings', label: 'Cài đặt hệ thống', icon: <FaCog /> },
       { id: 'logs', label: 'Nhật ký hệ thống', icon: <FaDatabase /> },
+      { id: 'notifications', label: 'Thông báo', icon: <FaBell /> },
       { id: 'profile', label: 'Hồ sơ cá nhân', icon: <FaUser /> }
     ]
   }
@@ -63,6 +65,41 @@ const getMenuIcon = (id) => {
   return null; // The icons will be set by the layout render
 };
 
+const INITIAL_SCHOOL_NOTIFICATIONS = [
+  {
+    id: "SN1",
+    title: "Yêu cầu duyệt cấp bằng mới",
+    desc: "Khoa Công nghệ thông tin gửi danh sách 12 sinh viên đủ điều kiện tốt nghiệp lớp CNTT-01 K65 để phê duyệt.",
+    time: "2 giờ trước",
+    type: "issue",
+    unread: true
+  },
+  {
+    id: "SN2",
+    title: "Giao dịch Blockchain hoàn tất",
+    desc: "Đã ghi nhận thành công mã băm văn bằng tốt nghiệp cho 45 sinh viên lớp CNTT-01 lên Blockchain Polygon.",
+    time: "1 ngày trước",
+    type: "blockchain",
+    unread: true
+  },
+  {
+    id: "SN3",
+    title: "Cảnh báo bảo mật ví MetaMask",
+    desc: "Đã kết nối ví MetaMask mới (địa chỉ 0xA3f2...9b7e) với tư cách Cán bộ đào tạo Lê Hoài Nam.",
+    time: "3 ngày trước",
+    type: "alert",
+    unread: true
+  },
+  {
+    id: "SN4",
+    title: "Sao lưu cơ sở dữ liệu",
+    desc: "Hệ thống đã tự động sao lưu toàn bộ dữ liệu văn bằng và nhật ký hệ thống định kỳ tuần này.",
+    time: "5 ngày trước",
+    type: "blockchain",
+    unread: false
+  }
+];
+
 const SchoolDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -70,6 +107,30 @@ const SchoolDashboard = () => {
   const [menuActive, setMenuActive] = useState(false);
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showNotifyDropdown, setShowNotifyDropdown] = useState(false);
+
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem('school_notifications');
+    return saved ? JSON.parse(saved) : INITIAL_SCHOOL_NOTIFICATIONS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('school_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  const handleMarkAsRead = (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  };
+
+  const handleClearNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const unreadNotifsCount = notifications.filter(n => n.unread).length;
 
   const userRole = localStorage.getItem('userRole') || 'school';
   const isOfficer = userRole === 'officer';
@@ -119,6 +180,15 @@ const SchoolDashboard = () => {
         return <SchoolLogs />;
       case 'profile':
         return <SchoolProfile />;
+      case 'notifications':
+        return (
+          <SchoolNotifications 
+            notifications={notifications}
+            onMarkAsRead={handleMarkAsRead}
+            onMarkAllAsRead={handleMarkAllAsRead}
+            onClearNotification={handleClearNotification}
+          />
+        );
       default:
         return <div>Tab không hợp lệ.</div>;
     }
@@ -206,10 +276,61 @@ const SchoolDashboard = () => {
           </div>
 
           <div className="sd-header-right">
-            <button className="sd-notify-btn">
-              <FaBell />
-              <span className="sd-notify-badge">3</span>
-            </button>
+            <div className="sd-notify-menu-container" style={{ position: 'relative' }}>
+              <button className="sd-notify-btn" onClick={() => { setShowNotifyDropdown(!showNotifyDropdown); setShowUserDropdown(false); }}>
+                <FaBell />
+                {unreadNotifsCount > 0 && <span className="sd-notify-badge">{unreadNotifsCount}</span>}
+              </button>
+
+              {showNotifyDropdown && (
+                <div className="sd-notif-dropdown">
+                  <div className="sd-notif-dropdown-header">
+                    <span className="sd-notif-dropdown-title">Thông báo mới</span>
+                    {unreadNotifsCount > 0 && (
+                      <button className="sd-notif-dropdown-clear" onClick={handleMarkAllAsRead}>
+                        Đọc tất cả
+                      </button>
+                    )}
+                  </div>
+                  <div className="sd-notif-dropdown-list">
+                    {notifications.length > 0 ? (
+                      notifications.slice(0, 3).map((notif) => (
+                        <div 
+                          key={notif.id} 
+                          className={`sd-notif-dropdown-item ${notif.unread ? 'unread' : ''}`}
+                          onClick={() => {
+                            handleMarkAsRead(notif.id);
+                            setShowNotifyDropdown(false);
+                            setActiveTab('notifications');
+                          }}
+                        >
+                          <div>
+                            <div className="sd-notif-dropdown-item-title">{notif.title}</div>
+                            <div className="sd-notif-dropdown-item-desc">{notif.desc}</div>
+                            <div className="sd-notif-dropdown-item-time">{notif.time}</div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: '#64748b' }}>
+                        Không có thông báo mới.
+                      </div>
+                    )}
+                  </div>
+                  <div className="sd-notif-dropdown-footer">
+                    <button 
+                      className="sd-notif-dropdown-viewall" 
+                      onClick={() => {
+                        setShowNotifyDropdown(false);
+                        setActiveTab('notifications');
+                      }}
+                    >
+                      Xem tất cả thông báo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             
             <div className="sd-user-menu-container">
               <div className="sd-user-menu" onClick={() => setShowUserDropdown(!showUserDropdown)}>

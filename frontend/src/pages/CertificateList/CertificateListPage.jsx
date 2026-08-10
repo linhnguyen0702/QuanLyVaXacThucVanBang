@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { FaSearch, FaFilter, FaCheckCircle, FaUserGraduate, FaUniversity, FaCalendarAlt, FaDownload, FaEye } from 'react-icons/fa'
-import Navbar from '../../components/Navbar/Navbar'
 import Footer from '../../components/Footer/Footer'
 import './CertificateListPage.css'
 
@@ -58,7 +57,6 @@ const CertificateListPage = () => {
 
   return (
     <div className="cert-list-page">
-      <Navbar />
 
       <div className="cert-list-main">
         <div className="cert-list-container">

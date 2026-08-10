@@ -112,8 +112,14 @@
 
 .sd-menu-item.active {
   background-color: #eff6ff;
+  border-left: 4px solid #1d4ed8;
   color: #1d4ed8;
   font-weight: 600;
+  padding-left: 8px; /* Offset the border */
+}
+
+.sd-sidebar.collapsed .sd-menu-item.active {
+  border-left: none;
 }
 
 .sd-menu-icon {
@@ -1120,4 +1126,110 @@
   background-color: #e2e8f0;
   margin: 4px 0;
 }
+
+/* ── NOTIFICATION DROPDOWN ── */
+.sd-notif-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: sdFadeIn 0.2s ease;
+  z-index: 1000;
+}
+
+.sd-notif-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.sd-notif-dropdown-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sd-notif-dropdown-clear {
+  font-size: 11px;
+  color: #0f4cf5;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.sd-notif-dropdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.sd-notif-dropdown-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid #f8fafc;
+  text-align: left;
+}
+
+.sd-notif-dropdown-item:hover {
+  background-color: #f8fafc;
+}
+
+.sd-notif-dropdown-item.unread {
+  background-color: #eff6ff;
+}
+
+.sd-notif-dropdown-item-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.sd-notif-dropdown-item-desc {
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.sd-notif-dropdown-item-time {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.sd-notif-dropdown-footer {
+  text-align: center;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.sd-notif-dropdown-viewall {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f4cf5;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+
 
