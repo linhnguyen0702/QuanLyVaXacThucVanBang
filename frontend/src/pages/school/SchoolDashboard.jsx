@@ -22,6 +22,8 @@ import SchoolSettings from './SchoolSettings';
 import SchoolLogs from './SchoolLogs';
 import SchoolProfile from './SchoolProfile';
 import SchoolNotifications from './SchoolNotifications';
+import AdminSchools from './AdminSchools';
+import { FaUniversity } from 'react-icons/fa';
 
 const MENU_GROUPS = [
   {
@@ -36,6 +38,7 @@ const MENU_GROUPS = [
       { id: 'certificates', label: 'Văn bằng', icon: <FaList /> },
       { id: 'students', label: 'Sinh viên', icon: <FaUserGraduate /> },
       { id: 'program', label: 'Chương trình đào tạo', icon: <FaBook /> },
+      { id: 'schools', label: 'Quản lý Trường học', icon: <FaUniversity /> },
       { id: 'verify-certificates', label: 'Xác thực văn bằng', icon: <FaShieldAlt /> }
     ]
   },
@@ -155,31 +158,33 @@ const SchoolDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <SchoolOverview />;
+        return <SchoolOverview onNavigate={(tab) => setActiveTab(tab)} />;
       case 'certificates':
-        return <SchoolCertificates />;
+        return <SchoolCertificates onNavigate={(tab) => setActiveTab(tab)} />;
       case 'students':
-        return <SchoolStudents />;
+        return <SchoolStudents onNavigate={(tab) => setActiveTab(tab)} />;
       case 'program':
-        return <SchoolPrograms />;
+        return <SchoolPrograms onNavigate={(tab) => setActiveTab(tab)} />;
+      case 'schools':
+        return <AdminSchools onNavigate={(tab) => setActiveTab(tab)} />;
       case 'verify-certificates':
-        return <SchoolVerifyCertificates />;
+        return <SchoolVerifyCertificates onNavigate={(tab) => setActiveTab(tab)} />;
       case 'stats':
-        return <SchoolStats />;
+        return <SchoolStats onNavigate={(tab) => setActiveTab(tab)} />;
       case 'history':
-        return <SchoolHistory />;
+        return <SchoolHistory onNavigate={(tab) => setActiveTab(tab)} />;
       case 'reports':
-        return <SchoolReports />;
+        return <SchoolReports onNavigate={(tab) => setActiveTab(tab)} />;
       case 'users':
-        return <SchoolUsers />;
+        return <SchoolUsers onNavigate={(tab) => setActiveTab(tab)} />;
       case 'roles':
-        return <SchoolRoles />;
+        return <SchoolRoles onNavigate={(tab) => setActiveTab(tab)} />;
       case 'settings':
-        return <SchoolSettings />;
+        return <SchoolSettings onNavigate={(tab) => setActiveTab(tab)} />;
       case 'logs':
-        return <SchoolLogs />;
+        return <SchoolLogs onNavigate={(tab) => setActiveTab(tab)} />;
       case 'profile':
-        return <SchoolProfile />;
+        return <SchoolProfile onNavigate={(tab) => setActiveTab(tab)} />;
       case 'notifications':
         return (
           <SchoolNotifications 

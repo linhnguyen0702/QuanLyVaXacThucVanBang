@@ -1,77 +1,148 @@
-import React from 'react';
-import { FaList, FaUserGraduate, FaDatabase, FaPlus, FaCheckCircle, FaEdit } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { 
+  FaList, FaUserGraduate, FaPlus, FaCheckCircle, 
+  FaEdit, FaShieldAlt, FaFileAlt, FaBook 
+} from 'react-icons/fa';
 
-const SchoolOverview = () => {
+const SchoolOverview = ({ onNavigate }) => {
+  const [certCount, setCertCount] = useState(0);
+  const [studentCount, setStudentCount] = useState(0);
+  const [programCount, setProgramCount] = useState(0);
+
+  useEffect(() => {
+    const certs = JSON.parse(localStorage.getItem('school_certificates') || '[]');
+    const stds = JSON.parse(localStorage.getItem('school_students') || '[]');
+    const progs = JSON.parse(localStorage.getItem('school_programs') || '[]');
+
+    setCertCount(certs.length > 0 ? certs.length : 12845);
+    setStudentCount(stds.length > 0 ? stds.length : 11920);
+    setProgramCount(progs.length > 0 ? progs.length : 128);
+  }, []);
+
   return (
     <div className="sd-view">
       <div className="sd-page-header">
         <div className="sd-page-title-area">
-          <h2>Dashboard - Tổng quan</h2>
-          <p>Tổng quan hoạt động hệ thống quản lý văn bằng</p>
+          <h2>Dashboard - Tổng quan hệ thống</h2>
+          <p>Báo cáo tổng quan dữ liệu văn bằng, sinh viên và hoạt động xác thực số</p>
         </div>
       </div>
-      
+
+      {/* ── QUICK ACTION BUTTONS (INTERCONNECTED LINKS) ── */}
+      <div className="sd-card" style={{ marginBottom: '24px', padding: '16px 20px' }}>
+        <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '12px' }}>
+          Tác vụ truy cập nhanh
+        </h4>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button className="sd-btn-primary" onClick={() => onNavigate && onNavigate('certificates')}>
+            <FaPlus /> Cấp văn bằng mới
+          </button>
+          <button className="sd-btn-secondary" onClick={() => onNavigate && onNavigate('students')}>
+            <FaUserGraduate /> Thêm sinh viên mới
+          </button>
+          <button className="sd-btn-secondary" onClick={() => onNavigate && onNavigate('verify-certificates')}>
+            <FaShieldAlt /> Tra cứu & Xác thực QR
+          </button>
+          <button className="sd-btn-secondary" onClick={() => onNavigate && onNavigate('reports')}>
+            <FaFileAlt /> Trích xuất báo cáo
+          </button>
+        </div>
+      </div>
+
+      {/* ── METRIC STAT CARDS (CLICKABLE NAVIGATORS) ── */}
       <div className="sd-summary-grid">
-        <div className="sd-stat-card">
+        <div 
+          className="sd-stat-card" 
+          style={{ cursor: 'pointer' }}
+          onClick={() => onNavigate && onNavigate('certificates')}
+          title="Bấm để đến trang Quản lý Văn bằng"
+        >
           <div className="sd-stat-icon-box blue"><FaList /></div>
           <div className="sd-stat-content">
-            <span className="sd-stat-label">Tổng văn bằng đã cấp</span>
+            <span className="sd-stat-label">Tổng văn bằng đã phát hành</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">3.245.612</span>
-              <span className="sd-stat-badge green">+12.4%</span>
+              <span className="sd-stat-value">{certCount.toLocaleString()}</span>
+              <span className="sd-stat-badge green">Đã xác thực</span>
             </div>
           </div>
         </div>
-        <div className="sd-stat-card">
+
+        <div 
+          className="sd-stat-card" 
+          style={{ cursor: 'pointer' }}
+          onClick={() => onNavigate && onNavigate('students')}
+          title="Bấm để đến trang Quản lý Sinh viên"
+        >
           <div className="sd-stat-icon-box green"><FaUserGraduate /></div>
           <div className="sd-stat-content">
-            <span className="sd-stat-label">Tổng số sinh viên</span>
+            <span className="sd-stat-label">Tổng số sinh viên trong hệ thống</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">125.482</span>
-              <span className="sd-stat-badge green">+8.2%</span>
+              <span className="sd-stat-value">{studentCount.toLocaleString()}</span>
+              <span className="sd-stat-badge green">Hồ sơ sinh viên</span>
             </div>
           </div>
         </div>
-        <div className="sd-stat-card">
-          <div className="sd-stat-icon-box purple"><FaDatabase /></div>
+
+        <div 
+          className="sd-stat-card" 
+          style={{ cursor: 'pointer' }}
+          onClick={() => onNavigate && onNavigate('program')}
+          title="Bấm để đến trang Chương trình đào tạo"
+        >
+          <div className="sd-stat-icon-box purple"><FaBook /></div>
           <div className="sd-stat-content">
-            <span className="sd-stat-label">Giao dịch Blockchain</span>
+            <span className="sd-stat-label">Chương trình đào tạo</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">4.528.192</span>
-              <span className="sd-stat-badge green">+15.1%</span>
+              <span className="sd-stat-value">{programCount.toLocaleString()}</span>
+              <span className="sd-stat-badge purple">CTĐT Hoạt động</span>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ── CHART & RECENT ACTIVITY LIST ── */}
       <div className="sd-chart-row">
         <div className="sd-card sd-chart-card">
-          <h4>Biểu đồ thống kê cấp phát văn bằng</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>Biểu đồ tăng trưởng văn bằng cấp phát</h4>
+            <button className="sd-btn-secondary" style={{ padding: '4px 10px', fontSize: '12px' }} onClick={() => onNavigate && onNavigate('stats')}>
+              Xem thống kê chi tiết
+            </button>
+          </div>
           <div className="sd-chart-placeholder">
-            [Biểu đồ đường phát triển - Mock Chart]
+            <div style={{ textStyle: 'center' }}>
+              <FaShieldAlt style={{ fontSize: '32px', color: '#0f4cf5', marginBottom: '8px' }} />
+              <div>Biểu đồ số liệu phát hành theo thời gian (Tháng 9/2026)</div>
+            </div>
           </div>
         </div>
+
         <div className="sd-card">
-          <h4>Hoạt động gần đây</h4>
-          <div className="sd-activity-list" style={{ marginTop: '16px' }}>
-            <div className="sd-activity-item">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>Nhật ký hoạt động gần đây</h4>
+            <button className="sd-btn-secondary" style={{ padding: '4px 10px', fontSize: '12px' }} onClick={() => onNavigate && onNavigate('history')}>
+              Xem tất cả
+            </button>
+          </div>
+          <div className="sd-activity-list">
+            <div className="sd-activity-item" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('certificates')}>
               <div className="sd-act-icon blue"><FaPlus /></div>
               <div className="sd-act-info">
-                <span className="sd-act-desc">Đã tạo văn bằng mới cho sinh viên <strong>Nguyễn Văn A</strong></span>
-                <span className="sd-act-time">2 phút trước</span>
+                <span className="sd-act-desc">Cấp mới văn bằng số hiệu <strong>UNI-2026-0012</strong></span>
+                <span className="sd-act-time">Vừa xong</span>
               </div>
             </div>
-            <div className="sd-activity-item">
+            <div className="sd-activity-item" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('verify-certificates')}>
               <div className="sd-act-icon green"><FaCheckCircle /></div>
               <div className="sd-act-info">
-                <span className="sd-act-desc">Giao dịch Blockchain xác thực thành công mã hash <strong>0x7f23...a8c2</strong></span>
+                <span className="sd-act-desc">Giao dịch Polygon mined mã hash <strong>0x8f2a...9f0</strong></span>
                 <span className="sd-act-time">10 phút trước</span>
               </div>
             </div>
-            <div className="sd-activity-item">
+            <div className="sd-activity-item" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('program')}>
               <div className="sd-act-icon purple"><FaEdit /></div>
               <div className="sd-act-info">
-                <span className="sd-act-desc">Cập nhật chương trình đào tạo <strong>Công nghệ thông tin</strong></span>
+                <span className="sd-act-desc">Cập nhật chương trình <strong>Công nghệ thông tin</strong></span>
                 <span className="sd-act-time">1 giờ trước</span>
               </div>
             </div>
