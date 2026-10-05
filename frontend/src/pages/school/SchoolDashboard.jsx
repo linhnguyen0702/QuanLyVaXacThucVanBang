@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FaShieldAlt, FaBell, FaChevronDown, FaBars, FaTimes,
   FaChartPie, FaList, FaUserGraduate, FaBook, FaHistory,
-  FaFileAlt, FaCog, FaDatabase, FaUser, FaLock, FaSignOutAlt
+  FaFileAlt, FaCog, FaDatabase, FaUser, FaLock, FaSignOutAlt, FaUniversity
 } from 'react-icons/fa';
 import './SchoolDashboard.css';
 
@@ -23,7 +23,6 @@ import SchoolLogs from './SchoolLogs';
 import SchoolProfile from './SchoolProfile';
 import SchoolNotifications from './SchoolNotifications';
 import AdminSchools from './AdminSchools';
-import { FaUniversity } from 'react-icons/fa';
 
 const MENU_GROUPS = [
   {
@@ -63,16 +62,11 @@ const MENU_GROUPS = [
   }
 ];
 
-// Let's dynamically map menu group icons for consistency with sidebars
-const getMenuIcon = (id) => {
-  return null; // The icons will be set by the layout render
-};
-
 const INITIAL_SCHOOL_NOTIFICATIONS = [
   {
     id: "SN1",
     title: "Yêu cầu duyệt cấp bằng mới",
-    desc: "Khoa Công nghệ thông tin gửi danh sách 12 sinh viên đủ điều kiện tốt nghiệp lớp CNTT-01 K65 để phê duyệt.",
+    desc: "Khoa Công nghệ thông tin gửi danh sách 12 sinh viên đủ điều kiện tốt nghiệp để phê duyệt.",
     time: "2 giờ trước",
     type: "issue",
     unread: true
@@ -80,26 +74,10 @@ const INITIAL_SCHOOL_NOTIFICATIONS = [
   {
     id: "SN2",
     title: "Giao dịch Blockchain hoàn tất",
-    desc: "Đã ghi nhận thành công mã băm văn bằng tốt nghiệp cho 45 sinh viên lớp CNTT-01 lên Blockchain Polygon.",
+    desc: "Đã ghi nhận thành công mã băm văn bằng tốt nghiệp cho 45 sinh viên lên Blockchain Sepolia/Polygon.",
     time: "1 ngày trước",
     type: "blockchain",
     unread: true
-  },
-  {
-    id: "SN3",
-    title: "Cảnh báo bảo mật ví MetaMask",
-    desc: "Đã kết nối ví MetaMask mới (địa chỉ 0xA3f2...9b7e) với tư cách Cán bộ đào tạo Lê Hoài Nam.",
-    time: "3 ngày trước",
-    type: "alert",
-    unread: true
-  },
-  {
-    id: "SN4",
-    title: "Sao lưu cơ sở dữ liệu",
-    desc: "Hệ thống đã tự động sao lưu toàn bộ dữ liệu văn bằng và nhật ký hệ thống định kỳ tuần này.",
-    time: "5 ngày trước",
-    type: "blockchain",
-    unread: false
   }
 ];
 
@@ -112,14 +90,13 @@ const SchoolDashboard = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifyDropdown, setShowNotifyDropdown] = useState(false);
 
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('school_notifications');
-    return saved ? JSON.parse(saved) : INITIAL_SCHOOL_NOTIFICATIONS;
-  });
+  // User state
+  const currentUser = (() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  })();
 
-  useEffect(() => {
-    localStorage.setItem('school_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+  const [notifications, setNotifications] = useState(INITIAL_SCHOOL_NOTIFICATIONS);
 
   const handleMarkAsRead = (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
@@ -133,12 +110,17 @@ const SchoolDashboard = () => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const unreadNotifsCount = notifications.filter(n => n.unread).length;
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    navigate('/login');
+  };
 
-  const userRole = localStorage.getItem('userRole') || 'school';
+  const unreadNotifsCount = notifications.filter(n => n.unread).length;
+  const userRole = (currentUser && currentUser.role) || localStorage.getItem('userRole') || 'school';
   const isOfficer = userRole === 'officer';
 
-  // Filter menu groups based on role
   const filteredMenuGroups = MENU_GROUPS.map(group => {
     if (isOfficer && group.title === 'Hệ thống') {
       return {
@@ -150,7 +132,8 @@ const SchoolDashboard = () => {
   });
 
   const handleCopyWallet = () => {
-    navigator.clipboard.writeText('0xA3f2d9b7eC81452D819280dEAc429e');
+    const wallet = (currentUser && currentUser.wallet_address) || '0xA3f2d9b7eC81452D819280dEAc429e';
+    navigator.clipboard.writeText(wallet);
     setCopiedWallet(true);
     setTimeout(() => setCopiedWallet(false), 2000);
   };
@@ -254,16 +237,16 @@ const SchoolDashboard = () => {
           <div className="sd-bc-details">
             <div className="sd-bc-detail-row">
               <span>Mạng lưới:</span>
-              <span className="sd-bc-detail-val">Polygon Mainnet</span>
+              <span className="sd-bc-detail-val">Ethereum Sepolia</span>
             </div>
             <div className="sd-bc-detail-row">
               <span>Địa chỉ ví:</span>
               <span className="sd-bc-detail-val" style={{ cursor: 'pointer' }} onClick={handleCopyWallet} title="Bấm để sao chép">
-                {copiedWallet ? 'Đã copy!' : '0xA3f2...9b7e'}
+                {copiedWallet ? 'Đã copy!' : (currentUser && currentUser.wallet_address ? currentUser.wallet_address.substring(0, 10) + '...' : '0xA3f2...9b7e')}
               </span>
             </div>
           </div>
-          <button className="sd-bc-btn">Xem chi tiết</button>
+          <button className="sd-bc-btn" onClick={() => alert('Smart contract address: 0x71C7656EC7ab88b098defB751B7401B5f6d8976F')}>Xem chi tiết</button>
         </div>
       </aside>
 
@@ -273,9 +256,6 @@ const SchoolDashboard = () => {
         <header className="sd-header">
           <div className="sd-header-left">
             <button className="sd-collapse-btn" onClick={() => setCollapsed(!collapsed)}>
-              <FaBars />
-            </button>
-            <button className="sd-btn-secondary" style={{ display: 'none' }} onClick={() => setMenuActive(true)}>
               <FaBars />
             </button>
           </div>
@@ -322,17 +302,6 @@ const SchoolDashboard = () => {
                       </div>
                     )}
                   </div>
-                  <div className="sd-notif-dropdown-footer">
-                    <button 
-                      className="sd-notif-dropdown-viewall" 
-                      onClick={() => {
-                        setShowNotifyDropdown(false);
-                        setActiveTab('notifications');
-                      }}
-                    >
-                      Xem tất cả thông báo
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
@@ -340,13 +309,15 @@ const SchoolDashboard = () => {
             <div className="sd-user-menu-container">
               <div className="sd-user-menu" onClick={() => setShowUserDropdown(!showUserDropdown)}>
                 <img 
-                  src={isOfficer ? "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150" : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150"} 
+                  src={(currentUser && currentUser.avatar_url) || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150"} 
                   alt="Avatar" 
                   className="sd-user-avatar" 
                 />
                 <div className="sd-user-info">
-                  <span className="sd-user-name">{isOfficer ? 'Lê Hoài Nam' : 'Nguyễn Văn An'}</span>
-                  <span className="sd-user-role">{isOfficer ? 'Cán bộ đào tạo' : 'Quản trị viên'}</span>
+                  <span className="sd-user-name">{(currentUser && currentUser.full_name) || 'Nguyễn Văn An'}</span>
+                  <span className="sd-user-role">
+                    {userRole === 'admin' ? 'Quản trị viên' : userRole === 'officer' ? 'Cán bộ đào tạo' : 'Quản lý nhà trường'}
+                  </span>
                 </div>
                 <FaChevronDown className="sd-user-chevron" />
               </div>
@@ -357,18 +328,12 @@ const SchoolDashboard = () => {
                     <FaUser className="sd-menu-icon" />
                     <span>Hồ sơ cá nhân</span>
                   </div>
-                  <div className="sd-dropdown-item" onClick={() => { setActiveTab('profile'); setShowUserDropdown(false); }}>
-                    <FaLock className="sd-menu-icon" />
-                    <span>Đổi mật khẩu</span>
+                  <div className="sd-dropdown-item" onClick={() => { setActiveTab('settings'); setShowUserDropdown(false); }}>
+                    <FaCog className="sd-menu-icon" />
+                    <span>Cài đặt</span>
                   </div>
-                  {!isOfficer && (
-                    <div className="sd-dropdown-item" onClick={() => { setActiveTab('settings'); setShowUserDropdown(false); }}>
-                      <FaCog className="sd-menu-icon" />
-                      <span>Cài đặt</span>
-                    </div>
-                  )}
                   <div className="sd-dropdown-divider"></div>
-                  <div className="sd-dropdown-item logout" onClick={() => { navigate('/login'); setShowUserDropdown(false); }}>
+                  <div className="sd-dropdown-item logout" onClick={handleLogout}>
                     <FaSignOutAlt className="sd-menu-icon" />
                     <span>Đăng xuất</span>
                   </div>

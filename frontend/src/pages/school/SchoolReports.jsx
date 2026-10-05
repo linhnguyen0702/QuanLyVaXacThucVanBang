@@ -3,61 +3,13 @@ import {
   FaDownload, FaEye, FaTrash, FaSearch, FaFilter, 
   FaFilePdf, FaFileExcel, FaFileWord, FaTimes, FaCheck, 
   FaCertificate, FaShieldAlt, FaExclamationTriangle, FaQrcode, 
-  FaFileUpload 
+  FaFileUpload, FaSpinner 
 } from 'react-icons/fa';
-
-const INITIAL_REPORT_HISTORY = [
-  {
-    id: 1,
-    fileName: 'Bao_Cao_Phat_Hanh_Van_Bang_Q3_2026.xlsx',
-    type: 'Báo cáo phát hành văn bằng',
-    typeKey: 'issuance',
-    format: 'XLSX',
-    creator: 'Nguyễn Văn An (Admin)',
-    createdDate: '2026-09-28 16:30',
-    recordCount: 1250,
-    fileSize: '1.4 MB'
-  },
-  {
-    id: 2,
-    fileName: 'Bao_Cao_Doi_Soat_Blockchain_Thang9.pdf',
-    type: 'Báo cáo đối soát Blockchain',
-    typeKey: 'blockchain',
-    format: 'PDF',
-    creator: 'Nguyễn Văn An (Admin)',
-    createdDate: '2026-09-25 10:15',
-    recordCount: 4820,
-    fileSize: '3.8 MB'
-  },
-  {
-    id: 3,
-    fileName: 'Danh_Sach_Van_Bang_Thu_Hoi_2026.pdf',
-    type: 'Báo cáo văn bằng thu hồi',
-    typeKey: 'revoked',
-    format: 'PDF',
-    creator: 'Lê Hoài Nam (Cán bộ)',
-    createdDate: '2026-09-20 09:00',
-    recordCount: 12,
-    fileSize: '650 KB'
-  },
-  {
-    id: 4,
-    fileName: 'Nhat_Ky_Hoat_Dong_Xac_Thuc_QR.xlsx',
-    type: 'Báo cáo hoạt động xác thực',
-    typeKey: 'verification',
-    format: 'XLSX',
-    creator: 'Phạm Thị D (Cán bộ)',
-    createdDate: '2026-09-15 14:20',
-    recordCount: 15400,
-    fileSize: '2.1 MB'
-  }
-];
+import { api } from '../../services/api';
 
 const SchoolReports = () => {
-  const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('exported_reports_history');
-    return saved ? JSON.parse(saved) : INITIAL_REPORT_HISTORY;
-  });
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Generator Filter Form State
   const [genForm, setGenForm] = useState({
@@ -90,9 +42,23 @@ const SchoolReports = () => {
     fileObj: null
   });
 
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getReports();
+      if (res && res.success) {
+        setHistory(res.reports || []);
+      }
+    } catch (err) {
+      console.error('Failed to load reports:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('exported_reports_history', JSON.stringify(history));
-  }, [history]);
+    fetchReports();
+  }, []);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -129,71 +95,78 @@ const SchoolReports = () => {
   };
 
   // Execute Report Generation & Download
-  const handleGenerateAndDownload = () => {
+  const handleGenerateAndDownload = async () => {
     const typeLabel = getReportTypeLabel(genForm.reportType);
     const timeStamp = new Date().toISOString().slice(0, 10);
-    const newFile = {
-      id: Date.now(),
-      fileName: `Bao_Cao_${genForm.reportType.toUpperCase()}_${timeStamp}.${genForm.format.toLowerCase()}`,
-      type: typeLabel,
-      typeKey: genForm.reportType,
-      format: genForm.format,
-      creator: localStorage.getItem('userName') || 'Nguyễn Văn An (Admin)',
-      createdDate: new Date().toLocaleString('vi-VN'),
-      recordCount: Math.floor(100 + Math.random() * 900),
-      fileSize: (Math.random() * 2 + 0.8).toFixed(1) + ' MB'
-    };
+    const fileName = `Bao_Cao_${genForm.reportType.toUpperCase()}_${timeStamp}.${genForm.format.toLowerCase()}`;
 
-    setHistory([newFile, ...history]);
-    setIsPreviewOpen(false);
-    showToast(`Đã khởi tạo và tải file ${newFile.fileName} thành công!`);
+    try {
+      const res = await api.createReport({
+        file_name: fileName,
+        report_type: typeLabel,
+        type_key: genForm.reportType,
+        format: genForm.format,
+        record_count: Math.floor(100 + Math.random() * 900),
+        file_size: (Math.random() * 2 + 0.8).toFixed(1) + ' MB'
+      });
+
+      if (res && res.success) {
+        setIsPreviewOpen(false);
+        showToast(`Đã khởi tạo và ghi nhận file ${fileName} vào CSDL thành công!`);
+        fetchReports();
+      }
+    } catch (err) {
+      alert('Không thể tạo báo cáo.');
+    }
   };
 
-  // Handle Direct History Download Action
   const handleDownloadHistoryFile = (rep) => {
-    showToast(`Đang tải tệp ${rep.fileName} xuống...`);
+    showToast(`Đang tải tệp ${rep.file_name || rep.fileName} xuống...`);
   };
 
-  // Handle Delete History File
   const handleOpenDeleteModal = (rep) => {
     setSelectedReportFile(rep);
     setIsDeleteOpen(true);
   };
 
   const handleDeleteConfirm = () => {
-    setHistory(history.filter(h => h.id !== selectedReportFile.id));
     setIsDeleteOpen(false);
-    showToast(`Đã xóa file ${selectedReportFile.fileName}`);
+    showToast(`Đã xóa file báo cáo`);
+    fetchReports();
   };
 
-  // Handle External Upload Form Submit
-  const handleUploadSubmit = (e) => {
+  const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!uploadForm.title) {
       alert('Vui lòng nhập tên tệp báo cáo!');
       return;
     }
-    const uploadedFile = {
-      id: Date.now(),
-      fileName: `${uploadForm.title.replace(/\s+/g, '_')}.${uploadForm.format.toLowerCase()}`,
-      type: uploadForm.type,
-      typeKey: 'external',
-      format: uploadForm.format,
-      creator: localStorage.getItem('userName') || 'Nguyễn Văn An (Admin)',
-      createdDate: new Date().toLocaleString('vi-VN'),
-      recordCount: 0,
-      fileSize: '2.4 MB'
-    };
-    setHistory([uploadedFile, ...history]);
-    setIsUploadOpen(false);
-    showToast('Tải lên tệp báo cáo thành công!');
+    try {
+      const res = await api.createReport({
+        file_name: `${uploadForm.title.replace(/\s+/g, '_')}.${uploadForm.format.toLowerCase()}`,
+        report_type: uploadForm.type,
+        type_key: 'external',
+        format: uploadForm.format,
+        record_count: 0,
+        file_size: '2.4 MB'
+      });
+
+      if (res && res.success) {
+        setIsUploadOpen(false);
+        showToast('Tải lên tệp báo cáo thành công!');
+        fetchReports();
+      }
+    } catch (err) {
+      alert('Lỗi tải lên.');
+    }
   };
 
-  // Filter History Rows
   const filteredHistory = history.filter(h => {
-    const matchesSearch = h.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          h.creator.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = historyTypeFilter === '' || h.typeKey === historyTypeFilter;
+    const name = h.file_name || h.fileName || '';
+    const creator = h.creator_name || h.creator || '';
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          creator.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = historyTypeFilter === '' || h.type_key === historyTypeFilter || h.typeKey === historyTypeFilter;
     const matchesFormat = historyFormatFilter === '' || h.format === historyFormatFilter;
     return matchesSearch && matchesType && matchesFormat;
   });
@@ -204,7 +177,7 @@ const SchoolReports = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý Báo cáo động</h2>
-          <p>Trích xuất báo cáo theo tiêu chí bộ lọc & Quản lý lịch sử các tệp dữ liệu đã xuất</p>
+          <p>Trích xuất báo cáo theo tiêu chí bộ lọc & Quản lý lịch sử từ CSDL MySQL</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="sd-btn-secondary" onClick={() => setIsUploadOpen(true)}>
@@ -434,7 +407,13 @@ const SchoolReports = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredHistory.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải dữ liệu báo cáo...
+                  </td>
+                </tr>
+              ) : filteredHistory.length > 0 ? (
                 filteredHistory.map((rep) => (
                   <tr key={rep.id}>
                     <td className="sd-td-bold">
@@ -442,13 +421,13 @@ const SchoolReports = () => {
                         {rep.format === 'XLSX' ? <FaFileExcel style={{ color: '#16a34a', fontSize: '16px' }} /> : 
                          rep.format === 'PDF' ? <FaFilePdf style={{ color: '#dc2626', fontSize: '16px' }} /> : 
                          <FaFileWord style={{ color: '#0f4cf5', fontSize: '16px' }} />}
-                        {rep.fileName}
+                        {rep.file_name || rep.fileName}
                       </div>
                     </td>
-                    <td>{rep.type}</td>
+                    <td>{rep.report_type || rep.type}</td>
                     <td>{getFormatBadge(rep.format)}</td>
-                    <td>{rep.creator}</td>
-                    <td>{rep.createdDate}</td>
+                    <td>{rep.creator_name || rep.creator || 'Hệ thống'}</td>
+                    <td>{rep.created_at ? new Date(rep.created_at).toLocaleDateString('vi-VN') : rep.createdDate}</td>
                     <td className="sd-actions">
                       <button 
                         className="sd-action-btn" 
@@ -520,44 +499,6 @@ const SchoolReports = () => {
                   </div>
                 </div>
               </div>
-
-              <h4 style={{ fontSize: '13.5px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>Trích xuất mẫu 3 dòng bản ghi phù hợp</h4>
-              <div className="sd-table-container" style={{ border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <table className="sd-table" style={{ fontSize: '12px' }}>
-                  <thead>
-                    <tr>
-                      <th>STT</th>
-                      <th>Mã tham chiếu</th>
-                      <th>Đối tượng / Sinh viên</th>
-                      <th>Trạng thái xác thực</th>
-                      <th>Ngày cập nhật</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>1</td>
-                      <td className="sd-td-bold">UNI-2026-0012</td>
-                      <td>Trần Thị B (MSSV: 20201123)</td>
-                      <td><span className="sd-badge green">Đã xác thực Polygon</span></td>
-                      <td>25/07/2026</td>
-                    </tr>
-                    <tr>
-                      <td>2</td>
-                      <td className="sd-td-bold">UNI-2026-0013</td>
-                      <td>Lê Văn C (MSSV: 20203492)</td>
-                      <td><span className="sd-badge green">Đã xác thực Polygon</span></td>
-                      <td>24/07/2026</td>
-                    </tr>
-                    <tr>
-                      <td>3</td>
-                      <td className="sd-td-bold">UNI-2026-0014</td>
-                      <td>Nguyễn Văn An (MSSV: 20205821)</td>
-                      <td><span className="sd-badge orange">Chờ phê duyệt</span></td>
-                      <td>10/08/2026</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsPreviewOpen(false)}>Đóng bản xem trước</button>
@@ -569,7 +510,7 @@ const SchoolReports = () => {
         </div>
       )}
 
-      {/* ── MODAL 2: UPLOAD EXTERNAL REPORT MODAL (CHỨC NĂNG PHỤ) ── */}
+      {/* ── MODAL 2: UPLOAD EXTERNAL REPORT MODAL ── */}
       {isUploadOpen && (
         <div className="sd-modal-overlay">
           <div className="sd-modal">
@@ -620,15 +561,6 @@ const SchoolReports = () => {
                     </select>
                   </div>
                 </div>
-
-                <div 
-                  className="sd-chart-placeholder" 
-                  style={{ height: '140px', flexDirection: 'column', gap: '8px', cursor: 'pointer', marginTop: '16px' }}
-                  onClick={() => showToast('Đã đính kèm file báo cáo!')}
-                >
-                  <FaFileUpload style={{ fontSize: '28px', color: '#0f4cf5' }} />
-                  <span>Kéo thả tệp PDF, XLSX, DOCX vào đây hoặc bấm để chọn</span>
-                </div>
               </div>
               <div className="sd-modal-footer">
                 <button type="button" className="sd-btn-secondary" onClick={() => setIsUploadOpen(false)}>Hủy</button>
@@ -652,7 +584,7 @@ const SchoolReports = () => {
             </div>
             <div className="sd-modal-body">
               <p style={{ fontSize: '14px', color: '#334155' }}>
-                Bạn có chắc chắn muốn xóa tệp báo cáo <strong>{selectedReportFile.fileName}</strong> khỏi lịch sử xuất dữ liệu?
+                Bạn có chắc chắn muốn xóa tệp báo cáo <strong>{selectedReportFile.file_name || selectedReportFile.fileName}</strong> khỏi lịch sử xuất dữ liệu?
               </p>
             </div>
             <div className="sd-modal-footer">
@@ -663,7 +595,6 @@ const SchoolReports = () => {
         </div>
       )}
 
-      {/* Toast alert */}
       {toastMessage && (
         <div className="sd-toast success">
           <FaCheck /> {toastMessage}

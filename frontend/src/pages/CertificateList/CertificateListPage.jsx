@@ -1,59 +1,32 @@
-import { useState } from 'react'
-import { FaSearch, FaFilter, FaCheckCircle, FaUserGraduate, FaUniversity, FaCalendarAlt, FaDownload, FaEye } from 'react-icons/fa'
+import { useState, useEffect } from 'react'
+import { FaSearch, FaFilter, FaCheckCircle, FaUserGraduate, FaUniversity, FaCalendarAlt, FaDownload, FaEye, FaSpinner } from 'react-icons/fa'
 import Footer from '../../components/Footer/Footer'
+import { api } from '../../services/api'
 import './CertificateListPage.css'
 
-const MOCK_CERTIFICATES = [
-  {
-    id: 'UNI2024-000123',
-    name: 'Nguyễn Thị Minh Châu',
-    degree: 'Kỹ sư Công nghệ thông tin',
-    school: 'Trường Đại học Công nghệ',
-    issueDate: '20/05/2024',
-    status: 'Đã ghi Blockchain',
-    verified: true
-  },
-  {
-    id: 'UNI2024-000124',
-    name: 'Trần Văn Đức',
-    degree: 'Cử nhân Quản trị kinh doanh',
-    school: 'Trường Đại học Kinh tế',
-    issueDate: '19/05/2024',
-    status: 'Đã ghi Blockchain',
-    verified: true
-  },
-  {
-    id: 'UNI2024-000125',
-    name: 'Lê Thị Hải Yến',
-    degree: 'Thạc sĩ Kiểm toán',
-    school: 'Trường Đại học Kinh tế',
-    issueDate: '18/05/2024',
-    status: 'Đã ghi Blockchain',
-    verified: true
-  },
-  {
-    id: 'UNI2024-000126',
-    name: 'Phạm Minh Tuấn',
-    degree: 'Kỹ sư Điện tử viễn thông',
-    school: 'Trường Đại học Bách khoa',
-    issueDate: '17/05/2024',
-    status: 'Đã ghi Blockchain',
-    verified: true
-  },
-  {
-    id: 'UNI2024-000127',
-    name: 'Hoàng Thị Mai',
-    degree: 'Cử nhân Ngôn ngữ Anh',
-    school: 'Trường Đại học Ngoại ngữ',
-    issueDate: '16/05/2024',
-    status: 'Đã ghi Blockchain',
-    verified: true
-  }
-]
-
 const CertificateListPage = () => {
+  const [certificates, setCertificates] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('')
   const [filterSchool, setFilterSchool] = useState('all')
+
+  const fetchCerts = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getCertificates({ search });
+      if (res && res.success) {
+        setCertificates(res.certificates || []);
+      }
+    } catch (err) {
+      console.error('Failed to load certificates:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCerts();
+  }, [search]);
 
   return (
     <div className="cert-list-page">
@@ -63,7 +36,7 @@ const CertificateListPage = () => {
           <div className="cert-list-header">
             <h1 className="cert-list-title">VĂN BẰNG MỚI CẤP</h1>
             <p className="cert-list-subtitle">
-              Danh sách văn bằng, chứng chỉ được cấp gần đây
+              Danh sách văn bằng, chứng chỉ được cấp gần đây từ CSDL MySQL & Blockchain
             </p>
           </div>
 
@@ -92,54 +65,61 @@ const CertificateListPage = () => {
           </div>
 
           {/* List */}
-          <div className="cert-list-grid">
-            {MOCK_CERTIFICATES.map((cert) => (
-              <div key={cert.id} className="cert-card">
-                <div className="cert-card-header">
-                  <div className="cert-card-avatar">
-                    <FaUserGraduate />
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+              <FaSpinner className="fa-spin" style={{ fontSize: '24px', marginBottom: '8px' }} /><br />
+              Đang tải danh sách văn bằng mới cấp...
+            </div>
+          ) : (
+            <div className="cert-list-grid">
+              {certificates.map((cert) => (
+                <div key={cert.id} className="cert-card">
+                  <div className="cert-card-header">
+                    <div className="cert-card-avatar">
+                      <FaUserGraduate />
+                    </div>
+                    <div className="cert-card-header-info">
+                      <div className="cert-card-name">{cert.student_name || cert.studentName}</div>
+                      <div className="cert-card-id">Mã VB: {cert.certificate_code || cert.code}</div>
+                    </div>
+                    {cert.status === 'issued' && (
+                      <FaCheckCircle className="cert-card-verified" />
+                    )}
                   </div>
-                  <div className="cert-card-header-info">
-                    <div className="cert-card-name">{cert.name}</div>
-                    <div className="cert-card-id">Mã VB: {cert.id}</div>
+                  <div className="cert-card-body">
+                    <div className="cert-card-row">
+                      <FaUserGraduate className="cert-card-icon" />
+                      <span className="cert-card-label">Văn bằng:</span>
+                      <span className="cert-card-value">{cert.major} ({cert.degree_type || 'Đại học'})</span>
+                    </div>
+                    <div className="cert-card-row">
+                      <FaUniversity className="cert-card-icon" />
+                      <span className="cert-card-label">Cơ sở:</span>
+                      <span className="cert-card-value">{cert.school_name || 'Trường Đại học Công nghệ'}</span>
+                    </div>
+                    <div className="cert-card-row">
+                      <FaCalendarAlt className="cert-card-icon" />
+                      <span className="cert-card-label">Ngày cấp:</span>
+                      <span className="cert-card-value">{cert.issue_date ? new Date(cert.issue_date).toLocaleDateString('vi-VN') : '2026-07-25'}</span>
+                    </div>
                   </div>
-                  {cert.verified && (
-                    <FaCheckCircle className="cert-card-verified" />
-                  )}
+                  <div className="cert-card-footer">
+                    <span className={`cert-status ${cert.status === 'issued' ? 'verified' : ''}`}>
+                      {cert.status === 'issued' ? 'Đã ghi Blockchain' : 'Đã xác thực'}
+                    </span>
+                    <div className="cert-card-actions">
+                      <button className="cert-action-btn view" onClick={() => alert(`Xem chi tiết văn bằng: ${cert.certificate_code || cert.code}`)}>
+                        <FaEye /> Xem
+                      </button>
+                      <button className="cert-action-btn download" onClick={() => alert('Đang tải bản PDF...')}>
+                        <FaDownload /> Tải
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="cert-card-body">
-                  <div className="cert-card-row">
-                    <FaUserGraduate className="cert-card-icon" />
-                    <span className="cert-card-label">Văn bằng:</span>
-                    <span className="cert-card-value">{cert.degree}</span>
-                  </div>
-                  <div className="cert-card-row">
-                    <FaUniversity className="cert-card-icon" />
-                    <span className="cert-card-label">Cơ sở:</span>
-                    <span className="cert-card-value">{cert.school}</span>
-                  </div>
-                  <div className="cert-card-row">
-                    <FaCalendarAlt className="cert-card-icon" />
-                    <span className="cert-card-label">Ngày cấp:</span>
-                    <span className="cert-card-value">{cert.issueDate}</span>
-                  </div>
-                </div>
-                <div className="cert-card-footer">
-                  <span className={`cert-status ${cert.verified ? 'verified' : ''}`}>
-                    {cert.status}
-                  </span>
-                  <div className="cert-card-actions">
-                    <button className="cert-action-btn view">
-                      <FaEye /> Xem
-                    </button>
-                    <button className="cert-action-btn download">
-                      <FaDownload /> Tải
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

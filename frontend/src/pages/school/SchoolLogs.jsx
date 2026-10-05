@@ -1,54 +1,39 @@
-import React, { useState } from 'react';
-import { FaSearch, FaTrash, FaDownload, FaCheck } from 'react-icons/fa';
-
-const INITIAL_LOGS = [
-  {
-    id: 1,
-    timestamp: '2026-09-30 14:05:32',
-    level: 'INFO',
-    eventCode: 'API_REQ_SUCCESS',
-    details: 'GET /api/v1/certificates?page=1 - Code 200 OK',
-    ip: '192.168.1.45'
-  },
-  {
-    id: 2,
-    timestamp: '2026-09-30 14:02:11',
-    level: 'SUCCESS',
-    eventCode: 'BC_TX_MINED',
-    details: 'Polygon block #1284723 mined transaction Hash 0xa3f2d9b7eC81452D819280dEAc429e81',
-    ip: 'System Process'
-  },
-  {
-    id: 3,
-    timestamp: '2026-09-30 13:58:00',
-    level: 'WARN',
-    eventCode: 'METAMASK_DISCONNECT',
-    details: 'User account 0xA3f2... manually disconnected from the wallet session',
-    ip: '192.168.1.102'
-  },
-  {
-    id: 4,
-    timestamp: '2026-09-29 18:22:15',
-    level: 'ERROR',
-    eventCode: 'AUTH_FAILED',
-    details: 'Failed login attempt for user user_unknown@school.edu.vn - Invalid password',
-    ip: '113.190.23.11'
-  },
-  {
-    id: 5,
-    timestamp: '2026-09-29 16:10:00',
-    level: 'SUCCESS',
-    eventCode: 'CERT_ISSUED',
-    details: 'Certificate UNI-2026-0012 issued for student Trần Thị B (MSSV: 20201123)',
-    ip: '192.168.1.45'
-  }
-];
+import React, { useState, useEffect } from 'react';
+import { FaSearch, FaTrash, FaDownload, FaCheck, FaSpinner } from 'react-icons/fa';
+import { api } from '../../services/api';
 
 const SchoolLogs = () => {
-  const [logs, setLogs] = useState(INITIAL_LOGS);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getVerificationLogs();
+      if (res && res.success) {
+        const mapped = (res.logs || []).map(l => ({
+          id: l.id,
+          timestamp: l.verified_at ? new Date(l.verified_at).toLocaleString('vi-VN') : 'Mới vừa xong',
+          level: l.verification_result ? 'SUCCESS' : 'ERROR',
+          eventCode: l.verification_method ? `VERIFY_${l.verification_method.toUpperCase()}` : 'VERIFY_REQUEST',
+          details: `Xác thực văn bằng '${l.certificate_code}': ${l.student_name ? 'Sinh viên ' + l.student_name : 'Tra cứu CSDL'}`,
+          ip: l.verifier_ip || '127.0.0.1'
+        }));
+        setLogs(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to load logs:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -71,9 +56,9 @@ const SchoolLogs = () => {
   };
 
   const handleClearLogs = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xoá toàn bộ nhật ký hệ thống?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xoá hiển thị nhật ký hệ thống?')) {
       setLogs([]);
-      showToast('Đã xoá sạch nhật ký hệ thống.');
+      showToast('Đã làm sạch nhật ký.');
     }
   };
 
@@ -90,7 +75,7 @@ const SchoolLogs = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Nhật ký hệ thống & Audit Logs</h2>
-          <p>Ghi nhận các sự kiện máy chủ, hoạt động người dùng và trạng thái hợp đồng thông minh</p>
+          <p>Ghi nhận hoạt động tra cứu, xác thực và các sự kiện từ CSDL MySQL</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="sd-btn-secondary" onClick={() => showToast('Đã xuất file log hệ thống!')}>
@@ -137,7 +122,13 @@ const SchoolLogs = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải dữ liệu nhật ký...
+                  </td>
+                </tr>
+              ) : filteredLogs.length > 0 ? (
                 filteredLogs.map(log => (
                   <tr key={log.id}>
                     <td>{log.timestamp}</td>

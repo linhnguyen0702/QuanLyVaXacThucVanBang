@@ -1,25 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaBook, FaUserGraduate, FaSearch, 
-  FaEye, FaEdit, FaTrash, FaTimes, FaCheck 
+  FaEye, FaEdit, FaTrash, FaTimes, FaCheck, FaSpinner 
 } from 'react-icons/fa';
-
-const INITIAL_PROGRAMS = [
-  { id: 1, code: 'CTDT-CNTT-01', name: 'Công nghệ thông tin', sub: 'Chương trình chuẩn', dept: 'Khoa Công nghệ thông tin', system: 'Đại học chính quy', duration: '4 năm', status: 'active', count: '2.856' },
-  { id: 2, code: 'CTDT-ATPM-01', name: 'Kỹ thuật phần mềm', sub: 'Chương trình chuẩn', dept: 'Khoa Công nghệ thông tin', system: 'Đại học chính quy', duration: '4 năm', status: 'active', count: '1.928' },
-  { id: 3, code: 'CTDT-HTTT-01', name: 'Hệ thống thông tin', sub: 'Chương trình chuẩn', dept: 'Khoa Công nghệ thông tin', system: 'Đại học chính quy', duration: '4 năm', status: 'active', count: '1.256' },
-  { id: 4, code: 'CTDT-ATTT-01', name: 'An toàn thông tin', sub: 'Chương trình tiên tiến', dept: 'Khoa Công nghệ thông tin', system: 'Đại học chính quy', duration: '4 năm', status: 'active', count: '842' },
-  { id: 5, code: 'CTDT-QTKD-01', name: 'Quản trị kinh doanh', sub: 'Chương trình chuẩn', dept: 'Khoa Kinh tế', system: 'Đại học chính quy', duration: '4 năm', status: 'active', count: '3.102' },
-  { id: 6, code: 'CTDT-KT-01', name: 'Kế toán', sub: 'Chương trình chuẩn', dept: 'Khoa Kinh tế', system: 'Đại học chính quy', duration: '4 năm', status: 'active', count: '2.348' },
-  { id: 7, code: 'CTDT-NNANH-01', name: 'Ngôn ngữ Anh', sub: 'Chương trình chuẩn', dept: 'Khoa Ngoại ngữ', system: 'Đại học chính quy', duration: '4 năm', status: 'paused', count: '512' }
-];
+import { api } from '../../services/api';
 
 const SchoolPrograms = () => {
-  const [programs, setPrograms] = useState(() => {
-    const saved = localStorage.getItem('school_programs');
-    return saved ? JSON.parse(saved) : INITIAL_PROGRAMS;
-  });
-
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -36,16 +24,34 @@ const SchoolPrograms = () => {
   const [formData, setFormData] = useState({
     code: '',
     name: '',
-    sub: 'Chương trình chuẩn',
+    sub: '',
     dept: 'Khoa Công nghệ thông tin',
     system: 'Đại học chính quy',
-    duration: '4 năm',
+    duration: '',
     status: 'active'
   });
 
+  const fetchPrograms = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getPrograms({
+        search: searchQuery,
+        department: deptFilter,
+        status: statusFilter
+      });
+      if (res && res.success) {
+        setPrograms(res.programs || []);
+      }
+    } catch (err) {
+      console.error('Failed to load programs:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('school_programs', JSON.stringify(programs));
-  }, [programs]);
+    fetchPrograms();
+  }, [searchQuery, deptFilter, statusFilter]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -58,50 +64,90 @@ const SchoolPrograms = () => {
       case 'paused': return { label: 'Tạm dừng', class: 'orange' };
       case 'completed': return { label: 'Đã hoàn tất', class: 'purple' };
       case 'stopped': return { label: 'Đã dừng', class: 'red' };
-      default: return { label: 'Không xác định', class: 'gray' };
+      default: return { label: 'Đang đào tạo', class: 'green' };
     }
   };
 
   const handleOpenAdd = () => {
     setFormData({
-      code: `CTDT-${Math.floor(100 + Math.random() * 900)}`,
+      code: '',
       name: '',
-      sub: 'Chương trình chuẩn',
+      sub: '',
       dept: 'Khoa Công nghệ thông tin',
       system: 'Đại học chính quy',
-      duration: '4 năm',
+      duration: '',
       status: 'active'
     });
     setIsAddOpen(true);
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.code) {
       alert('Vui lòng nhập tên và mã chương trình!');
       return;
     }
-    const newProg = {
-      id: Date.now(),
-      ...formData,
-      count: '0'
-    };
-    setPrograms([newProg, ...programs]);
-    setIsAddOpen(false);
-    showToast('Thêm chương trình đào tạo thành công!');
+
+    try {
+      const res = await api.createProgram({
+        program_code: formData.code,
+        program_name: formData.name,
+        sub_name: formData.sub,
+        department: formData.dept,
+        education_system: formData.system,
+        duration: formData.duration,
+        status: formData.status
+      });
+
+      if (res && res.success) {
+        setIsAddOpen(false);
+        showToast('Thêm chương trình đào tạo thành công!');
+        fetchPrograms();
+      } else {
+        alert(res.message || 'Lỗi thêm mới.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
 
   const handleOpenEdit = (prog) => {
     setSelectedProg(prog);
-    setFormData({ ...prog });
+    setFormData({
+      code: prog.program_code || prog.code,
+      name: prog.program_name || prog.name,
+      sub: prog.sub_name || prog.sub || 'Chương trình chuẩn',
+      dept: prog.department || prog.dept,
+      system: prog.education_system || prog.system || 'Đại học chính quy',
+      duration: prog.duration,
+      status: prog.status
+    });
     setIsEditOpen(true);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setPrograms(programs.map(p => p.id === selectedProg.id ? { ...p, ...formData } : p));
-    setIsEditOpen(false);
-    showToast('Cập nhật chương trình thành công!');
+    if (!selectedProg) return;
+    try {
+      const res = await api.updateProgram(selectedProg.id, {
+        program_code: formData.code,
+        program_name: formData.name,
+        sub_name: formData.sub,
+        department: formData.dept,
+        education_system: formData.system,
+        duration: formData.duration,
+        status: formData.status
+      });
+      if (res && res.success) {
+        setIsEditOpen(false);
+        showToast('Cập nhật chương trình thành công!');
+        fetchPrograms();
+      } else {
+        alert(res.message || 'Lỗi cập nhật chương trình.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
 
   const handleOpenView = (prog) => {
@@ -114,26 +160,28 @@ const SchoolPrograms = () => {
     setIsDeleteOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setPrograms(programs.filter(p => p.id !== selectedProg.id));
-    setIsDeleteOpen(false);
-    showToast(`Đã xóa chương trình ${selectedProg.name}`);
+  const handleDeleteConfirm = async () => {
+    if (!selectedProg) return;
+    try {
+      const res = await api.deleteProgram(selectedProg.id);
+      if (res && res.success) {
+        setIsDeleteOpen(false);
+        showToast(`Đã xóa chương trình đào tạo thành công!`);
+        fetchPrograms();
+      } else {
+        alert(res.message || 'Lỗi xóa chương trình.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
-
-  const filteredPrograms = programs.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDept = deptFilter === '' || p.dept === deptFilter;
-    const matchesStatus = statusFilter === '' || p.status === statusFilter;
-    return matchesSearch && matchesDept && matchesStatus;
-  });
 
   return (
     <div className="sd-view">
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Chương trình đào tạo</h2>
-          <p>Quản lý các chương trình đào tạo & cấp bằng của nhà trường</p>
+          <p>Quản lý các chương trình đào tạo & cấp bằng của nhà trường từ CSDL MySQL</p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Thêm chương trình
@@ -147,7 +195,7 @@ const SchoolPrograms = () => {
             <span className="sd-stat-label">Tổng số chương trình</span>
             <div className="sd-stat-val-row">
               <span className="sd-stat-value">{programs.length}</span>
-              <span className="sd-stat-badge green">Mới cập nhật</span>
+              <span className="sd-stat-badge green">Trong Database</span>
             </div>
           </div>
         </div>
@@ -206,23 +254,29 @@ const SchoolPrograms = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredPrograms.length > 0 ? (
-                filteredPrograms.map((row) => {
+              {loading ? (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải danh sách chương trình...
+                  </td>
+                </tr>
+              ) : programs.length > 0 ? (
+                programs.map((row) => {
                   const stat = getStatusLabel(row.status);
                   return (
                     <tr key={row.id}>
-                      <td className="sd-td-bold">{row.code}</td>
+                      <td className="sd-td-bold">{row.program_code || row.code}</td>
                       <td>
-                        <div className="sd-td-bold">{row.name}</div>
-                        <div className="sd-td-subtext">{row.sub}</div>
+                        <div className="sd-td-bold">{row.program_name || row.name}</div>
+                        <div className="sd-td-subtext">{row.sub_name || row.sub}</div>
                       </td>
-                      <td>{row.dept}</td>
-                      <td>{row.system}</td>
+                      <td>{row.department || row.dept}</td>
+                      <td>{row.education_system || row.system}</td>
                       <td>{row.duration}</td>
                       <td>
                         <span className={`sd-badge ${stat.class}`}>{stat.label}</span>
                       </td>
-                      <td className="sd-td-bold">{row.count}</td>
+                      <td className="sd-td-bold">{row.issued_count || row.count || 0}</td>
                       <td className="sd-actions">
                         <button className="sd-action-btn" title="Xem" onClick={() => handleOpenView(row)}><FaEye /></button>
                         <button className="sd-action-btn" title="Sửa" onClick={() => handleOpenEdit(row)}><FaEdit /></button>
@@ -263,6 +317,7 @@ const SchoolPrograms = () => {
                       type="text" 
                       className="sd-input" 
                       required 
+                      placeholder="Ví dụ: CTDT-CNTT-01"
                       value={formData.code} 
                       onChange={(e) => setFormData({...formData, code: e.target.value})} 
                     />
@@ -273,7 +328,7 @@ const SchoolPrograms = () => {
                       type="text" 
                       className="sd-input" 
                       required 
-                      placeholder="Công nghệ thông tin"
+                      placeholder="Ví dụ: Công nghệ thông tin"
                       value={formData.name} 
                       onChange={(e) => setFormData({...formData, name: e.target.value})} 
                     />
@@ -283,7 +338,7 @@ const SchoolPrograms = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
-                      placeholder="Chương trình chuẩn"
+                      placeholder="Ví dụ: Chương trình chuẩn"
                       value={formData.sub} 
                       onChange={(e) => setFormData({...formData, sub: e.target.value})} 
                     />
@@ -310,6 +365,7 @@ const SchoolPrograms = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="Ví dụ: 4 năm"
                       value={formData.duration} 
                       onChange={(e) => setFormData({...formData, duration: e.target.value})} 
                     />
@@ -334,14 +390,14 @@ const SchoolPrograms = () => {
         </div>
       )}
 
-      {/* ── EDIT MODAL (IDENTICAL FULL FORM AS CREATE MODAL) ── */}
+      {/* ── EDIT MODAL ── */}
       {isEditOpen && selectedProg && (
         <div className="sd-modal-overlay">
           <div className="sd-modal large">
             <div className="sd-modal-header">
               <div className="sd-modal-title">
                 <div className="sd-modal-icon-badge"><FaEdit /></div>
-                <h3>Sửa chương trình {selectedProg.code}</h3>
+                <h3>Sửa chương trình {selectedProg.program_code || selectedProg.code}</h3>
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsEditOpen(false)}><FaTimes /></button>
             </div>
@@ -439,27 +495,27 @@ const SchoolPrograms = () => {
                 <div className="sd-detail-grid">
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Mã chương trình:</span>
-                    <span className="sd-detail-value">{selectedProg.code}</span>
+                    <span className="sd-detail-value">{selectedProg.program_code || selectedProg.code}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Tên chương trình:</span>
-                    <span className="sd-detail-value">{selectedProg.name}</span>
+                    <span className="sd-detail-value">{selectedProg.program_name || selectedProg.name}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Loại chương trình:</span>
-                    <span className="sd-detail-value">{selectedProg.sub}</span>
+                    <span className="sd-detail-value">{selectedProg.sub_name || selectedProg.sub}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Khoa trực thuộc:</span>
-                    <span className="sd-detail-value">{selectedProg.dept}</span>
+                    <span className="sd-detail-value">{selectedProg.department || selectedProg.dept}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Hệ đào tạo:</span>
-                    <span className="sd-detail-value">{selectedProg.system} ({selectedProg.duration})</span>
+                    <span className="sd-detail-value">{selectedProg.education_system || selectedProg.system} ({selectedProg.duration})</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Số bằng đã cấp:</span>
-                    <span className="sd-detail-value">{selectedProg.count}</span>
+                    <span className="sd-detail-value">{selectedProg.issued_count || selectedProg.count || 0}</span>
                   </div>
                 </div>
               </div>
@@ -484,7 +540,7 @@ const SchoolPrograms = () => {
             </div>
             <div className="sd-modal-body">
               <p style={{ fontSize: '14px', color: '#334155' }}>
-                Bạn có chắc chắn muốn xóa chương trình <strong>{selectedProg.name}</strong> ({selectedProg.code})?
+                Bạn có chắc chắn muốn xóa chương trình <strong>{selectedProg.program_name || selectedProg.name}</strong> ({selectedProg.program_code || selectedProg.code})?
               </p>
             </div>
             <div className="sd-modal-footer">

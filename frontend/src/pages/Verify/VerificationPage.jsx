@@ -11,16 +11,47 @@ import {
   FaSearch,
   FaBell,
   FaDatabase,
+  FaSpinner,
+  FaExclamationTriangle,
+  FaTimesCircle,
+  FaUniversity,
+  FaUserGraduate,
+  FaCalendarAlt,
+  FaExternalLinkAlt
 } from "react-icons/fa";
-
+import { api } from "../../services/api";
 import "./VerificationPage.css";
 
 const VerificationPage = () => {
-  const [activeTab, setActiveTab] = useState("qr");
+  const [activeTab, setActiveTab] = useState("code");
   const [certificateCode, setCertificateCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleVerify = () => {
-    console.log(certificateCode);
+  const handleVerify = async () => {
+    if (!certificateCode.trim()) {
+      setErrorMsg("Vui lòng nhập mã văn bằng, mã sinh viên hoặc chuỗi mã Hash.");
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+    setErrorMsg("");
+
+    try {
+      const data = await api.verifyCertificate(certificateCode.trim());
+      setLoading(false);
+
+      if (data && data.success) {
+        setResult(data);
+      } else {
+        setErrorMsg(data.message || "Không tìm thấy văn bằng trong cơ sở dữ liệu.");
+      }
+    } catch (err) {
+      setLoading(false);
+      setErrorMsg("Không thể kết nối đến máy chủ Backend (http://localhost:5000). Vui lòng đảm bảo Server Backend đang hoạt động.");
+    }
   };
 
   return (
@@ -32,52 +63,48 @@ const VerificationPage = () => {
           <svg width="180" height="180" viewBox="0 0 24 24" fill="none">
             <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M9 11L11 13L15 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-            <line x1="5" y1="8" x2="19" y2="8" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2"/>
-            <line x1="5" y1="15" x2="19" y2="15" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2"/>
-          </svg>
-        </div>
-        <div className="banner-watermark watermark-right">
-          <svg width="240" height="240" viewBox="0 0 200 200" fill="none">
-            <g transform="translate(130, 30)">
-              <path d="M30 0L60 15V45L30 60L0 45V15L30 0Z" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M30 0V60" stroke="currentColor" strokeWidth="1"/>
-              <path d="M0 15L30 30L60 15" stroke="currentColor" strokeWidth="1"/>
-            </g>
-            <g transform="translate(110, 110)">
-              <path d="M30 0L60 15V45L30 60L0 45V15L30 0Z" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M30 0V60" stroke="currentColor" strokeWidth="1"/>
-              <path d="M0 15L30 30L60 15" stroke="currentColor" strokeWidth="1"/>
-            </g>
-            <g transform="translate(40, 70)">
-              <path d="M30 0L60 15V45L30 60L0 45V15L30 0Z" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M30 0V60" stroke="currentColor" strokeWidth="1"/>
-              <path d="M0 15L30 30L60 15" stroke="currentColor" strokeWidth="1"/>
-            </g>
-            <path d="M70 100L130 60" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4"/>
-            <path d="M70 100L110 140" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4"/>
-            <path d="M160 90L140 110" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 4"/>
           </svg>
         </div>
         <div className="banner-content">
           <h1>XÁC THỰC VĂN BẰNG, CHỨNG CHỈ SỐ</h1>
-          <p>Kiểm tra tính xác thực của văn bằng, chứng chỉ được cấp trên hệ thống Blockchain</p>
+          <p>Kiểm tra tính xác thực trực tiếp từ CSDL nhà trường và hệ thống Blockchain Polygon/Sepolia</p>
         </div>
       </div>
 
-      {/* ── 2-COLUMN LAYOUT: main | guide+notice ── */}
+      {/* ── 2-COLUMN LAYOUT ── */}
       <div className="vp-layout">
 
-        {/* ── MIDDLE: verify card ── */}
+        {/* ── LEFT/MIDDLE: verify card ── */}
         <div className="vp-main">
           <div className="verify-card">
             <div className="tabs">
-              <button className={activeTab === "qr" ? "active" : ""} onClick={() => setActiveTab("qr")}>
-                <FaQrcode className="tab-icon" /> Quét mã QR
-              </button>
               <button className={activeTab === "code" ? "active" : ""} onClick={() => setActiveTab("code")}>
                 <FaKeyboard className="tab-icon" /> Nhập mã xác thực
               </button>
+              <button className={activeTab === "qr" ? "active" : ""} onClick={() => setActiveTab("qr")}>
+                <FaQrcode className="tab-icon" /> Quét mã QR
+              </button>
             </div>
+
+            {activeTab === "code" && (
+              <div className="code-section">
+                <h3 className="code-section-title">Nhập mã xác thực văn bằng</h3>
+                <p className="code-section-desc">Vui lòng nhập mã văn bằng (Ví dụ: <strong>UNI-2026-0012</strong>), mã sinh viên (<strong>20201123</strong>) hoặc mã băm Hash để kiểm tra.</p>
+                <div className="input-group">
+                  <input
+                    type="text"
+                    placeholder="VD: UNI-2026-0012 hoặc 20201123"
+                    value={certificateCode}
+                    onChange={(e) => setCertificateCode(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                  />
+                </div>
+                <button className="verify-btn" onClick={handleVerify} disabled={loading}>
+                  {loading ? <FaSpinner className="fa-spin" /> : <FaSearch className="btn-icon" />}
+                  {loading ? ' Đang kiểm tra CSDL...' : ' Xác thực ngay'}
+                </button>
+              </div>
+            )}
 
             {activeTab === "qr" && (
               <div className="qr-section">
@@ -91,44 +118,119 @@ const VerificationPage = () => {
                     <svg className="qr-placeholder-svg" width="120" height="120" viewBox="0 0 24 24" fill="none">
                       <path d="M3 9V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                       <path d="M21 9V5C21 3.89543 20.1046 3 19 3H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      <path d="M3 15V19C3 20.1046 3.89543 21 5 21H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      <path d="M21 15V19C21 20.1046 20.1046 21 19 21H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                       <rect x="6" y="6" width="4" height="4" stroke="currentColor" strokeWidth="2"/>
                       <rect x="14" y="6" width="4" height="4" stroke="currentColor" strokeWidth="2"/>
-                      <rect x="6" y="14" width="4" height="4" stroke="currentColor" strokeWidth="2"/>
-                      <rect x="14" y="14" width="2" height="2" fill="currentColor"/>
-                      <rect x="16" y="16" width="2" height="2" fill="currentColor"/>
-                      <rect x="14" y="16" width="2" height="2" fill="currentColor"/>
-                      <rect x="16" y="14" width="2" height="2" fill="currentColor"/>
                     </svg>
                   </div>
                 </div>
                 <h3 className="qr-instruction-title">Đưa mã QR vào khung quét</h3>
                 <p className="qr-instruction-desc">
-                  Hệ thống sẽ tự động nhận diện và xác thực thông tin văn bằng, chứng chỉ.
+                  Hệ thống sẽ tự động nhận diện mã băm Hash và đối soát trực tiếp dữ liệu.
                 </p>
                 <div className="divider"><span>HOẶC</span></div>
-                <button className="upload-btn">
+                <button className="upload-btn" onClick={() => alert('Vui lòng nhập mã văn bằng ở tab "Nhập mã xác thực" để tra cứu nhanh.')}>
                   <FaUpload className="btn-icon" /> Chọn ảnh QR từ thiết bị
                 </button>
               </div>
             )}
 
-            {activeTab === "code" && (
-              <div className="code-section">
-                <h3 className="code-section-title">Nhập mã xác thực văn bằng</h3>
-                <p className="code-section-desc">Vui lòng nhập chính xác mã xác thực được in trên văn bằng, chứng chỉ để thực hiện kiểm tra.</p>
-                <div className="input-group">
-                  <input
-                    type="text"
-                    placeholder="VD: UNI2024-000123"
-                    value={certificateCode}
-                    onChange={(e) => setCertificateCode(e.target.value)}
-                  />
+            {/* Error Message Alert */}
+            {errorMsg && (
+              <div style={{
+                marginTop: '20px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fca5a5',
+                color: '#991b1b',
+                padding: '14px 18px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <FaTimesCircle style={{ fontSize: '20px', flexShrink: 0 }} />
+                <div>
+                  <strong>Tra cứu thất bại:</strong> {errorMsg}
                 </div>
-                <button className="verify-btn" onClick={handleVerify}>
-                  <FaSearch className="btn-icon" /> Xác thực ngay
-                </button>
+              </div>
+            )}
+
+            {/* Verification Result Display */}
+            {result && result.certificate && (
+              <div style={{
+                marginTop: '24px',
+                padding: '20px',
+                borderRadius: '12px',
+                backgroundColor: result.isRevoked ? '#fef2f2' : '#f0fdf4',
+                border: `2px solid ${result.isRevoked ? '#ef4444' : '#22c55e'}`,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  {result.isRevoked ? (
+                    <FaExclamationTriangle style={{ fontSize: '32px', color: '#ef4444' }} />
+                  ) : (
+                    <FaCheckCircle style={{ fontSize: '32px', color: '#22c55e' }} />
+                  )}
+                  <div>
+                    <h3 style={{ margin: 0, color: result.isRevoked ? '#991b1b' : '#15803d', fontSize: '18px' }}>
+                      {result.message}
+                    </h3>
+                    <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                      Mã tra cứu: <strong>{result.certificate.certificate_code}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '12px',
+                  backgroundColor: '#ffffff',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}>
+                  <div>
+                    <span style={{ color: '#6b7280', display: 'block', fontSize: '12px' }}>Họ và tên sinh viên:</span>
+                    <strong style={{ color: '#111827', fontSize: '15px' }}>{result.certificate.student_name}</strong>
+                  </div>
+
+                  <div>
+                    <span style={{ color: '#6b7280', display: 'block', fontSize: '12px' }}>Mã sinh viên:</span>
+                    <strong>{result.certificate.student_code}</strong>
+                  </div>
+
+                  <div>
+                    <span style={{ color: '#6b7280', display: 'block', fontSize: '12px' }}>Trường cấp bằng:</span>
+                    <strong>{result.certificate.school_name}</strong>
+                  </div>
+
+                  <div>
+                    <span style={{ color: '#6b7280', display: 'block', fontSize: '12px' }}>Ngành đào tạo:</span>
+                    <strong>{result.certificate.major}</strong>
+                  </div>
+
+                  <div>
+                    <span style={{ color: '#6b7280', display: 'block', fontSize: '12px' }}>Loại văn bằng / Xếp loại:</span>
+                    <strong>{result.certificate.degree_type} - {result.certificate.classification} (GPA: {result.certificate.gpa})</strong>
+                  </div>
+
+                  <div>
+                    <span style={{ color: '#6b7280', display: 'block', fontSize: '12px' }}>Ngày cấp / Quyết định:</span>
+                    <strong>{new Date(result.certificate.issue_date).toLocaleDateString('vi-VN')} ({result.certificate.decision_number})</strong>
+                  </div>
+                </div>
+
+                {result.blockchainVerification && (
+                  <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #cbd5e1', fontSize: '12px', color: '#475569' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FaShieldAlt style={{ color: '#3b82f6' }} />
+                      <span><strong>Blockchain Network:</strong> {result.blockchainVerification.network}</span>
+                    </div>
+                    <div style={{ wordBreak: 'break-all', marginTop: '4px' }}>
+                      <strong>Transaction Hash:</strong> {result.blockchainVerification.txHash}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

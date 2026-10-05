@@ -4,6 +4,7 @@ import {
   FaShieldAlt, FaBell, FaChevronDown, FaBars, FaTimes,
   FaChartPie, FaGraduationCap, FaUser, FaLock, FaSignOutAlt 
 } from 'react-icons/fa';
+import { api } from '../../services/api';
 import './StudentDashboard.css';
 
 // Sub-components
@@ -12,49 +13,6 @@ import StudentCertificates from './StudentCertificates';
 import StudentNotifications from './StudentNotifications';
 import StudentProfile from './StudentProfile';
 import StudentPassword from './StudentPassword';
-
-// Initial Mock Data
-const INITIAL_CERTIFICATES = [
-  {
-    id: "UNI-2026-0012",
-    type: "Bằng Tốt Nghiệp Đại Học",
-    title: "Cử nhân Công nghệ thông tin",
-    school: "Trường Đại học Bách Khoa",
-    gpa: "3.62 / 4.0 (Xuất sắc)",
-    issueDate: "25/07/2026",
-    status: "blockchain",
-    txHash: "0x7f23a8c2d5e9b7eC81452D819280dEAc429ef993cc65319e75c8d0e5124b892a",
-    blockNumber: "14890251",
-    blockchainTime: "25/07/2026 14:32:08",
-    qrCode: "UNI20260012"
-  },
-  {
-    id: "CERT-2026-098",
-    type: "Chứng Chỉ Tiếng Anh",
-    title: "IELTS Academic (7.5)",
-    school: "Trung tâm Khảo thí Quốc tế IDP",
-    gpa: "Band 7.5",
-    issueDate: "12/06/2026",
-    status: "blockchain",
-    txHash: "0x3f5da1e2d9b6e987c8a817293de7c4892fb671a938cde99281a8b273ce99120e",
-    blockNumber: "14758209",
-    blockchainTime: "12/06/2026 09:15:43",
-    qrCode: "CERT2026098"
-  },
-  {
-    id: "CERT-2026-115",
-    type: "Chứng chỉ Kỹ năng",
-    title: "Chứng nhận Lập trình Web nâng cao",
-    school: "Viện Đào tạo Công nghệ thông tin",
-    gpa: "Hoàn thành xuất sắc",
-    issueDate: "05/08/2026",
-    status: "approve",
-    txHash: "",
-    blockNumber: "",
-    blockchainTime: "",
-    qrCode: "CERT2026115"
-  }
-];
 
 const INITIAL_NOTIFICATIONS = [
   {
@@ -72,35 +30,8 @@ const INITIAL_NOTIFICATIONS = [
     time: "15 ngày trước",
     type: "blockchain",
     unread: false
-  },
-  {
-    id: "N3",
-    title: "Cấp chứng chỉ khóa học mới",
-    desc: "Chứng nhận khóa học 'Lập trình Web nâng cao' của bạn đã được Viện Đào tạo Công nghệ thông tin phê duyệt cấp phát.",
-    time: "5 ngày trước",
-    type: "approve",
-    unread: true
-  },
-  {
-    id: "N4",
-    title: "Chứng chỉ IELTS được liên kết",
-    desc: "Hệ thống đã cập nhật thành công chữ ký số và mã QR xác thực cho chứng chỉ tiếng Anh IELTS Academic của bạn.",
-    time: "2 tháng trước",
-    type: "issue",
-    unread: false
   }
 ];
-
-const INITIAL_PROFILE = {
-  name: "Nguyễn Văn An",
-  id: "20201123",
-  class: "CNTT-01 K65",
-  major: "Công nghệ thông tin",
-  department: "Khoa Công nghệ thông tin & Truyền thông",
-  email: "annv@student.edu.vn",
-  phone: "0368 251 814",
-  avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150"
-};
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -110,39 +41,68 @@ const StudentDashboard = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifyDropdown, setShowNotifyDropdown] = useState(false);
 
-  // Shared States initialized from localStorage
+  // User profile state loaded from logged-in user or localStorage
   const [profileData, setProfileData] = useState(() => {
-    const saved = localStorage.getItem('student_profile');
-    return saved ? JSON.parse(saved) : INITIAL_PROFILE;
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      const u = JSON.parse(savedUser);
+      return {
+        name: u.full_name || "Sinh viên",
+        id: u.student_code || "20201123",
+        class: u.class_name || "CNTT-01 K65",
+        major: u.department || "Công nghệ thông tin",
+        department: u.department || "Khoa Công nghệ thông tin",
+        email: u.email || "student@school.edu.vn",
+        phone: u.phone || "0368 251 814",
+        avatar: u.avatar_url || "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150"
+      };
+    }
+    return {
+      name: "Trần Thị B",
+      id: "20201123",
+      class: "CNTT-01 K65",
+      major: "Công nghệ thông tin",
+      department: "Khoa Công nghệ thông tin",
+      email: "tranthib@school.edu.vn",
+      phone: "0368 251 814",
+      avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150"
+    };
   });
 
-  const [certificates] = useState(() => {
-    const saved = localStorage.getItem('student_certificates');
-    return saved ? JSON.parse(saved) : INITIAL_CERTIFICATES;
-  });
+  const [certificates, setCertificates] = useState([]);
 
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('student_notifications');
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
-  });
-
-  // State coordination for linking overview shortcuts to details modal in certificates tab
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [selectedCert, setSelectedCert] = useState(null);
   const [showCertModal, setShowCertModal] = useState(false);
 
+  // Fetch student certificates from Backend API
   useEffect(() => {
-    localStorage.setItem('student_profile', JSON.stringify(profileData));
-  }, [profileData]);
+    const fetchStudentCerts = async () => {
+      try {
+        const res = await api.getCertificates();
+        if (res && res.success && res.certificates) {
+          const mapped = res.certificates.map(c => ({
+            id: c.certificate_code,
+            type: `Bằng Tốt Nghiệp ${c.degree_type || 'Đại học'}`,
+            title: `Cử nhân ${c.major}`,
+            school: c.school_name || "Trường Đại học Công nghệ",
+            gpa: `${c.gpa || '3.65'} (${c.classification || 'Xuất sắc'})`,
+            issueDate: c.issue_date ? new Date(c.issue_date).toLocaleDateString('vi-VN') : '25/07/2026',
+            status: c.status === 'issued' ? 'blockchain' : 'approve',
+            txHash: c.blockchain_tx_hash || '0x7f23a8c2d5e9b7eC81452D819280dEAc429ef993cc65319e75c8d0e5124b892a',
+            blockNumber: '14890251',
+            blockchainTime: c.issue_date ? new Date(c.issue_date).toLocaleString('vi-VN') : '25/07/2026',
+            qrCode: c.certificate_code
+          }));
+          setCertificates(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to load student certificates:', err);
+      }
+    };
+    fetchStudentCerts();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('student_certificates', JSON.stringify(certificates));
-  }, [certificates]);
-
-  useEffect(() => {
-    localStorage.setItem('student_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
-  // Notifications logic
   const handleMarkAsRead = (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
   };
@@ -157,6 +117,13 @@ const StudentDashboard = () => {
 
   const handleUpdateProfile = (updatedFields) => {
     setProfileData(prev => ({ ...prev, ...updatedFields }));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    navigate('/login');
   };
 
   const unreadCount = notifications.filter(n => n.unread).length;
@@ -300,16 +267,7 @@ const StudentDashboard = () => {
         {/* Header */}
         <header className="std-header">
           <div className="std-header-left">
-            {/* Desktop toggle */}
             <button className="std-collapse-btn" onClick={() => setCollapsed(!collapsed)}>
-              <FaBars />
-            </button>
-            {/* Mobile menu trigger */}
-            <button 
-              className="std-collapse-btn" 
-              style={{ display: 'none' }} // Style overrides standard styling, but handled via CSS media queries
-              onClick={() => setMenuActive(true)}
-            >
               <FaBars />
             </button>
           </div>
@@ -396,7 +354,7 @@ const StudentDashboard = () => {
                     <span>Đổi mật khẩu</span>
                   </div>
                   <div className="std-dropdown-divider"></div>
-                  <div className="std-dropdown-item logout" onClick={() => { navigate('/login'); setShowUserDropdown(false); }}>
+                  <div className="std-dropdown-item logout" onClick={handleLogout}>
                     <FaSignOutAlt className="std-menu-icon" />
                     <span>Đăng xuất</span>
                   </div>

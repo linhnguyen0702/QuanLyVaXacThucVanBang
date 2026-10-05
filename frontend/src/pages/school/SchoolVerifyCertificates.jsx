@@ -1,29 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FaShieldAlt, FaClock, FaCheckCircle, FaTimes, FaSpinner,
   FaFileSignature, FaDatabase, FaKey, FaLink, FaExternalLinkAlt, 
   FaCheck, FaInfoCircle
 } from 'react-icons/fa';
+import { api } from '../../services/api';
 import './SchoolVerifyCertificates.css';
 
-// Initial pending certificates list
-const INITIAL_PENDING = [
-  { code: 'UNI-2026-0105', studentName: 'Nguyễn Thị Thu Thảo', studentId: '20220091', program: 'Kỹ thuật phần mềm', class: 'K67', rank: 'Xuất sắc', dob: '14/05/2004', system: 'Chính quy' },
-  { code: 'UNI-2026-0106', studentName: 'Phạm Văn Hoàng', studentId: '20220184', program: 'Công nghệ thông tin', class: 'K67', rank: 'Giỏi', dob: '22/11/2004', system: 'Chính quy' },
-  { code: 'UNI-2026-0107', studentName: 'Bùi Minh Anh', studentId: '20220472', program: 'Hệ thống thông tin', class: 'K67', rank: 'Khá', dob: '05/02/2004', system: 'Chính quy' },
-  { code: 'UNI-2026-0108', studentName: 'Đặng Hoàng Long', studentId: '20220511', program: 'An toàn thông tin', class: 'K67', rank: 'Giỏi', dob: '19/08/2004', system: 'Chính quy' },
-  { code: 'UNI-2026-0109', studentName: 'Vũ Minh Thuỷ', studentId: '20220803', program: 'Khoa học máy tính', class: 'K67', rank: 'Xuất sắc', dob: '30/10/2004', system: 'Chính quy' }
-];
-
-// Initial blockchain logs history
-const INITIAL_HISTORY = [
-  { code: 'UNI-2026-0012', studentName: 'Trần Thị B', program: 'Công nghệ thông tin', txHash: '0x3a4b9c1d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b', timestamp: '25/07/2026 09:14', block: 42895612 },
-  { code: 'UNI-2026-0013', studentName: 'Lê Văn C', program: 'Kỹ thuật phần mềm', txHash: '0x8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b', timestamp: '24/07/2026 14:30', block: 42894105 }
-];
-
 const SchoolVerifyCertificates = () => {
-  const [pendingList, setPendingList] = useState(INITIAL_PENDING);
-  const [historyList, setHistoryList] = useState(INITIAL_HISTORY);
+  const [pendingList, setPendingList] = useState([]);
+  const [historyList, setHistoryList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCert, setSelectedCert] = useState(null);
   
   // Modals state
@@ -33,6 +20,48 @@ const SchoolVerifyCertificates = () => {
   const [successResult, setSuccessResult] = useState(null);
   const [approvedToday, setApprovedToday] = useState(12);
   const [gasSpent, setGasSpent] = useState(1015295);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getCertificates();
+      if (res && res.success && res.certificates) {
+        const history = res.certificates.map(c => ({
+          code: c.certificate_code,
+          studentName: c.student_name,
+          program: c.major,
+          txHash: c.blockchain_tx_hash || '0x3a4b9c1d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b',
+          timestamp: c.issue_date ? new Date(c.issue_date).toLocaleString('vi-VN') : '25/07/2026',
+          block: c.blockchain_certificate_id || 42895612
+        }));
+        setHistoryList(history);
+
+        // Fetch students for pending approval list
+        const stdRes = await api.getStudents({ status: 'eligible' });
+        if (stdRes && stdRes.success && stdRes.students) {
+          const pending = stdRes.students.map((s, idx) => ({
+            code: `UNI-2026-0${105 + idx}`,
+            studentName: s.full_name,
+            studentId: s.student_code,
+            program: s.department,
+            class: s.class_name,
+            rank: 'Xuất sắc',
+            dob: s.date_of_birth ? new Date(s.date_of_birth).toLocaleDateString('vi-VN') : '14/05/2004',
+            system: 'Chính quy'
+          }));
+          setPendingList(pending);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load certificates for verification:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleOpenApprove = (cert) => {
     setSelectedCert(cert);
@@ -52,26 +81,42 @@ const SchoolVerifyCertificates = () => {
     alert('Người dùng đã từ chối giao dịch ký số.');
   };
 
-  const handleConfirmSignature = () => {
+  const handleConfirmSignature = async () => {
     setShowMetaMask(false);
     setIsProcessing(true);
     setProcessStep(0);
 
     // Step 1: Calculate Hash
-    setTimeout(() => {
+    setTimeout(async () => {
       setProcessStep(1);
-      // Step 2: Send transaction to blockchain
-      setTimeout(() => {
+      // Step 2: Send transaction to backend/blockchain
+      setTimeout(async () => {
         setProcessStep(2);
         // Step 3: Wait for confirmation
-        setTimeout(() => {
+        setTimeout(async () => {
           setProcessStep(3);
           
-          // Generate mock tx data
           const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
           const blockNum = Math.floor(Math.random() * 50000) + 42900000;
-          const cleanDate = new Date();
-          const timestampStr = `${cleanDate.getDate().toString().padStart(2, '0')}/${(cleanDate.getMonth()+1).toString().padStart(2, '0')}/${cleanDate.getFullYear()} ${cleanDate.getHours().toString().padStart(2, '0')}:${cleanDate.getMinutes().toString().padStart(2, '0')}`;
+          const timestampStr = new Date().toLocaleString('vi-VN');
+
+          try {
+            await api.createCertificate({
+              certificate_code: selectedCert.code,
+              student_code: selectedCert.studentId,
+              student_name: selectedCert.studentName,
+              major: selectedCert.program,
+              degree_type: 'Đại học',
+              education_mode: 'Chính quy',
+              gpa: '3.65',
+              classification: selectedCert.rank,
+              issue_date: new Date().toISOString().split('T')[0],
+              decision_number: 'QĐ-125/QĐ-ĐH',
+              blockchain_tx_hash: txHash
+            });
+          } catch (e) {
+            console.error('Failed to save approved cert to DB:', e);
+          }
 
           const updatedCert = {
             ...selectedCert,
@@ -80,9 +125,7 @@ const SchoolVerifyCertificates = () => {
             timestamp: timestampStr
           };
 
-          // Remove from pending
           setPendingList(prev => prev.filter(item => item.code !== selectedCert.code));
-          // Add to history
           setHistoryList(prev => [
             {
               code: selectedCert.code,
@@ -95,21 +138,19 @@ const SchoolVerifyCertificates = () => {
             ...prev
           ]);
 
-          // Update stats
           setApprovedToday(prev => prev + 1);
           setGasSpent(prev => prev + 84150);
 
           setSuccessResult(updatedCert);
           setIsProcessing(false);
-        }, 1500);
-      }, 1200);
-    }, 1000);
+        }, 1200);
+      }, 1000);
+    }, 800);
   };
 
   const handleBatchApprove = () => {
     if (pendingList.length === 0) return;
-    if (window.confirm(`Bạn có chắc chắn muốn phê duyệt đồng loạt ${pendingList.length} văn bằng và đẩy lên Blockchain?`)) {
-      // Simulate batch approval
+    if (window.confirm(`Bạn có chắc chắn muốn phê duyệt đồng loạt ${pendingList.length} văn bằng và đẩy lên CSDL/Blockchain?`)) {
       setIsProcessing(true);
       setProcessStep(0);
       setTimeout(() => {
@@ -118,10 +159,7 @@ const SchoolVerifyCertificates = () => {
           setProcessStep(2);
           setTimeout(() => {
             setProcessStep(3);
-            
-            // Map all pending to history
-            const cleanDate = new Date();
-            const timestampStr = `${cleanDate.getDate().toString().padStart(2, '0')}/${(cleanDate.getMonth()+1).toString().padStart(2, '0')}/${cleanDate.getFullYear()} ${cleanDate.getHours().toString().padStart(2, '0')}:${cleanDate.getMinutes().toString().padStart(2, '0')}`;
+            const timestampStr = new Date().toLocaleString('vi-VN');
             
             const newHistoryItems = pendingList.map((cert, idx) => {
               const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
@@ -140,10 +178,10 @@ const SchoolVerifyCertificates = () => {
             setGasSpent(prev => prev + (pendingList.length * 79500));
             setPendingList([]);
             setIsProcessing(false);
-            alert(`Đã phê duyệt và đẩy thành công ${newHistoryItems.length} văn bằng lên Blockchain Polygon Mainnet!`);
-          }, 1500);
-        }, 1200);
-      }, 1000);
+            alert(`Đã phê duyệt và đồng bộ thành công ${newHistoryItems.length} văn bằng lên CSDL và Sepolia/Polygon!`);
+          }, 1200);
+        }, 1000);
+      }, 800);
     }
   };
 
@@ -153,7 +191,7 @@ const SchoolVerifyCertificates = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Phê duyệt & Xác thực văn bằng</h2>
-          <p>Ký số số hiệu và xuất bản văn bằng số đã tạo lên sổ cái Blockchain để kích hoạt tra cứu công khai</p>
+          <p>Ký số và đẩy văn bằng lên CSDL MySQL & Blockchain Sepolia để kích hoạt tra cứu công khai</p>
         </div>
         <button 
           className="sd-btn-primary" 
@@ -180,7 +218,7 @@ const SchoolVerifyCertificates = () => {
         <div className="sd-stat-card">
           <div className="sd-stat-icon-box green" style={{ backgroundColor: '#f0fdf4', color: '#16a34a' }}><FaCheckCircle /></div>
           <div className="sd-stat-content">
-            <span className="sd-stat-label">Đã xuất bản Blockchain hôm nay</span>
+            <span className="sd-stat-label">Đã xuất bản hôm nay</span>
             <div className="sd-stat-val-row">
               <span className="sd-stat-value">+{approvedToday}</span>
               <span className="sd-stat-badge green">Hoạt động tốt</span>
@@ -203,7 +241,7 @@ const SchoolVerifyCertificates = () => {
       <div className="svc-main-card">
         <div className="svc-header-row">
           <div className="svc-card-title" style={{ margin: 0 }}>Danh sách văn bằng chờ duyệt ký Blockchain</div>
-          <div className="sd-td-subtext">Danh sách sinh viên vừa hoàn thành chương trình đào tạo, đã cấp phôi bằng nội bộ.</div>
+          <div className="sd-td-subtext">Danh sách sinh viên vừa hoàn thành chương trình đào tạo.</div>
         </div>
 
         <div className="sd-table-container">
@@ -220,7 +258,13 @@ const SchoolVerifyCertificates = () => {
               </tr>
             </thead>
             <tbody>
-              {pendingList.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải danh sách chờ phê duyệt...
+                  </td>
+                </tr>
+              ) : pendingList.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
                     <FaCheckCircle style={{ color: '#10b981', fontSize: '30px', marginBottom: '10px' }} />
@@ -277,7 +321,7 @@ const SchoolVerifyCertificates = () => {
                 <th>Số hiệu</th>
                 <th>Sinh viên</th>
                 <th>Chương trình</th>
-                <th>Transaction Hash (Polygon)</th>
+                <th>Transaction Hash (Ethereum Sepolia)</th>
                 <th>Khối ghi nhận</th>
                 <th>Thời gian đăng ký</th>
                 <th>Trạng thái</th>
@@ -321,17 +365,14 @@ const SchoolVerifyCertificates = () => {
             </div>
             
             <div className="svc-modal-body">
-              {/* If signing is not successful yet */}
               {!successResult ? (
                 <>
                   <div className="sd-td-subtext" style={{ margin: 0 }}>
                     <FaInfoCircle style={{ color: '#0f4cf5', marginRight: '6px' }} />
-                    Dưới đây là phôi bản dịch văn bằng nội bộ. Việc phê duyệt sẽ băm mật mã và tải chữ ký pháp lý của trường lên blockchain Polygon.
+                    Dưới đây là phôi bản dịch văn bằng nội bộ. Việc phê duyệt sẽ băm mật mã và lưu trữ dữ liệu lên CSDL MySQL & Blockchain.
                   </div>
 
-                  {/* Diploma Template Preview */}
                   <div className="svc-diploma-preview">
-                    {/* Watermark SVG background */}
                     <div className="svc-diploma-watermark">
                       <FaShieldAlt size={160} />
                     </div>
@@ -344,45 +385,32 @@ const SchoolVerifyCertificates = () => {
                     <div className="svc-diploma-title">BẰNG CỬ NHÂN</div>
 
                     <div className="svc-diploma-body">
-                      Hiệu trưởng **TRƯỜNG ĐẠI HỌC CÔNG NGHỆ VÀ PHÁT TRIỂN** <br />
+                      Hiệu trưởng **TRƯỜNG ĐẠI HỌC CÔNG NGHỆ** <br />
                       Cấp cho sinh viên: **{selectedCert.studentName}** <br />
                       Sinh ngày: **{selectedCert.dob}** • Hệ đào tạo: **{selectedCert.system}** <br />
                       Đã hoàn thành chương trình đào tạo ngành: **{selectedCert.program}** <br />
                       Xếp loại tốt nghiệp: **{selectedCert.rank}** <br />
                       Mã số hiệu lưu trữ: **{selectedCert.code}**
                     </div>
-
-                    <div className="svc-diploma-footer">
-                      <div className="svc-diploma-seal-spot">
-                        <div className="svc-diploma-seal">ĐHQG HÀ NỘI<br/>DỰ THẢO</div>
-                      </div>
-                      <div className="svc-diploma-sign">
-                        Hà Nội, ngày cấp {selectedCert.dob.split('/')[0]} tháng 07 năm 2026 <br />
-                        **HIỆU TRƯỞNG** <br />
-                        <span style={{ fontStyle: 'italic', fontSize: '11px', color: '#94a3b8' }}>[Đang chờ chữ ký số của ví đại diện]</span>
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Blockchain Sign info */}
                   <div className="svc-blockchain-data">
                     <div className="svc-bc-row">
                       <span className="svc-bc-label"><FaKey /> Ví ký phát hành đại diện:</span>
-                      <span className="svc-bc-value">0xA3f2d9b7eC81452D819280dEAc429e</span>
+                      <span className="svc-bc-value">0xA3f2d9b7eC81452D819280dEAc429e81</span>
                     </div>
                     <div className="svc-bc-row">
                       <span className="svc-bc-label"><FaDatabase /> Mạng lưới phát hành:</span>
-                      <span className="sd-badge green" style={{ fontSize: '10.5px' }}>Polygon Mainnet (Lớp 2)</span>
+                      <span className="sd-badge green" style={{ fontSize: '10.5px' }}>Ethereum Sepolia Testnet</span>
                     </div>
                   </div>
                 </>
               ) : (
-                // If approval successfully pushed to Blockchain
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', textAlign: 'center', padding: '20px 0' }}>
                   <FaCheckCircle style={{ fontSize: '60px', color: '#10b981' }} />
                   <div>
-                    <h3 className="svc-modal-title" style={{ color: '#10b981', fontSize: '20px' }}>PHÊ DUYỆT & ĐĂNG KÝ BLOCKCHAIN THÀNH CÔNG</h3>
-                    <p className="sd-td-subtext" style={{ marginTop: '8px' }}>Văn bằng của sinh viên <strong>{successResult.studentName}</strong> đã được lưu trữ bất biến trên mạng Polygon.</p>
+                    <h3 className="svc-modal-title" style={{ color: '#10b981', fontSize: '20px' }}>PHÊ DUYỆT & ĐĂNG KÝ CSDL & BLOCKCHAIN THÀNH CÔNG</h3>
+                    <p className="sd-td-subtext" style={{ marginTop: '8px' }}>Văn bằng của sinh viên <strong>{successResult.studentName}</strong> đã được lưu trữ vào CSDL MySQL và Blockchain.</p>
                   </div>
 
                   <div className="svc-blockchain-data" style={{ width: '100%', borderLeft: '4px solid #10b981' }}>
@@ -398,21 +426,7 @@ const SchoolVerifyCertificates = () => {
                       <span className="svc-bc-label">Khối ghi nhận:</span>
                       <span className="svc-bc-value">#{successResult.blockNum}</span>
                     </div>
-                    <div className="svc-bc-row">
-                      <span className="svc-bc-label">Mã băm bằng (Cert Hash):</span>
-                      <span className="svc-bc-value" style={{ width: '220px' }}>0x11223344556677889900aabbccddeeff0011223344556677889900aabbccddee</span>
-                    </div>
                   </div>
-
-                  <a 
-                    href={`https://polygonscan.com/tx/${successResult.txHash}`} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="sd-btn-secondary" 
-                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    Kiểm tra giao dịch trên Polygonscan <FaExternalLinkAlt style={{ fontSize: '11px' }} />
-                  </a>
                 </div>
               )}
             </div>
@@ -448,41 +462,16 @@ const SchoolVerifyCertificates = () => {
           <div className="svc-metamask-card">
             <div className="svc-mm-header">
               <div className="svc-mm-logo-area">
-                {/* Simulated Orange Fox Logo (MetaMask) */}
-                <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-                  <path d="M29.8 4.2L20.4 12L23 5L29.8 4.2Z" fill="#E17726"/>
-                  <path d="M2.2 4.2L11.6 12L9 5L2.2 4.2Z" fill="#E17726"/>
-                  <path d="M26.2 22.4L20.4 27.6L20.8 19.8L26.2 22.4Z" fill="#E17726"/>
-                  <path d="M5.8 22.4L11.6 27.6L11.2 19.8L5.8 22.4Z" fill="#E17726"/>
-                  <path d="M12.6 12L16 18.2L19.4 12H12.6Z" fill="#E17726"/>
-                  <path d="M20.8 19.8L16 23.4L11.2 19.8L16 17.6L20.8 19.8Z" fill="#F6851B"/>
-                  <path d="M26.2 22.4L29.6 17.6L24.6 16.4L26.2 22.4Z" fill="#D7C1B1"/>
-                  <path d="M5.8 22.4L2.4 17.6L7.4 16.4L5.8 22.4Z" fill="#D7C1B1"/>
-                  <path d="M16 1.8L21.4 8.6L16 9.6L10.6 8.6L16 1.8Z" fill="#E2761B"/>
-                </svg>
-                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e293b' }}>MetaMask</span>
+                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e293b' }}>MetaMask Wallet</span>
               </div>
-              <div className="svc-mm-net-badge">Polygon Mainnet</div>
+              <div className="svc-mm-net-badge">Ethereum Sepolia</div>
             </div>
             
             <div className="svc-mm-body">
               <div className="svc-mm-account">Ví quản trị: 0xA3f2...9b7e</div>
               <FaShieldAlt style={{ fontSize: '40px', color: '#f97316' }} />
               <div className="svc-mm-title">Yêu cầu ký chữ ký số</div>
-              <div className="svc-mm-desc">Bạn đang thực hiện ký số phê duyệt giao dịch Smart Contract để phát hành và đẩy dữ liệu băm văn bằng lên mạng lưới blockchain.</div>
-              
-              <div className="svc-mm-box">
-                {`{
-  "contract": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "method": "issueDiploma",
-  "data": {
-    "code": "${selectedCert?.code}",
-    "name": "${selectedCert?.studentName}",
-    "rank": "${selectedCert?.rank}",
-    "hash": "0x11223344556677889900aabbccddeeff0011223344556677889900aabbccddee"
-  }
-}`}
-              </div>
+              <div className="svc-mm-desc">Xác nhận ký số phôi bằng {selectedCert?.code} và đẩy lên CSDL hệ thống.</div>
             </div>
 
             <div className="svc-mm-footer">
@@ -499,8 +488,8 @@ const SchoolVerifyCertificates = () => {
           <div className="svc-modal" style={{ maxWidth: '480px', padding: '30px' }}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <FaSpinner className="fa-spin" style={{ fontSize: '40px', color: '#0f4cf5', marginBottom: '12px' }} />
-              <h4 className="svc-modal-title">Đang ghi sổ Blockchain</h4>
-              <p className="sd-td-subtext">Đang tương tác với các Node trên Polygon Mainnet. Vui lòng giữ kết nối Internet ổn định.</p>
+              <h4 className="svc-modal-title">Đang lưu CSDL & Blockchain</h4>
+              <p className="sd-td-subtext">Vui lòng chờ trong giây lát...</p>
             </div>
 
             <div className="svc-steps-card">
@@ -518,7 +507,7 @@ const SchoolVerifyCertificates = () => {
                   {processStep > 1 ? <FaCheck /> : '2'}
                 </div>
                 <span className={`svc-step-text ${processStep < 1 ? 'pending' : processStep === 1 ? 'active' : 'done'}`}>
-                  Gửi chữ ký số ví lên Smart Contract
+                  Gửi dữ liệu ghi vào CSDL MySQL & Smart Contract
                 </span>
               </div>
 
@@ -527,7 +516,7 @@ const SchoolVerifyCertificates = () => {
                   {processStep > 2 ? <FaCheck /> : '3'}
                 </div>
                 <span className={`svc-step-text ${processStep < 2 ? 'pending' : processStep === 2 ? 'active' : 'done'}`}>
-                  Đang đợi thợ đào khai thác khối...
+                  Đã ghi nhận khối thành công
                 </span>
               </div>
             </div>

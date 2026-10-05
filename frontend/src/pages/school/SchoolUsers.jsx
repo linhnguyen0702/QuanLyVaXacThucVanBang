@@ -1,48 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaEdit, FaTrash, FaUser, FaSearch, 
-  FaTimes, FaCheck 
+  FaTimes, FaCheck, FaSpinner 
 } from 'react-icons/fa';
-
-const INITIAL_USERS = [
-  {
-    id: 1,
-    fullName: 'Nguyễn Văn An',
-    email: 'annv@school.edu.vn',
-    department: 'Phòng Đào tạo',
-    role: 'admin',
-    roleLabel: 'Quản trị viên',
-    status: 'active',
-    lastLogin: '2026-09-30 08:30'
-  },
-  {
-    id: 2,
-    fullName: 'Phạm Thị D',
-    email: 'dpt@school.edu.vn',
-    department: 'Phòng Đào tạo',
-    role: 'officer',
-    roleLabel: 'Cán bộ nhập liệu',
-    status: 'active',
-    lastLogin: '2026-09-29 14:15'
-  },
-  {
-    id: 3,
-    fullName: 'Hoàng Văn E',
-    email: 'ehv@school.edu.vn',
-    department: 'Khoa CNTT',
-    role: 'viewer',
-    roleLabel: 'Nhân viên tra cứu',
-    status: 'inactive',
-    lastLogin: '2026-08-12 10:00'
-  }
-];
+import { api } from '../../services/api';
 
 const SchoolUsers = () => {
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem('school_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
@@ -58,14 +23,31 @@ const SchoolUsers = () => {
     fullName: '',
     email: '',
     password: '',
-    department: 'Phòng Đào tạo',
+    department: '',
     role: 'officer',
     status: 'active'
   });
 
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getUsers({
+        search: searchQuery,
+        role: roleFilter
+      });
+      if (res && res.success) {
+        setUsers(res.users || []);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách người dùng:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('school_users', JSON.stringify(users));
-  }, [users]);
+    fetchUsers();
+  }, [searchQuery, roleFilter]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -90,51 +72,73 @@ const SchoolUsers = () => {
       fullName: '',
       email: '',
       password: '',
-      department: 'Phòng Đào tạo',
+      department: '',
       role: 'officer',
       status: 'active'
     });
     setIsAddOpen(true);
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.fullName || !formData.email) {
       alert('Vui lòng nhập họ tên và email!');
       return;
     }
-    const roleLabels = { admin: 'Quản trị viên', officer: 'Cán bộ nhập liệu', viewer: 'Nhân viên tra cứu' };
-    const newUser = {
-      id: Date.now(),
-      ...formData,
-      roleLabel: roleLabels[formData.role] || 'Người dùng',
-      lastLogin: 'Chưa đăng nhập'
-    };
-    setUsers([newUser, ...users]);
-    setIsAddOpen(false);
-    showToast('Thêm người dùng mới thành công!');
+    try {
+      const res = await api.register({
+        email: formData.email,
+        password: formData.password || '123456',
+        full_name: formData.fullName,
+        role: formData.role,
+        department: formData.department
+      });
+
+      if (res && res.success) {
+        setIsAddOpen(false);
+        showToast('Thêm người dùng mới vào CSDL thành công!');
+        fetchUsers();
+      } else {
+        alert(res.message || 'Lỗi tạo tài khoản.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
 
   const handleOpenEdit = (user) => {
     setSelectedUser(user);
-    setFormData({ ...user, password: '' });
+    setFormData({
+      fullName: user.full_name || user.fullName,
+      email: user.email,
+      password: '',
+      department: user.department || 'Phòng Đào tạo',
+      role: user.role,
+      status: user.is_active ? 'active' : 'inactive'
+    });
     setIsEditOpen(true);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    const roleLabels = { admin: 'Quản trị viên', officer: 'Cán bộ nhập liệu', viewer: 'Nhân viên tra cứu' };
-    setUsers(users.map(u => u.id === selectedUser.id ? { 
-      ...u, 
-      fullName: formData.fullName, 
-      email: formData.email, 
-      department: formData.department,
-      role: formData.role,
-      roleLabel: roleLabels[formData.role] || u.roleLabel,
-      status: formData.status
-    } : u));
-    setIsEditOpen(false);
-    showToast('Cập nhật người dùng thành công!');
+    if (!selectedUser) return;
+    try {
+      const res = await api.updateUser(selectedUser.id, {
+        full_name: formData.fullName,
+        email: formData.email,
+        department: formData.department,
+        role: formData.role
+      });
+      if (res && res.success) {
+        setIsEditOpen(false);
+        showToast('Cập nhật người dùng thành công!');
+        fetchUsers();
+      } else {
+        alert(res.message || 'Lỗi cập nhật người dùng.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
 
   const handleOpenDelete = (user) => {
@@ -142,25 +146,28 @@ const SchoolUsers = () => {
     setIsDeleteOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setUsers(users.filter(u => u.id !== selectedUser.id));
-    setIsDeleteOpen(false);
-    showToast(`Đã xóa tài khoản ${selectedUser.fullName}`);
+  const handleDeleteConfirm = async () => {
+    if (!selectedUser) return;
+    try {
+      const res = await api.deleteUser(selectedUser.id);
+      if (res && res.success) {
+        setIsDeleteOpen(false);
+        showToast(`Đã xóa tài khoản thành công!`);
+        fetchUsers();
+      } else {
+        alert(res.message || 'Lỗi xóa tài khoản.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
-
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          u.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === '' || u.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
 
   return (
     <div className="sd-view">
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý người dùng</h2>
-          <p>Danh sách các cán bộ, nhân viên được cấp quyền truy cập hệ thống</p>
+          <p>Danh sách các cán bộ, nhân viên được cấp quyền truy cập hệ thống từ CSDL MySQL</p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Thêm người dùng
@@ -198,26 +205,30 @@ const SchoolUsers = () => {
                 <th>Bộ phận</th>
                 <th>Vai trò</th>
                 <th>Trạng thái</th>
-                <th>Đăng nhập cuối</th>
                 <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map(user => (
+              {loading ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải dữ liệu tài khoản...
+                  </td>
+                </tr>
+              ) : users.length > 0 ? (
+                users.map(user => (
                   <tr key={user.id}>
-                    <td className="sd-td-bold">{user.fullName}</td>
+                    <td className="sd-td-bold">{user.full_name || user.fullName}</td>
                     <td>{user.email}</td>
-                    <td>{user.department}</td>
+                    <td>{user.department || 'Phòng Đào tạo'}</td>
                     <td>{getRoleBadge(user.role)}</td>
                     <td>
-                      {user.status === 'active' ? (
+                      {user.is_active || user.status === 'active' ? (
                         <span className="sd-badge green">Hoạt động</span>
                       ) : (
                         <span className="sd-badge red">Tạm khóa</span>
                       )}
                     </td>
-                    <td>{user.lastLogin}</td>
                     <td className="sd-actions">
                       <button className="sd-action-btn" title="Chỉnh sửa" onClick={() => handleOpenEdit(user)}>
                         <FaEdit />
@@ -230,7 +241,7 @@ const SchoolUsers = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
                     Không tìm thấy người dùng phù hợp.
                   </td>
                 </tr>
@@ -281,7 +292,7 @@ const SchoolUsers = () => {
                     <input 
                       type="password" 
                       className="sd-input" 
-                      placeholder="••••••••"
+                      placeholder="Mặc định: 123456"
                       value={formData.password} 
                       onChange={(e) => setFormData({...formData, password: e.target.value})} 
                     />
@@ -291,6 +302,7 @@ const SchoolUsers = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="Ví dụ: Phòng Đào tạo"
                       value={formData.department} 
                       onChange={(e) => setFormData({...formData, department: e.target.value})} 
                     />
@@ -301,13 +313,6 @@ const SchoolUsers = () => {
                       <option value="admin">Quản trị viên (Admin)</option>
                       <option value="officer">Cán bộ nhập liệu</option>
                       <option value="viewer">Nhân viên tra cứu</option>
-                    </select>
-                  </div>
-                  <div className="sd-form-group">
-                    <label>Trạng thái</label>
-                    <select className="sd-input" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                      <option value="active">Hoạt động</option>
-                      <option value="inactive">Tạm khóa</option>
                     </select>
                   </div>
                 </div>
@@ -321,14 +326,14 @@ const SchoolUsers = () => {
         </div>
       )}
 
-      {/* ── EDIT USER MODAL (IDENTICAL FULL FORM AS CREATE MODAL) ── */}
+      {/* ── EDIT USER MODAL ── */}
       {isEditOpen && selectedUser && (
         <div className="sd-modal-overlay">
           <div className="sd-modal">
             <div className="sd-modal-header">
               <div className="sd-modal-title">
                 <div className="sd-modal-icon-badge"><FaEdit /></div>
-                <h3>Sửa người dùng {selectedUser.fullName}</h3>
+                <h3>Sửa người dùng {selectedUser.full_name || selectedUser.fullName}</h3>
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsEditOpen(false)}><FaTimes /></button>
             </div>
@@ -356,16 +361,6 @@ const SchoolUsers = () => {
                     />
                   </div>
                   <div className="sd-form-group">
-                    <label>Đổi mật khẩu mới (Nếu có)</label>
-                    <input 
-                      type="password" 
-                      className="sd-input" 
-                      placeholder="Để trống nếu không đổi..."
-                      value={formData.password} 
-                      onChange={(e) => setFormData({...formData, password: e.target.value})} 
-                    />
-                  </div>
-                  <div className="sd-form-group">
                     <label>Bộ phận / Phòng ban</label>
                     <input 
                       type="text" 
@@ -380,13 +375,6 @@ const SchoolUsers = () => {
                       <option value="admin">Quản trị viên (Admin)</option>
                       <option value="officer">Cán bộ nhập liệu</option>
                       <option value="viewer">Nhân viên tra cứu</option>
-                    </select>
-                  </div>
-                  <div className="sd-form-group">
-                    <label>Trạng thái</label>
-                    <select className="sd-input" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                      <option value="active">Hoạt động</option>
-                      <option value="inactive">Tạm khóa</option>
                     </select>
                   </div>
                 </div>
@@ -413,7 +401,7 @@ const SchoolUsers = () => {
             </div>
             <div className="sd-modal-body">
               <p style={{ fontSize: '14px', color: '#334155' }}>
-                Bạn có chắc chắn muốn xóa tài khoản của <strong>{selectedUser.fullName}</strong> ({selectedUser.email})?
+                Bạn có chắc chắn muốn xóa tài khoản của <strong>{selectedUser.full_name || selectedUser.fullName}</strong> ({selectedUser.email})?
               </p>
             </div>
             <div className="sd-modal-footer">

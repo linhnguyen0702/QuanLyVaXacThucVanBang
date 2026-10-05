@@ -1,54 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaUserGraduate, 
-  FaTimes, FaCheck, FaFileUpload 
+  FaTimes, FaCheck, FaFileUpload, FaSpinner 
 } from 'react-icons/fa';
-
-const INITIAL_STUDENTS = [
-  {
-    id: 1,
-    studentCode: '20201123',
-    fullName: 'Trần Thị B',
-    email: 'tranthib@school.edu.vn',
-    dob: '2002-05-14',
-    gender: 'Nữ',
-    idNumber: '001198001234',
-    department: 'Công nghệ thông tin',
-    className: 'CNTT-01 K65',
-    graduationStatus: 'issued' // issued, eligible, studying, suspended
-  },
-  {
-    id: 2,
-    studentCode: '20203492',
-    fullName: 'Lê Văn C',
-    email: 'levanc@school.edu.vn',
-    dob: '2002-08-20',
-    gender: 'Nam',
-    idNumber: '001198005678',
-    department: 'Khoa học máy tính',
-    className: 'KHMT-02 K65',
-    graduationStatus: 'eligible'
-  },
-  {
-    id: 3,
-    studentCode: '20210045',
-    fullName: 'Phạm Minh Tuấn',
-    email: 'tuanpm@school.edu.vn',
-    dob: '2003-01-10',
-    gender: 'Nam',
-    idNumber: '001198009988',
-    department: 'Kỹ thuật phần mềm',
-    className: 'KTPM-01 K66',
-    graduationStatus: 'studying'
-  }
-];
+import { api } from '../../services/api';
 
 const SchoolStudents = () => {
-  const [students, setStudents] = useState(() => {
-    const saved = localStorage.getItem('school_students');
-    return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
-  });
-
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -67,17 +26,36 @@ const SchoolStudents = () => {
     studentCode: '',
     fullName: '',
     email: '',
-    dob: '2002-01-01',
+    dob: '',
     gender: 'Nam',
     idNumber: '',
+    placeOfBirth: '',
     department: 'Công nghệ thông tin',
-    className: 'CNTT-01 K65',
+    className: '',
     graduationStatus: 'eligible'
   });
 
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getStudents({
+        search: searchQuery,
+        status: statusFilter,
+        department: deptFilter
+      });
+      if (res && res.success) {
+        setStudents(res.students || []);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách sinh viên:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('school_students', JSON.stringify(students));
-  }, [students]);
+    fetchStudents();
+  }, [searchQuery, statusFilter, deptFilter]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -86,42 +64,96 @@ const SchoolStudents = () => {
 
   const handleOpenAdd = () => {
     setFormData({
-      studentCode: `2022${Math.floor(1000 + Math.random() * 9000)}`,
+      studentCode: '',
       fullName: '',
       email: '',
-      dob: '2002-01-01',
+      dob: '',
       gender: 'Nam',
-      idNumber: '00120' + Math.floor(1000000 + Math.random() * 9000000),
+      idNumber: '',
+      placeOfBirth: '',
       department: 'Công nghệ thông tin',
-      className: 'CNTT-01 K65',
+      className: '',
       graduationStatus: 'eligible'
     });
     setIsAddOpen(true);
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.studentCode) {
-      alert('Vui lòng nhập họ tên và MSSV!');
+    if (!formData.fullName || !formData.studentCode || !formData.email) {
+      alert('Vui lòng nhập họ tên, MSSV và Email!');
       return;
     }
-    const newStudent = { id: Date.now(), ...formData };
-    setStudents([newStudent, ...students]);
-    setIsAddOpen(false);
-    showToast('Thêm sinh viên mới thành công!');
+    try {
+      const res = await api.createStudent({
+        student_code: formData.studentCode,
+        full_name: formData.fullName,
+        email: formData.email,
+        date_of_birth: formData.dob,
+        gender: formData.gender,
+        id_number: formData.idNumber,
+        place_of_birth: formData.placeOfBirth,
+        department: formData.department,
+        class_name: formData.className,
+        graduation_status: formData.graduationStatus
+      });
+
+      if (res && res.success) {
+        setIsAddOpen(false);
+        showToast('Thêm sinh viên mới vào CSDL thành công!');
+        fetchStudents();
+      } else {
+        alert(res.message || 'Lỗi thêm sinh viên.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối Backend.');
+    }
   };
 
   const handleOpenEdit = (student) => {
     setSelectedStudent(student);
-    setFormData({ ...student });
+    setFormData({
+      studentCode: student.student_code || student.studentCode,
+      fullName: student.full_name || student.fullName,
+      email: student.email,
+      dob: student.date_of_birth ? student.date_of_birth.split('T')[0] : '',
+      gender: student.gender || 'Nam',
+      idNumber: student.id_number || student.idNumber || '',
+      placeOfBirth: student.place_of_birth || student.placeOfBirth || '',
+      department: student.department || 'Công nghệ thông tin',
+      className: student.class_name || student.className || '',
+      graduationStatus: student.graduation_status || student.graduationStatus || 'eligible'
+    });
     setIsEditOpen(true);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setStudents(students.map(s => s.id === selectedStudent.id ? { ...s, ...formData } : s));
-    setIsEditOpen(false);
-    showToast('Cập nhật thông tin sinh viên thành công!');
+    if (!selectedStudent) return;
+    try {
+      const res = await api.updateStudent(selectedStudent.id, {
+        student_code: formData.studentCode,
+        full_name: formData.fullName,
+        email: formData.email,
+        date_of_birth: formData.dob,
+        gender: formData.gender,
+        id_number: formData.idNumber,
+        place_of_birth: formData.placeOfBirth,
+        department: formData.department,
+        class_name: formData.className,
+        graduation_status: formData.graduationStatus
+      });
+
+      if (res && res.success) {
+        setIsEditOpen(false);
+        showToast('Cập nhật thông tin sinh viên thành công!');
+        fetchStudents();
+      } else {
+        alert(res.message || 'Lỗi cập nhật sinh viên.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối đến máy chủ Backend.');
+    }
   };
 
   const handleOpenView = (student) => {
@@ -134,20 +166,21 @@ const SchoolStudents = () => {
     setIsDeleteOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setStudents(students.filter(s => s.id !== selectedStudent.id));
-    setIsDeleteOpen(false);
-    showToast(`Đã xóa sinh viên ${selectedStudent.fullName}`);
+  const handleDeleteConfirm = async () => {
+    if (!selectedStudent) return;
+    try {
+      const res = await api.deleteStudent(selectedStudent.id);
+      if (res && res.success) {
+        setIsDeleteOpen(false);
+        showToast(`Đã xóa sinh viên khỏi danh sách`);
+        fetchStudents();
+      } else {
+        alert(res.message || 'Lỗi xóa sinh viên.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối đến máy chủ Backend.');
+    }
   };
-
-  const filteredStudents = students.filter(s => {
-    const matchesSearch = s.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.studentCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDept = deptFilter === '' || s.department === deptFilter;
-    const matchesStatus = statusFilter === '' || s.graduationStatus === statusFilter;
-    return matchesSearch && matchesDept && matchesStatus;
-  });
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -169,7 +202,7 @@ const SchoolStudents = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý sinh viên</h2>
-          <p>Danh sách sinh viên và trạng thái xét duyệt cấp văn bằng</p>
+          <p>Danh sách sinh viên và trạng thái xét duyệt cấp văn bằng từ CSDL MySQL</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="sd-btn-secondary" onClick={() => setIsImportOpen(true)}>
@@ -223,15 +256,21 @@ const SchoolStudents = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredStudents.length > 0 ? (
-                filteredStudents.map(student => (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải dữ liệu sinh viên...
+                  </td>
+                </tr>
+              ) : students.length > 0 ? (
+                students.map(student => (
                   <tr key={student.id}>
-                    <td className="sd-td-bold">{student.studentCode}</td>
-                    <td className="sd-td-bold">{student.fullName}</td>
+                    <td className="sd-td-bold">{student.student_code || student.studentCode}</td>
+                    <td className="sd-td-bold">{student.full_name || student.fullName}</td>
                     <td>{student.email}</td>
                     <td>{student.department}</td>
-                    <td>{student.className}</td>
-                    <td>{getStatusBadge(student.graduationStatus)}</td>
+                    <td>{student.class_name || student.className}</td>
+                    <td>{getStatusBadge(student.graduation_status || student.graduationStatus)}</td>
                     <td className="sd-actions">
                       <button className="sd-action-btn" title="Xem chi tiết" onClick={() => handleOpenView(student)}>
                         <FaEye />
@@ -277,6 +316,7 @@ const SchoolStudents = () => {
                       type="text" 
                       className="sd-input" 
                       required 
+                      placeholder="Ví dụ: 20201123"
                       value={formData.studentCode} 
                       onChange={(e) => setFormData({...formData, studentCode: e.target.value})} 
                     />
@@ -287,7 +327,7 @@ const SchoolStudents = () => {
                       type="text" 
                       className="sd-input" 
                       required 
-                      placeholder="Nguyễn Văn A"
+                      placeholder="Ví dụ: Nguyễn Văn A"
                       value={formData.fullName} 
                       onChange={(e) => setFormData({...formData, fullName: e.target.value})} 
                     />
@@ -321,10 +361,21 @@ const SchoolStudents = () => {
                     </select>
                   </div>
                   <div className="sd-form-group">
+                    <label>Nơi sinh</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      placeholder="Ví dụ: Hà Nội"
+                      value={formData.placeOfBirth} 
+                      onChange={(e) => setFormData({...formData, placeOfBirth: e.target.value})} 
+                    />
+                  </div>
+                  <div className="sd-form-group">
                     <label>Số CCCD / CMND</label>
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="Ví dụ: 001200001234"
                       value={formData.idNumber} 
                       onChange={(e) => setFormData({...formData, idNumber: e.target.value})} 
                     />
@@ -343,6 +394,7 @@ const SchoolStudents = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="Ví dụ: CNTT-01 K65"
                       value={formData.className} 
                       onChange={(e) => setFormData({...formData, className: e.target.value})} 
                     />
@@ -387,20 +439,20 @@ const SchoolStudents = () => {
             </div>
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsImportOpen(false)}>Hủy</button>
-              <button className="sd-btn-primary" onClick={() => { setIsImportOpen(false); showToast('Đã nhập thành công 45 hồ sơ sinh viên!'); }}>Tải lên & Xử lý</button>
+              <button className="sd-btn-primary" onClick={() => { setIsImportOpen(false); showToast('Đã nhập thành công hồ sơ sinh viên!'); }}>Tải lên & Xử lý</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── EDIT STUDENT MODAL (IDENTICAL FULL FORM AS CREATE MODAL) ── */}
+      {/* ── EDIT STUDENT MODAL ── */}
       {isEditOpen && selectedStudent && (
         <div className="sd-modal-overlay">
           <div className="sd-modal large">
             <div className="sd-modal-header">
               <div className="sd-modal-title">
                 <div className="sd-modal-icon-badge"><FaEdit /></div>
-                <h3>Sửa thông tin sinh viên {selectedStudent.studentCode}</h3>
+                <h3>Sửa thông tin sinh viên {selectedStudent.student_code || selectedStudent.studentCode}</h3>
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsEditOpen(false)}><FaTimes /></button>
             </div>
@@ -455,6 +507,15 @@ const SchoolStudents = () => {
                     </select>
                   </div>
                   <div className="sd-form-group">
+                    <label>Nơi sinh</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      value={formData.placeOfBirth} 
+                      onChange={(e) => setFormData({...formData, placeOfBirth: e.target.value})} 
+                    />
+                  </div>
+                  <div className="sd-form-group">
                     <label>Số CCCD / CMND</label>
                     <input 
                       type="text" 
@@ -485,7 +546,7 @@ const SchoolStudents = () => {
                     <label>Trạng thái xét tốt nghiệp</label>
                     <select className="sd-input" value={formData.graduationStatus} onChange={(e) => setFormData({...formData, graduationStatus: e.target.value})}>
                       <option value="eligible">Đủ điều kiện cấp bằng</option>
-                      <option value="issued">Đã cấp bằng</option>
+                      <option value="issued">Đã được cấp bằng</option>
                       <option value="studying">Đang theo học</option>
                       <option value="suspended">Tạm dừng học</option>
                     </select>
@@ -517,11 +578,11 @@ const SchoolStudents = () => {
                 <div className="sd-detail-grid">
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">MSSV:</span>
-                    <span className="sd-detail-value">{selectedStudent.studentCode}</span>
+                    <span className="sd-detail-value">{selectedStudent.student_code || selectedStudent.studentCode}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Họ và tên:</span>
-                    <span className="sd-detail-value">{selectedStudent.fullName}</span>
+                    <span className="sd-detail-value">{selectedStudent.full_name || selectedStudent.fullName}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Email:</span>
@@ -529,7 +590,11 @@ const SchoolStudents = () => {
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Ngày sinh:</span>
-                    <span className="sd-detail-value">{selectedStudent.dob} ({selectedStudent.gender})</span>
+                    <span className="sd-detail-value">{selectedStudent.date_of_birth ? new Date(selectedStudent.date_of_birth).toLocaleDateString('vi-VN') : selectedStudent.dob} ({selectedStudent.gender || 'Nam'})</span>
+                  </div>
+                  <div className="sd-detail-item">
+                    <span className="sd-detail-label">Nơi sinh:</span>
+                    <span className="sd-detail-value">{selectedStudent.place_of_birth || selectedStudent.placeOfBirth || 'Chưa cập nhật'}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Khoa/Ngành:</span>
@@ -537,15 +602,15 @@ const SchoolStudents = () => {
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Lớp sinh hoạt:</span>
-                    <span className="sd-detail-value">{selectedStudent.className}</span>
+                    <span className="sd-detail-value">{selectedStudent.class_name || selectedStudent.className}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Số CCCD:</span>
-                    <span className="sd-detail-value">{selectedStudent.idNumber}</span>
+                    <span className="sd-detail-value">{selectedStudent.id_number || selectedStudent.idNumber}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Trạng thái:</span>
-                    <span className="sd-detail-value">{getStatusBadge(selectedStudent.graduationStatus)}</span>
+                    <span className="sd-detail-value">{getStatusBadge(selectedStudent.graduation_status || selectedStudent.graduationStatus)}</span>
                   </div>
                 </div>
               </div>
@@ -570,7 +635,7 @@ const SchoolStudents = () => {
             </div>
             <div className="sd-modal-body">
               <p style={{ fontSize: '14px', color: '#334155' }}>
-                Bạn có chắc chắn muốn xóa hồ sơ sinh viên <strong>{selectedStudent.fullName}</strong> (MSSV: {selectedStudent.studentCode}) khỏi hệ thống? 
+                Bạn có chắc chắn muốn xóa hồ sơ sinh viên <strong>{selectedStudent.full_name || selectedStudent.fullName}</strong> (MSSV: {selectedStudent.student_code || selectedStudent.studentCode}) khỏi hệ thống? 
               </p>
             </div>
             <div className="sd-modal-footer">

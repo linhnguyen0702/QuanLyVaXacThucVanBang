@@ -1,25 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const authController = require('../controllers/auth.controller');
+const { protect } = require('../middleware/auth.middleware');
 
-// @route   POST /api/auth/register
-// @desc    Register new user
-// @access  Public
-router.post('/register', (req, res) => {
-  res.json({ message: 'Register endpoint' });
-});
-
-// @route   POST /api/auth/login
-// @desc    Login user
-// @access  Public
-router.post('/login', (req, res) => {
-  res.json({ message: 'Login endpoint' });
-});
-
-// @route   GET /api/auth/me
-// @desc    Get current user
-// @access  Private
-router.get('/me', (req, res) => {
-  res.json({ message: 'Get current user endpoint' });
-});
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+router.get('/me', protect, authController.getMe);
+router.put('/update-profile', protect, authController.updateProfile);
+router.put('/change-password', protect, authController.changePassword);
 
 module.exports = router;

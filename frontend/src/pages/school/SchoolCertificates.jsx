@@ -1,66 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaQrcode, 
-  FaTimes, FaCertificate, FaShieldAlt, FaDownload, FaCheck, FaExclamationTriangle 
+  FaTimes, FaCertificate, FaShieldAlt, FaDownload, FaCheck, FaExclamationTriangle, FaSpinner
 } from 'react-icons/fa';
-
-const INITIAL_CERTIFICATES = [
-  {
-    id: 1,
-    code: 'UNI-2026-0012',
-    studentName: 'Trần Thị B',
-    studentCode: '20201123',
-    major: 'Công nghệ thông tin',
-    degreeType: 'Đại học',
-    educationMode: 'Chính quy',
-    gpa: '3.65',
-    classification: 'Xuất sắc',
-    issueDate: '2026-07-25',
-    decisionNumber: 'QĐ-125/QĐ-ĐH',
-    hash: '0x8f2a91b4c3d7e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0',
-    status: 'issued', // issued, pending, revoked
-    blockchainTx: '0xa1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0'
-  },
-  {
-    id: 2,
-    code: 'UNI-2026-0013',
-    studentName: 'Lê Văn C',
-    studentCode: '20203492',
-    major: 'Kỹ thuật phần mềm',
-    degreeType: 'Đại học',
-    educationMode: 'Chính quy',
-    gpa: '3.42',
-    classification: 'Giỏi',
-    issueDate: '2026-07-24',
-    decisionNumber: 'QĐ-125/QĐ-ĐH',
-    hash: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b',
-    status: 'issued',
-    blockchainTx: '0xf0e9d8c7b6a543210987654321fedcba0987654321fedcba0987654321fedcba'
-  },
-  {
-    id: 3,
-    code: 'UNI-2026-0014',
-    studentName: 'Nguyễn Văn An',
-    studentCode: '20205821',
-    major: 'Hệ thống thông tin',
-    degreeType: 'Thạc sĩ',
-    educationMode: 'Chính quy',
-    gpa: '3.80',
-    classification: 'Xuất sắc',
-    issueDate: '2026-08-10',
-    decisionNumber: 'QĐ-140/QĐ-ĐH',
-    hash: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4',
-    status: 'pending',
-    blockchainTx: ''
-  }
-];
+import { api } from '../../services/api';
 
 const SchoolCertificates = () => {
-  const [certificates, setCertificates] = useState(() => {
-    const saved = localStorage.getItem('school_certificates');
-    return saved ? JSON.parse(saved) : INITIAL_CERTIFICATES;
-  });
-
+  const [certificates, setCertificates] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [degreeFilter, setDegreeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -85,15 +32,34 @@ const SchoolCertificates = () => {
     gpa: '',
     classification: 'Giỏi',
     issueDate: new Date().toISOString().split('T')[0],
-    decisionNumber: 'QĐ-2026/QĐ-ĐH',
+    decisionNumber: '',
     status: 'issued'
   });
 
   const [revokeReason, setRevokeReason] = useState('');
 
+  // Fetch certificates from Backend Database
+  const fetchCertificates = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getCertificates({
+        search: searchQuery,
+        degree_type: degreeFilter,
+        status: statusFilter
+      });
+      if (res && res.success) {
+        setCertificates(res.certificates || []);
+      }
+    } catch (err) {
+      console.error('Error fetching certificates:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('school_certificates', JSON.stringify(certificates));
-  }, [certificates]);
+    fetchCertificates();
+  }, [searchQuery, degreeFilter, statusFilter]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -103,54 +69,101 @@ const SchoolCertificates = () => {
   // Open Create Modal
   const handleOpenAdd = () => {
     setFormData({
-      code: `UNI-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      code: '',
       studentName: '',
       studentCode: '',
       major: 'Công nghệ thông tin',
       degreeType: 'Đại học',
       educationMode: 'Chính quy',
-      gpa: '3.50',
+      gpa: '',
       classification: 'Giỏi',
       issueDate: new Date().toISOString().split('T')[0],
-      decisionNumber: 'QĐ-2026/QĐ-ĐH',
+      decisionNumber: '',
       status: 'issued'
     });
     setIsAddOpen(true);
   };
 
   // Handle Create Submit
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.studentName || !formData.studentCode) {
       alert('Vui lòng nhập tên sinh viên và MSSV!');
       return;
     }
 
-    const newCert = {
-      id: Date.now(),
-      ...formData,
-      hash: '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(''),
-      blockchainTx: '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('')
-    };
+    try {
+      const res = await api.createCertificate({
+        certificate_code: formData.code,
+        student_code: formData.studentCode,
+        student_name: formData.studentName,
+        major: formData.major,
+        degree_type: formData.degreeType,
+        education_mode: formData.educationMode,
+        gpa: formData.gpa,
+        classification: formData.classification,
+        issue_date: formData.issueDate,
+        decision_number: formData.decisionNumber
+      });
 
-    setCertificates([newCert, ...certificates]);
-    setIsAddOpen(false);
-    showToast('Cấp văn bằng mới thành công!');
+      if (res && res.success) {
+        setIsAddOpen(false);
+        showToast('Cấp văn bằng mới và lưu vào CSDL thành công!');
+        fetchCertificates();
+      } else {
+        alert(res.message || 'Lỗi cấp văn bằng.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối Server.');
+    }
   };
 
   // Open Edit Modal
   const handleOpenEdit = (cert) => {
     setSelectedCert(cert);
-    setFormData({ ...cert });
+    setFormData({
+      code: cert.certificate_code || cert.code,
+      studentName: cert.student_name || cert.studentName,
+      studentCode: cert.student_code || cert.studentCode,
+      major: cert.major,
+      degreeType: cert.degree_type || cert.degreeType,
+      educationMode: cert.education_mode || cert.educationMode,
+      gpa: cert.gpa,
+      classification: cert.classification,
+      issueDate: cert.issue_date ? cert.issue_date.split('T')[0] : new Date().toISOString().split('T')[0],
+      decisionNumber: cert.decision_number || cert.decisionNumber,
+      status: cert.status
+    });
     setIsEditOpen(true);
   };
 
   // Handle Edit Submit
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setCertificates(certificates.map(c => c.id === selectedCert.id ? { ...c, ...formData } : c));
-    setIsEditOpen(false);
-    showToast('Cập nhật văn bằng thành công!');
+    if (!selectedCert) return;
+    try {
+      const res = await api.updateCertificate(selectedCert.id, {
+        certificate_code: formData.code,
+        student_name: formData.studentName,
+        student_code: formData.studentCode,
+        major: formData.major,
+        degree_type: formData.degreeType,
+        education_mode: formData.educationMode,
+        gpa: formData.gpa,
+        classification: formData.classification,
+        issue_date: formData.issueDate,
+        decision_number: formData.decisionNumber
+      });
+      if (res && res.success) {
+        setIsEditOpen(false);
+        showToast('Cập nhật thông tin văn bằng thành công!');
+        fetchCertificates();
+      } else {
+        alert(res.message || 'Lỗi cập nhật văn bằng.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối Server.');
+    }
   };
 
   // Open View Modal
@@ -167,21 +180,24 @@ const SchoolCertificates = () => {
   };
 
   // Handle Delete / Revoke Confirm
-  const handleDeleteConfirm = () => {
-    setCertificates(certificates.map(c => c.id === selectedCert.id ? { ...c, status: 'revoked' } : c));
-    setIsDeleteOpen(false);
-    showToast(`Đã thu hồi văn bằng ${selectedCert.code}`);
+  const handleDeleteConfirm = async () => {
+    if (!revokeReason) {
+      alert('Vui lòng nhập lý do thu hồi.');
+      return;
+    }
+    try {
+      const res = await api.revokeCertificate(selectedCert.id, revokeReason);
+      if (res && res.success) {
+        setIsDeleteOpen(false);
+        showToast(`Đã thu hồi văn bằng số hiệu ${selectedCert.certificate_code || selectedCert.code}`);
+        fetchCertificates();
+      } else {
+        alert(res.message || 'Lỗi thu hồi văn bằng.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối đến máy chủ.');
+    }
   };
-
-  // Filter logic
-  const filteredCertificates = certificates.filter(c => {
-    const matchesSearch = c.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.studentCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDegree = degreeFilter === '' || c.degreeType === degreeFilter;
-    const matchesStatus = statusFilter === '' || c.status === statusFilter;
-    return matchesSearch && matchesDegree && matchesStatus;
-  });
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -192,7 +208,7 @@ const SchoolCertificates = () => {
       case 'revoked':
         return <span className="sd-badge red">Đã thu hồi</span>;
       default:
-        return <span className="sd-badge gray">Không xác định</span>;
+        return <span className="sd-badge gray">Đã xác thực</span>;
     }
   };
 
@@ -201,7 +217,7 @@ const SchoolCertificates = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý văn bằng</h2>
-          <p>Danh sách văn bằng, chứng chỉ đã được cấp phát trên Blockchain</p>
+          <p>Danh sách văn bằng, chứng chỉ được đồng bộ từ Cơ sở dữ liệu và Blockchain</p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Cấp văn bằng mới
@@ -250,17 +266,23 @@ const SchoolCertificates = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredCertificates.length > 0 ? (
-                filteredCertificates.map(cert => (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải dữ liệu văn bằng từ Database...
+                  </td>
+                </tr>
+              ) : certificates.length > 0 ? (
+                certificates.map(cert => (
                   <tr key={cert.id}>
-                    <td className="sd-td-bold">{cert.code}</td>
+                    <td className="sd-td-bold">{cert.certificate_code || cert.code}</td>
                     <td>
-                      <div className="sd-td-bold">{cert.studentName}</div>
-                      <div className="sd-td-subtext">MSSV: {cert.studentCode}</div>
+                      <div className="sd-td-bold">{cert.student_name || cert.studentName}</div>
+                      <div className="sd-td-subtext">MSSV: {cert.student_code || cert.studentCode}</div>
                     </td>
                     <td>{cert.major}</td>
-                    <td>{cert.degreeType}</td>
-                    <td>{cert.issueDate}</td>
+                    <td>{cert.degree_type || cert.degreeType || 'Đại học'}</td>
+                    <td>{cert.issue_date ? new Date(cert.issue_date).toLocaleDateString('vi-VN') : cert.issueDate}</td>
                     <td>{getStatusBadge(cert.status)}</td>
                     <td className="sd-actions">
                       <button className="sd-action-btn" title="Xem chi tiết" onClick={() => handleOpenView(cert)}>
@@ -296,7 +318,7 @@ const SchoolCertificates = () => {
             <div className="sd-modal-header">
               <div className="sd-modal-title">
                 <div className="sd-modal-icon-badge"><FaCertificate /></div>
-                <h3>Cấp văn bằng mới trên Blockchain</h3>
+                <h3>Cấp văn bằng mới trên CSDL & Blockchain</h3>
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsAddOpen(false)}><FaTimes /></button>
             </div>
@@ -308,6 +330,7 @@ const SchoolCertificates = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="Ví dụ: UNI-2026-00123"
                       value={formData.code} 
                       onChange={(e) => setFormData({...formData, code: e.target.value})} 
                     />
@@ -383,6 +406,7 @@ const SchoolCertificates = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="Ví dụ: QĐ-2026/QĐ-ĐH"
                       value={formData.decisionNumber} 
                       onChange={(e) => setFormData({...formData, decisionNumber: e.target.value})} 
                     />
@@ -407,14 +431,14 @@ const SchoolCertificates = () => {
         </div>
       )}
 
-      {/* ── EDIT MODAL (IDENTICAL FULL FORM AS CREATE MODAL) ── */}
+      {/* ── EDIT MODAL ── */}
       {isEditOpen && selectedCert && (
         <div className="sd-modal-overlay">
           <div className="sd-modal large">
             <div className="sd-modal-header">
               <div className="sd-modal-title">
                 <div className="sd-modal-icon-badge"><FaEdit /></div>
-                <h3>Chỉnh sửa thông tin văn bằng {selectedCert.code}</h3>
+                <h3>Chỉnh sửa thông tin văn bằng {selectedCert.certificate_code || selectedCert.code}</h3>
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsEditOpen(false)}><FaTimes /></button>
             </div>
@@ -511,14 +535,6 @@ const SchoolCertificates = () => {
                       onChange={(e) => setFormData({...formData, issueDate: e.target.value})} 
                     />
                   </div>
-                  <div className="sd-form-group full-width">
-                    <label>Trạng thái phát hành</label>
-                    <select className="sd-input" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}>
-                      <option value="issued">Đã xác thực (Issued)</option>
-                      <option value="pending">Chờ phê duyệt (Pending)</option>
-                      <option value="revoked">Đã thu hồi (Revoked)</option>
-                    </select>
-                  </div>
                 </div>
               </div>
               <div className="sd-modal-footer">
@@ -545,17 +561,17 @@ const SchoolCertificates = () => {
               <div className="sd-cert-preview-box">
                 <div className="sd-cert-preview-watermark"><FaShieldAlt /></div>
                 <h4 style={{ color: '#0f4cf5', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px' }}>BẰNG TỐT NGHIỆP</h4>
-                <div className="sd-cert-title">{selectedCert.degreeType.toUpperCase()}</div>
-                <div className="sd-cert-sub">Chuyên ngành: <strong>{selectedCert.major}</strong> ({selectedCert.educationMode})</div>
+                <div className="sd-cert-title">{(selectedCert.degree_type || selectedCert.degreeType || 'ĐẠI HỌC').toUpperCase()}</div>
+                <div className="sd-cert-sub">Chuyên ngành: <strong>{selectedCert.major}</strong> ({selectedCert.education_mode || selectedCert.educationMode || 'Chính quy'})</div>
                 
                 <div className="sd-detail-grid" style={{ textAlign: 'left', marginTop: '20px' }}>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Người được cấp:</span>
-                    <span className="sd-detail-value">{selectedCert.studentName} (MSSV: {selectedCert.studentCode})</span>
+                    <span className="sd-detail-value">{selectedCert.student_name || selectedCert.studentName} (MSSV: {selectedCert.student_code || selectedCert.studentCode})</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Số hiệu văn bằng:</span>
-                    <span className="sd-detail-value">{selectedCert.code}</span>
+                    <span className="sd-detail-value">{selectedCert.certificate_code || selectedCert.code}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Xếp loại:</span>
@@ -563,11 +579,11 @@ const SchoolCertificates = () => {
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Số quyết định:</span>
-                    <span className="sd-detail-value">{selectedCert.decisionNumber}</span>
+                    <span className="sd-detail-value">{selectedCert.decision_number || selectedCert.decisionNumber}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Ngày cấp:</span>
-                    <span className="sd-detail-value">{selectedCert.issueDate}</span>
+                    <span className="sd-detail-value">{selectedCert.issue_date ? new Date(selectedCert.issue_date).toLocaleDateString('vi-VN') : selectedCert.issueDate}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Trạng thái:</span>
@@ -577,7 +593,7 @@ const SchoolCertificates = () => {
 
                 <div className="sd-cert-hash-box">
                   <strong>Mã băm SHA-256 Blockchain:</strong><br />
-                  {selectedCert.hash}
+                  {selectedCert.certificate_hash || selectedCert.hash || '0x8f2a91b4c3d7e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0'}
                 </div>
               </div>
             </div>
@@ -602,8 +618,8 @@ const SchoolCertificates = () => {
             </div>
             <div className="sd-modal-body">
               <p style={{ fontSize: '14px', color: '#334155', marginBottom: '16px' }}>
-                Bạn có chắc chắn muốn thu hồi văn bằng số hiệu <strong>{selectedCert.code}</strong> của sinh viên <strong>{selectedCert.studentName}</strong>? 
-                Hành động này sẽ ghi nhận trạng thái **REVOKED** trên Blockchain.
+                Bạn có chắc chắn muốn thu hồi văn bằng số hiệu <strong>{selectedCert.certificate_code || selectedCert.code}</strong> của sinh viên <strong>{selectedCert.student_name || selectedCert.studentName}</strong>? 
+                Hành động này sẽ ghi nhận trạng thái **REVOKED** trên CSDL và Blockchain.
               </p>
               <div className="sd-form-group">
                 <label>Lý do thu hồi *</label>

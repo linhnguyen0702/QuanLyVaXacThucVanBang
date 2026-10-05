@@ -1,39 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const certController = require('../controllers/certificate.controller');
+const { protect, authorize } = require('../middleware/auth.middleware');
 
-// @route   GET /api/certificates
-// @desc    Get all certificates
-// @access  Private
-router.get('/', (req, res) => {
-  res.json({ message: 'Get all certificates endpoint' });
-});
+router.get('/', certController.getCertificates);
+router.get('/stats/summary', certController.getStatsSummary);
+router.get('/:id', certController.getCertificateById);
 
-// @route   GET /api/certificates/:id
-// @desc    Get certificate by ID
-// @access  Public
-router.get('/:id', (req, res) => {
-  res.json({ message: `Get certificate ${req.params.id} endpoint` });
-});
-
-// @route   POST /api/certificates
-// @desc    Create new certificate
-// @access  Private (School only)
-router.post('/', (req, res) => {
-  res.json({ message: 'Create certificate endpoint' });
-});
-
-// @route   PUT /api/certificates/:id
-// @desc    Update certificate
-// @access  Private (School only)
-router.put('/:id', (req, res) => {
-  res.json({ message: `Update certificate ${req.params.id} endpoint` });
-});
-
-// @route   DELETE /api/certificates/:id
-// @desc    Delete certificate
-// @access  Private (School only)
-router.delete('/:id', (req, res) => {
-  res.json({ message: `Delete certificate ${req.params.id} endpoint` });
-});
+router.post('/', protect, authorize('admin', 'school', 'officer'), certController.createCertificate);
+router.put('/:id', protect, authorize('admin', 'school', 'officer'), certController.updateCertificate);
+router.put('/:id/revoke', protect, authorize('admin', 'school'), certController.revokeCertificate);
+router.delete('/:id', protect, authorize('admin'), certController.deleteCertificate);
 
 module.exports = router;

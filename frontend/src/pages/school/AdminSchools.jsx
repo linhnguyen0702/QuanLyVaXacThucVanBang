@@ -1,57 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaUniversity, FaSearch, FaEye, FaEdit, FaTrash, 
-  FaCheck, FaTimes, FaShieldAlt 
+  FaCheck, FaTimes, FaShieldAlt, FaSpinner 
 } from 'react-icons/fa';
-
-const INITIAL_SCHOOLS = [
-  {
-    id: 1,
-    schoolName: 'Trường Đại học Công nghệ - ĐHQGHN',
-    schoolCode: 'UET-VNU',
-    schoolType: 'university',
-    schoolTypeLabel: 'Đại học',
-    establishmentYear: 2004,
-    licenseNumber: 'GP-1234/BGDDT',
-    website: 'https://uet.vnu.edu.vn',
-    walletAddress: '0xA3f2d9b7eC81452D819280dEAc429e81',
-    isVerified: true,
-    certificateCount: 12450
-  },
-  {
-    id: 2,
-    schoolName: 'Trường Đại học Bách khoa Hà Nội',
-    schoolCode: 'HUST',
-    schoolType: 'university',
-    schoolTypeLabel: 'Đại học',
-    establishmentYear: 1956,
-    licenseNumber: 'GP-5678/BGDDT',
-    website: 'https://hust.edu.vn',
-    walletAddress: '0xB821c9e4a11295D31918aC391e',
-    isVerified: true,
-    certificateCount: 28900
-  },
-  {
-    id: 3,
-    schoolName: 'Học viện Công nghệ Bưu chính Viễn thông',
-    schoolCode: 'PTIT',
-    schoolType: 'institute',
-    schoolTypeLabel: 'Học viện',
-    establishmentYear: 1997,
-    licenseNumber: 'GP-9912/BGDDT',
-    website: 'https://ptit.edu.vn',
-    walletAddress: '0xC918237192831823719bA',
-    isVerified: false,
-    certificateCount: 8400
-  }
-];
+import { api } from '../../services/api';
 
 const AdminSchools = () => {
-  const [schools, setSchools] = useState(() => {
-    const saved = localStorage.getItem('system_schools');
-    return saved ? JSON.parse(saved) : INITIAL_SCHOOLS;
-  });
-
+  const [schools, setSchools] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [verifiedFilter, setVerifiedFilter] = useState('');
@@ -69,16 +25,30 @@ const AdminSchools = () => {
     schoolName: '',
     schoolCode: '',
     schoolType: 'university',
-    establishmentYear: 2000,
-    licenseNumber: 'GP-2026/BGDDT',
-    website: 'https://',
-    walletAddress: '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+    establishmentYear: '',
+    licenseNumber: '',
+    website: '',
+    walletAddress: '',
     isVerified: true
   });
 
+  const fetchSchools = async () => {
+    setLoading(true);
+    try {
+      const res = await api.getSchools(searchQuery);
+      if (res && res.success) {
+        setSchools(res.schools || []);
+      }
+    } catch (err) {
+      console.error('Failed to load schools:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('system_schools', JSON.stringify(schools));
-  }, [schools]);
+    fetchSchools();
+  }, [searchQuery]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -99,47 +69,82 @@ const AdminSchools = () => {
       schoolName: '',
       schoolCode: '',
       schoolType: 'university',
-      establishmentYear: 2000,
-      licenseNumber: 'GP-2026/BGDDT',
-      website: 'https://',
-      walletAddress: '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+      establishmentYear: '',
+      licenseNumber: '',
+      website: '',
+      walletAddress: '',
       isVerified: true
     });
     setIsAddOpen(true);
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.schoolName || !formData.schoolCode) {
       alert('Vui lòng nhập tên trường và mã trường!');
       return;
     }
-    const newSchool = {
-      id: Date.now(),
-      ...formData,
-      schoolTypeLabel: getTypeLabel(formData.schoolType),
-      certificateCount: 0
-    };
-    setSchools([newSchool, ...schools]);
-    setIsAddOpen(false);
-    showToast('Tạo mới trường học / đơn vị cấp bằng thành công!');
+    try {
+      const res = await api.createSchool({
+        school_name: formData.schoolName,
+        school_code: formData.schoolCode,
+        school_type: formData.schoolType,
+        establishment_year: formData.establishmentYear,
+        license_number: formData.licenseNumber,
+        website: formData.website,
+        wallet_address: formData.walletAddress
+      });
+
+      if (res && res.success) {
+        setIsAddOpen(false);
+        showToast('Thêm mới cơ sở giáo dục thành công!');
+        fetchSchools();
+      } else {
+        alert(res.message || 'Lỗi tạo trường học.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
 
   const handleOpenEdit = (sch) => {
     setSelectedSchool(sch);
-    setFormData({ ...sch });
+    setFormData({
+      schoolName: sch.school_name || sch.schoolName,
+      schoolCode: sch.school_code || sch.schoolCode,
+      schoolType: sch.school_type || sch.schoolType || 'university',
+      establishmentYear: sch.establishment_year || sch.establishmentYear || 2000,
+      licenseNumber: sch.license_number || sch.licenseNumber,
+      website: sch.website,
+      walletAddress: sch.wallet_address || sch.walletAddress,
+      isVerified: sch.is_verified ?? sch.isVerified ?? true
+    });
     setIsEditOpen(true);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setSchools(schools.map(s => s.id === selectedSchool.id ? { 
-      ...s, 
-      ...formData, 
-      schoolTypeLabel: getTypeLabel(formData.schoolType)
-    } : s));
-    setIsEditOpen(false);
-    showToast('Cập nhật thông tin nhà trường thành công!');
+    if (!selectedSchool) return;
+    try {
+      const res = await api.updateSchool(selectedSchool.id, {
+        school_name: formData.schoolName,
+        school_code: formData.schoolCode,
+        school_type: formData.schoolType,
+        establishment_year: formData.establishmentYear,
+        license_number: formData.licenseNumber,
+        website: formData.website,
+        wallet_address: formData.walletAddress
+      });
+      if (res && res.success) {
+        setIsEditOpen(false);
+        showToast('Cập nhật thông tin nhà trường thành công!');
+        fetchSchools();
+      } else {
+        alert(res.message || 'Lỗi cập nhật nhà trường.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
 
   const handleOpenView = (sch) => {
@@ -152,23 +157,28 @@ const AdminSchools = () => {
     setIsDeleteOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setSchools(schools.filter(s => s.id !== selectedSchool.id));
-    setIsDeleteOpen(false);
-    showToast(`Đã xóa cơ sở ${selectedSchool.schoolName}`);
-  };
-
-  const toggleVerifyStatus = (sch) => {
-    setSchools(schools.map(s => s.id === sch.id ? { ...s, isVerified: !s.isVerified } : s));
-    showToast(`Đã ${!sch.isVerified ? 'xác thực' : 'hủy xác thực'} ${sch.schoolName}`);
+  const handleDeleteConfirm = async () => {
+    if (!selectedSchool) return;
+    try {
+      const res = await api.deleteSchool(selectedSchool.id);
+      if (res && res.success) {
+        setIsDeleteOpen(false);
+        showToast(`Đã xóa cơ sở đào tạo thành công!`);
+        fetchSchools();
+      } else {
+        alert(res.message || 'Lỗi xóa cơ sở nhà trường.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối máy chủ.');
+    }
   };
 
   const filteredSchools = schools.filter(s => {
-    const matchesSearch = s.schoolName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.schoolCode.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === '' || s.schoolType === typeFilter;
-    const matchesVerify = verifiedFilter === '' || (verifiedFilter === 'verified' ? s.isVerified : !s.isVerified);
-    return matchesSearch && matchesType && matchesVerify;
+    const name = s.school_name || s.schoolName || '';
+    const code = s.school_code || s.schoolCode || '';
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          code.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   });
 
   return (
@@ -176,7 +186,7 @@ const AdminSchools = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý Trường học & Đơn vị cấp bằng</h2>
-          <p>Danh sách các cơ sở giáo dục đã được xác minh địa chỉ ví Blockchain</p>
+          <p>Danh sách các cơ sở giáo dục đã được lưu trên CSDL & xác minh địa chỉ ví Blockchain</p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Thêm trường mới
@@ -190,7 +200,7 @@ const AdminSchools = () => {
             <span className="sd-stat-label">Tổng số cơ sở đào tạo</span>
             <div className="sd-stat-val-row">
               <span className="sd-stat-value">{schools.length}</span>
-              <span className="sd-stat-badge green">Trường học</span>
+              <span className="sd-stat-badge green">Trong Database</span>
             </div>
           </div>
         </div>
@@ -199,7 +209,7 @@ const AdminSchools = () => {
           <div className="sd-stat-content">
             <span className="sd-stat-label">Đã xác minh Blockchain</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">{schools.filter(s=>s.isVerified).length}</span>
+              <span className="sd-stat-value">{schools.filter(s=>s.is_verified || s.isVerified).length}</span>
               <span className="sd-stat-badge green">Đã kết nối ví</span>
             </div>
           </div>
@@ -225,11 +235,6 @@ const AdminSchools = () => {
               <option value="college">Cao đẳng</option>
               <option value="institute">Học viện</option>
             </select>
-            <select className="sd-select" value={verifiedFilter} onChange={(e) => setVerifiedFilter(e.target.value)}>
-              <option value="">Tất cả xác minh</option>
-              <option value="verified">Đã xác minh</option>
-              <option value="unverified">Chưa xác minh</option>
-            </select>
           </div>
         </div>
 
@@ -247,27 +252,29 @@ const AdminSchools = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredSchools.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải danh sách trường học...
+                  </td>
+                </tr>
+              ) : filteredSchools.length > 0 ? (
                 filteredSchools.map(sch => (
                   <tr key={sch.id}>
-                    <td className="sd-td-bold">{sch.schoolCode}</td>
+                    <td className="sd-td-bold">{sch.school_code || sch.schoolCode}</td>
                     <td>
-                      <div className="sd-td-bold">{sch.schoolName}</div>
+                      <div className="sd-td-bold">{sch.school_name || sch.schoolName}</div>
                       <div className="sd-td-subtext">{sch.website}</div>
                     </td>
-                    <td>{sch.schoolTypeLabel}</td>
-                    <td className="sd-bc-detail-val">{sch.walletAddress.slice(0, 10)}...{sch.walletAddress.slice(-6)}</td>
-                    <td className="sd-td-bold">{sch.certificateCount.toLocaleString()}</td>
+                    <td>{getTypeLabel(sch.school_type || sch.schoolType)}</td>
+                    <td className="sd-bc-detail-val">
+                      {(sch.wallet_address || sch.walletAddress || '0x...').substring(0, 10)}...
+                    </td>
+                    <td className="sd-td-bold">{(sch.certificate_count || sch.certificateCount || 0).toLocaleString()}</td>
                     <td>
-                      {sch.isVerified ? (
-                        <span className="sd-badge green" style={{ cursor: 'pointer' }} onClick={() => toggleVerifyStatus(sch)}>
-                          <FaCheck style={{marginRight: '4px'}} /> Đã xác minh
-                        </span>
-                      ) : (
-                        <span className="sd-badge orange" style={{ cursor: 'pointer' }} onClick={() => toggleVerifyStatus(sch)}>
-                          Chờ xác minh
-                        </span>
-                      )}
+                      <span className="sd-badge green">
+                        <FaCheck style={{marginRight: '4px'}} /> Đã xác minh
+                      </span>
                     </td>
                     <td className="sd-actions">
                       <button className="sd-action-btn" title="Xem" onClick={() => handleOpenView(sch)}><FaEye /></button>
@@ -337,6 +344,7 @@ const AdminSchools = () => {
                     <input 
                       type="number" 
                       className="sd-input" 
+                      placeholder="Ví dụ: 1995"
                       value={formData.establishmentYear} 
                       onChange={(e) => setFormData({...formData, establishmentYear: e.target.value})} 
                     />
@@ -346,6 +354,7 @@ const AdminSchools = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="Ví dụ: GP-2026/BGDDT"
                       value={formData.licenseNumber} 
                       onChange={(e) => setFormData({...formData, licenseNumber: e.target.value})} 
                     />
@@ -355,6 +364,7 @@ const AdminSchools = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="https://vnu.edu.vn"
                       value={formData.website} 
                       onChange={(e) => setFormData({...formData, website: e.target.value})} 
                     />
@@ -364,6 +374,7 @@ const AdminSchools = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      placeholder="0x..."
                       style={{ fontFamily: 'monospace' }}
                       value={formData.walletAddress} 
                       onChange={(e) => setFormData({...formData, walletAddress: e.target.value})} 
@@ -380,14 +391,14 @@ const AdminSchools = () => {
         </div>
       )}
 
-      {/* ── EDIT SCHOOL MODAL (IDENTICAL FULL FORM AS CREATE MODAL) ── */}
+      {/* ── EDIT SCHOOL MODAL ── */}
       {isEditOpen && selectedSchool && (
         <div className="sd-modal-overlay">
           <div className="sd-modal large">
             <div className="sd-modal-header">
               <div className="sd-modal-title">
                 <div className="sd-modal-icon-badge"><FaEdit /></div>
-                <h3>Sửa cơ sở {selectedSchool.schoolCode}</h3>
+                <h3>Sửa cơ sở {selectedSchool.school_code || selectedSchool.schoolCode}</h3>
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsEditOpen(false)}><FaTimes /></button>
             </div>
@@ -459,13 +470,6 @@ const AdminSchools = () => {
                       onChange={(e) => setFormData({...formData, walletAddress: e.target.value})} 
                     />
                   </div>
-                  <div className="sd-form-group full-width">
-                    <label>Xác minh ví Blockchain</label>
-                    <select className="sd-input" value={formData.isVerified ? 'true' : 'false'} onChange={(e) => setFormData({...formData, isVerified: e.target.value === 'true'})}>
-                      <option value="true">Đã xác minh (Verified)</option>
-                      <option value="false">Chưa xác minh (Unverified)</option>
-                    </select>
-                  </div>
                 </div>
               </div>
               <div className="sd-modal-footer">
@@ -493,32 +497,24 @@ const AdminSchools = () => {
                 <div className="sd-detail-grid">
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Tên cơ sở:</span>
-                    <span className="sd-detail-value">{selectedSchool.schoolName}</span>
+                    <span className="sd-detail-value">{selectedSchool.school_name || selectedSchool.schoolName}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Mã trường:</span>
-                    <span className="sd-detail-value">{selectedSchool.schoolCode}</span>
+                    <span className="sd-detail-value">{selectedSchool.school_code || selectedSchool.schoolCode}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Loại hình:</span>
-                    <span className="sd-detail-value">{selectedSchool.schoolTypeLabel}</span>
+                    <span className="sd-detail-value">{getTypeLabel(selectedSchool.school_type || selectedSchool.schoolType)}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Năm thành lập:</span>
-                    <span className="sd-detail-value">{selectedSchool.establishmentYear}</span>
-                  </div>
-                  <div className="sd-detail-item">
-                    <span className="sd-detail-label">Số giấy phép:</span>
-                    <span className="sd-detail-value">{selectedSchool.licenseNumber}</span>
-                  </div>
-                  <div className="sd-detail-item">
-                    <span className="sd-detail-label">Tổng bằng đã cấp:</span>
-                    <span className="sd-detail-value">{selectedSchool.certificateCount.toLocaleString()}</span>
+                    <span className="sd-detail-value">{selectedSchool.establishment_year || selectedSchool.establishmentYear}</span>
                   </div>
                 </div>
                 <div className="sd-cert-hash-box" style={{ marginTop: '16px' }}>
-                  <strong>Ví Smart Contract Polygon:</strong><br />
-                  {selectedSchool.walletAddress}
+                  <strong>Ví Smart Contract Polygon/Sepolia:</strong><br />
+                  {selectedSchool.wallet_address || selectedSchool.walletAddress}
                 </div>
               </div>
             </div>
@@ -542,7 +538,7 @@ const AdminSchools = () => {
             </div>
             <div className="sd-modal-body">
               <p style={{ fontSize: '14px', color: '#334155' }}>
-                Bạn có chắc chắn muốn xóa <strong>{selectedSchool.schoolName}</strong> ({selectedSchool.schoolCode})?
+                Bạn có chắc chắn muốn xóa <strong>{selectedSchool.school_name || selectedSchool.schoolName}</strong> ({selectedSchool.school_code || selectedSchool.schoolCode})?
               </p>
             </div>
             <div className="sd-modal-footer">
