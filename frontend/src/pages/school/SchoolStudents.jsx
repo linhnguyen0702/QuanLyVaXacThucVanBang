@@ -21,10 +21,17 @@ const SchoolStudents = () => {
 
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [formError, setFormError] = useState('');
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'warning' });
+
+  const showAlertModal = (message, title = 'Thông báo hệ thống', type = 'warning') => {
+    setAlertModal({ open: true, title, message, type });
+  };
 
   const [formData, setFormData] = useState({
     studentCode: '',
     fullName: '',
+    schoolName: '',
     email: '',
     dob: '',
     gender: 'Nam',
@@ -34,6 +41,13 @@ const SchoolStudents = () => {
     className: '',
     graduationStatus: 'eligible'
   });
+
+  // Regex hỗ trợ kiểm tra trực tiếp khi nhập
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const cccdRegex = /^\d{12}$/;
+
+  const isEmailInvalid = formData.email.trim().length > 0 && !emailRegex.test(formData.email.trim());
+  const isCccdInvalid = formData.idNumber.trim().length > 0 && !cccdRegex.test(formData.idNumber.trim());
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -63,9 +77,11 @@ const SchoolStudents = () => {
   };
 
   const handleOpenAdd = () => {
+    setFormError('');
     setFormData({
       studentCode: '',
       fullName: '',
+      schoolName: '',
       email: '',
       dob: '',
       gender: 'Nam',
@@ -80,18 +96,49 @@ const SchoolStudents = () => {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.studentCode || !formData.email) {
-      alert('Vui lòng nhập họ tên, MSSV và Email!');
+    setFormError('');
+
+    const code = (formData.studentCode || '').trim();
+    const name = (formData.fullName || '').trim();
+    const emailStr = (formData.email || '').trim();
+    const idNum = (formData.idNumber || '').trim();
+    const dobStr = (formData.dob || '').trim();
+
+    if (!code || !name || !emailStr || !idNum || !dobStr) {
+      setFormError('Vui lòng nhập đầy đủ thông tin bắt buộc (MSSV, Họ tên, Email, Ngày sinh, Số CCCD)!');
       return;
     }
+
+    // 1. Kiểm tra định dạng Email khi bấm submit
+    if (!emailRegex.test(emailStr)) {
+      setFormError('Email không đúng định dạng. Vui lòng kiểm tra lại email thường hoặc email edu (ví dụ: student@school.edu.vn)!');
+      return;
+    }
+
+    // 2. Kiểm tra định dạng CCCD khi bấm submit (đúng 12 chữ số)
+    if (!cccdRegex.test(idNum)) {
+      setFormError('Số CCCD không đúng định dạng. Số CCCD phải bao gồm đúng 12 chữ số!');
+      return;
+    }
+
+    // 3. Kiểm tra trùng MSSV -> Hiển thị thông báo trên màn hình (không dùng alert trình duyệt)
+    const isDuplicateCode = students.some(
+      s => (s.student_code || s.studentCode || '').toString().trim().toLowerCase() === code.toLowerCase()
+    );
+    if (isDuplicateCode) {
+      showAlertModal('kiểm tra lại mã số sinh viên', 'Thông báo trùng mã sinh viên');
+      return;
+    }
+
     try {
       const res = await api.createStudent({
-        student_code: formData.studentCode,
-        full_name: formData.fullName,
-        email: formData.email,
-        date_of_birth: formData.dob,
+        student_code: code,
+        full_name: name,
+        school_name: (formData.schoolName || '').trim(),
+        email: emailStr,
+        date_of_birth: dobStr,
         gender: formData.gender,
-        id_number: formData.idNumber,
+        id_number: idNum,
         place_of_birth: formData.placeOfBirth,
         department: formData.department,
         class_name: formData.className,
@@ -103,18 +150,25 @@ const SchoolStudents = () => {
         showToast('Thêm sinh viên mới vào CSDL thành công!');
         fetchStudents();
       } else {
-        alert(res.message || 'Lỗi thêm sinh viên.');
+        const msg = res.message || 'Lỗi thêm sinh viên.';
+        if (msg.includes('mã số sinh viên') || msg.toLowerCase().includes('mssv')) {
+          showAlertModal('kiểm tra lại mã số sinh viên', 'Thông báo trùng mã sinh viên');
+        } else {
+          setFormError(msg);
+        }
       }
     } catch (err) {
-      alert('Không thể kết nối Backend.');
+      setFormError('Không thể kết nối máy chủ Backend.');
     }
   };
 
   const handleOpenEdit = (student) => {
+    setFormError('');
     setSelectedStudent(student);
     setFormData({
       studentCode: student.student_code || student.studentCode,
       fullName: student.full_name || student.fullName,
+      schoolName: student.school_name || student.schoolName || '',
       email: student.email,
       dob: student.date_of_birth ? student.date_of_birth.split('T')[0] : '',
       gender: student.gender || 'Nam',
@@ -130,14 +184,49 @@ const SchoolStudents = () => {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!selectedStudent) return;
+    setFormError('');
+
+    const code = (formData.studentCode || '').trim();
+    const name = (formData.fullName || '').trim();
+    const emailStr = (formData.email || '').trim();
+    const idNum = (formData.idNumber || '').trim();
+    const dobStr = (formData.dob || '').trim();
+
+    if (!code || !name || !emailStr || !idNum) {
+      setFormError('Vui lòng nhập đầy đủ MSSV, Họ tên, Email và Số CCCD!');
+      return;
+    }
+
+    // 1. Kiểm tra Email format
+    if (!emailRegex.test(emailStr)) {
+      setFormError('Email không đúng định dạng email thường hoặc email edu (ví dụ: student@school.edu.vn)!');
+      return;
+    }
+
+    // 2. Kiểm tra CCCD format (12 chữ số)
+    if (!cccdRegex.test(idNum)) {
+      setFormError('Số CCCD không đủ 12 chữ số hoặc không đúng định dạng CCCD!');
+      return;
+    }
+
+    // 3. Kiểm tra trùng MSSV với sinh viên khác -> Hiển thị thông báo trên màn hình
+    const isDuplicateCode = students.some(
+      s => s.id !== selectedStudent.id && (s.student_code || s.studentCode || '').toString().trim().toLowerCase() === code.toLowerCase()
+    );
+    if (isDuplicateCode) {
+      showAlertModal('kiểm tra lại mã số sinh viên', 'Thông báo trùng mã sinh viên');
+      return;
+    }
+
     try {
       const res = await api.updateStudent(selectedStudent.id, {
-        student_code: formData.studentCode,
-        full_name: formData.fullName,
-        email: formData.email,
-        date_of_birth: formData.dob,
+        student_code: code,
+        full_name: name,
+        school_name: (formData.schoolName || '').trim(),
+        email: emailStr,
+        date_of_birth: dobStr,
         gender: formData.gender,
-        id_number: formData.idNumber,
+        id_number: idNum,
         place_of_birth: formData.placeOfBirth,
         department: formData.department,
         class_name: formData.className,
@@ -149,10 +238,15 @@ const SchoolStudents = () => {
         showToast('Cập nhật thông tin sinh viên thành công!');
         fetchStudents();
       } else {
-        alert(res.message || 'Lỗi cập nhật sinh viên.');
+        const msg = res.message || 'Lỗi cập nhật sinh viên.';
+        if (msg.includes('mã số sinh viên') || msg.toLowerCase().includes('mssv')) {
+          showAlertModal('kiểm tra lại mã số sinh viên', 'Thông báo trùng mã sinh viên');
+        } else {
+          setFormError(msg);
+        }
       }
     } catch (err) {
-      alert('Không thể kết nối đến máy chủ Backend.');
+      setFormError('Không thể kết nối đến máy chủ Backend.');
     }
   };
 
@@ -248,6 +342,7 @@ const SchoolStudents = () => {
               <tr>
                 <th>MSSV</th>
                 <th>Họ và tên</th>
+                <th>Trường / Cơ sở</th>
                 <th>Email</th>
                 <th>Khoa / Ngành</th>
                 <th>Lớp</th>
@@ -258,7 +353,7 @@ const SchoolStudents = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
                     <FaSpinner className="fa-spin" style={{ marginRight: '8px' }} /> Đang tải dữ liệu sinh viên...
                   </td>
                 </tr>
@@ -267,6 +362,7 @@ const SchoolStudents = () => {
                   <tr key={student.id}>
                     <td className="sd-td-bold">{student.student_code || student.studentCode}</td>
                     <td className="sd-td-bold">{student.full_name || student.fullName}</td>
+                    <td>{student.school_name || student.schoolName || 'Trường Đại học Công nghệ'}</td>
                     <td>{student.email}</td>
                     <td>{student.department}</td>
                     <td>{student.class_name || student.className}</td>
@@ -286,7 +382,7 @@ const SchoolStudents = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
                     Không tìm thấy sinh viên phù hợp.
                   </td>
                 </tr>
@@ -309,6 +405,20 @@ const SchoolStudents = () => {
             </div>
             <form onSubmit={handleAddSubmit}>
               <div className="sd-modal-body">
+                {formError && (
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    marginBottom: '16px'
+                  }}>
+                    ⚠️ {formError}
+                  </div>
+                )}
                 <div className="sd-form-grid">
                   <div className="sd-form-group">
                     <label>MSSV *</label>
@@ -333,6 +443,16 @@ const SchoolStudents = () => {
                     />
                   </div>
                   <div className="sd-form-group">
+                    <label>Trường / Cơ sở đào tạo</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      placeholder="Ví dụ: Trường Đại học Công nghệ"
+                      value={formData.schoolName} 
+                      onChange={(e) => setFormData({...formData, schoolName: e.target.value})} 
+                    />
+                  </div>
+                  <div className="sd-form-group">
                     <label>Email sinh viên *</label>
                     <input 
                       type="email" 
@@ -341,13 +461,20 @@ const SchoolStudents = () => {
                       placeholder="an@school.edu.vn"
                       value={formData.email} 
                       onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                      style={{ borderColor: isEmailInvalid ? '#ef4444' : undefined }}
                     />
+                    {isEmailInvalid && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: '500' }}>
+                        ⚠️ Email không đúng định dạng (email thường hoặc email edu)
+                      </span>
+                    )}
                   </div>
                   <div className="sd-form-group">
-                    <label>Ngày sinh</label>
+                    <label>Ngày sinh *</label>
                     <input 
                       type="date" 
                       className="sd-input" 
+                      required
                       value={formData.dob} 
                       onChange={(e) => setFormData({...formData, dob: e.target.value})} 
                     />
@@ -371,23 +498,35 @@ const SchoolStudents = () => {
                     />
                   </div>
                   <div className="sd-form-group">
-                    <label>Số CCCD / CMND</label>
+                    <label>Số CCCD (12 chữ số) *</label>
                     <input 
                       type="text" 
                       className="sd-input" 
+                      required
+                      maxLength={12}
                       placeholder="Ví dụ: 001200001234"
                       value={formData.idNumber} 
-                      onChange={(e) => setFormData({...formData, idNumber: e.target.value})} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setFormData({...formData, idNumber: val});
+                      }} 
+                      style={{ borderColor: isCccdInvalid ? '#ef4444' : undefined }}
                     />
+                    {isCccdInvalid && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: '500' }}>
+                        ⚠️ Số CCCD phải bao gồm đúng 12 chữ số (hiện tại: {formData.idNumber.trim().length}/12)
+                      </span>
+                    )}
                   </div>
                   <div className="sd-form-group">
-                    <label>Khoa / Ngành</label>
-                    <select className="sd-input" value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})}>
-                      <option value="Công nghệ thông tin">Công nghệ thông tin</option>
-                      <option value="Khoa học máy tính">Khoa học máy tính</option>
-                      <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
-                      <option value="Quản trị kinh doanh">Quản trị kinh doanh</option>
-                    </select>
+                    <label>Khoa / Ngành *</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      placeholder="Ví dụ: Công nghệ thông tin, An toàn thông tin,..."
+                      value={formData.department} 
+                      onChange={(e) => setFormData({...formData, department: e.target.value})} 
+                    />
                   </div>
                   <div className="sd-form-group">
                     <label>Lớp học</label>
@@ -458,6 +597,20 @@ const SchoolStudents = () => {
             </div>
             <form onSubmit={handleEditSubmit}>
               <div className="sd-modal-body">
+                {formError && (
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    marginBottom: '16px'
+                  }}>
+                    ⚠️ {formError}
+                  </div>
+                )}
                 <div className="sd-form-grid">
                   <div className="sd-form-group">
                     <label>MSSV *</label>
@@ -480,6 +633,16 @@ const SchoolStudents = () => {
                     />
                   </div>
                   <div className="sd-form-group">
+                    <label>Trường / Cơ sở đào tạo</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      placeholder="Ví dụ: Trường Đại học Công nghệ"
+                      value={formData.schoolName} 
+                      onChange={(e) => setFormData({...formData, schoolName: e.target.value})} 
+                    />
+                  </div>
+                  <div className="sd-form-group">
                     <label>Email sinh viên *</label>
                     <input 
                       type="email" 
@@ -487,7 +650,13 @@ const SchoolStudents = () => {
                       required 
                       value={formData.email} 
                       onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                      style={{ borderColor: isEmailInvalid ? '#ef4444' : undefined }}
                     />
+                    {isEmailInvalid && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: '500' }}>
+                        ⚠️ Email không đúng định dạng (email thường hoặc email edu)
+                      </span>
+                    )}
                   </div>
                   <div className="sd-form-group">
                     <label>Ngày sinh</label>
@@ -516,22 +685,34 @@ const SchoolStudents = () => {
                     />
                   </div>
                   <div className="sd-form-group">
-                    <label>Số CCCD / CMND</label>
+                    <label>Số CCCD (12 chữ số) *</label>
                     <input 
                       type="text" 
                       className="sd-input" 
+                      required
+                      maxLength={12}
                       value={formData.idNumber} 
-                      onChange={(e) => setFormData({...formData, idNumber: e.target.value})} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setFormData({...formData, idNumber: val});
+                      }} 
+                      style={{ borderColor: isCccdInvalid ? '#ef4444' : undefined }}
                     />
+                    {isCccdInvalid && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: '500' }}>
+                        ⚠️ Số CCCD phải bao gồm đúng 12 chữ số (hiện tại: {formData.idNumber.trim().length}/12)
+                      </span>
+                    )}
                   </div>
                   <div className="sd-form-group">
-                    <label>Khoa / Ngành</label>
-                    <select className="sd-input" value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})}>
-                      <option value="Công nghệ thông tin">Công nghệ thông tin</option>
-                      <option value="Khoa học máy tính">Khoa học máy tính</option>
-                      <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
-                      <option value="Quản trị kinh doanh">Quản trị kinh doanh</option>
-                    </select>
+                    <label>Khoa / Ngành *</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      placeholder="Ví dụ: Công nghệ thông tin, An toàn thông tin,..."
+                      value={formData.department} 
+                      onChange={(e) => setFormData({...formData, department: e.target.value})} 
+                    />
                   </div>
                   <div className="sd-form-group">
                     <label>Lớp học</label>
@@ -583,6 +764,10 @@ const SchoolStudents = () => {
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Họ và tên:</span>
                     <span className="sd-detail-value">{selectedStudent.full_name || selectedStudent.fullName}</span>
+                  </div>
+                  <div className="sd-detail-item">
+                    <span className="sd-detail-label">Trường học:</span>
+                    <span className="sd-detail-value">{selectedStudent.school_name || selectedStudent.schoolName || 'Trường Đại học Công nghệ'}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Email:</span>
@@ -641,6 +826,44 @@ const SchoolStudents = () => {
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsDeleteOpen(false)}>Hủy</button>
               <button className="sd-btn-danger" onClick={handleDeleteConfirm}>Xác nhận Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CUSTOM ON-SCREEN ALERT MODAL (Thay thế alert trình duyệt) ── */}
+      {alertModal.open && (
+        <div className="sd-modal-overlay" style={{ zIndex: 4000 }}>
+          <div className="sd-modal" style={{ maxWidth: '420px', padding: '24px', textAlign: 'center' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: alertModal.type === 'danger' ? '#fef2f2' : '#fffbeb',
+              color: alertModal.type === 'danger' ? '#ef4444' : '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '26px',
+              margin: '0 auto 16px'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+              {alertModal.title}
+            </h3>
+            <p style={{ fontSize: '15px', color: '#334155', marginBottom: '24px', fontWeight: '600', lineHeight: '1.5' }}>
+              {alertModal.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button 
+                type="button"
+                className="sd-btn-primary" 
+                style={{ minWidth: '120px', justifyContent: 'center' }}
+                onClick={() => setAlertModal({ ...alertModal, open: false })}
+              >
+                Đồng ý
+              </button>
             </div>
           </div>
         </div>

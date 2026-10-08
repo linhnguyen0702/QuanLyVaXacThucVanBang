@@ -114,18 +114,22 @@ const SchoolStats = () => {
         {/* Degree Level Proportion */}
         <div className="sd-card">
           <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginBottom: '16px' }}>Tỷ lệ Trình độ</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="sd-detail-card">
-              <span className="sd-detail-label">Đại học chính quy</span>
-              <span className="sd-detail-value" style={{ fontSize: '20px', color: '#0f4cf5' }}>74.5%</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="sd-detail-card" style={{ padding: '10px 14px' }}>
+              <span className="sd-detail-label">Đại học</span>
+              <span className="sd-detail-value" style={{ fontSize: '18px', color: '#0f4cf5' }}>64.5%</span>
             </div>
-            <div className="sd-detail-card">
+            <div className="sd-detail-card" style={{ padding: '10px 14px' }}>
+              <span className="sd-detail-label">Cao đẳng</span>
+              <span className="sd-detail-value" style={{ fontSize: '18px', color: '#06b6d4' }}>10.0%</span>
+            </div>
+            <div className="sd-detail-card" style={{ padding: '10px 14px' }}>
               <span className="sd-detail-label">Thạc sĩ</span>
-              <span className="sd-detail-value" style={{ fontSize: '20px', color: '#10b981' }}>18.2%</span>
+              <span className="sd-detail-value" style={{ fontSize: '18px', color: '#10b981' }}>18.2%</span>
             </div>
-            <div className="sd-detail-card">
+            <div className="sd-detail-card" style={{ padding: '10px 14px' }}>
               <span className="sd-detail-label">Tiến sĩ</span>
-              <span className="sd-detail-value" style={{ fontSize: '20px', color: '#8b5cf6' }}>7.3%</span>
+              <span className="sd-detail-value" style={{ fontSize: '18px', color: '#8b5cf6' }}>7.3%</span>
             </div>
           </div>
         </div>

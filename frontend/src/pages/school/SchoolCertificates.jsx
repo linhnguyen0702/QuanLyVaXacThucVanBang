@@ -20,23 +20,41 @@ const SchoolCertificates = () => {
 
   const [selectedCert, setSelectedCert] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [formError, setFormError] = useState('');
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'warning' });
+
+  // Danh sách sinh viên lấy từ trang Sinh viên
+  const [studentList, setStudentList] = useState([]);
 
   // Form inputs for Create / Edit
   const [formData, setFormData] = useState({
     code: '',
+    studentId: '',
     studentName: '',
     studentCode: '',
     major: 'Công nghệ thông tin',
     degreeType: 'Đại học',
     educationMode: 'Chính quy',
-    gpa: '',
+    gpa: '3.50',
     classification: 'Giỏi',
     issueDate: new Date().toISOString().split('T')[0],
-    decisionNumber: '',
-    status: 'issued'
+    decisionNumber: 'QĐ-2026/QĐ-ĐH',
+    status: 'pending'
   });
 
   const [revokeReason, setRevokeReason] = useState('');
+
+  // Nạp danh sách sinh viên từ trang sinh viên
+  const fetchStudents = async () => {
+    try {
+      const res = await api.getStudents();
+      if (res && res.success) {
+        setStudentList(res.students || []);
+      }
+    } catch (err) {
+      console.error('Error fetching students list:', err);
+    }
+  };
 
   // Fetch certificates from Backend Database
   const fetchCertificates = async () => {
@@ -59,6 +77,7 @@ const SchoolCertificates = () => {
 
   useEffect(() => {
     fetchCertificates();
+    fetchStudents();
   }, [searchQuery, degreeFilter, statusFilter]);
 
   const showToast = (msg) => {
@@ -66,20 +85,45 @@ const SchoolCertificates = () => {
     setTimeout(() => setToastMessage(''), 3000);
   };
 
+  // Khi chọn sinh viên từ Dropdown
+  const handleSelectStudent = (studentId) => {
+    const selected = studentList.find(s => String(s.id) === String(studentId));
+    if (selected) {
+      setFormData(prev => ({
+        ...prev,
+        studentId: selected.id,
+        studentCode: selected.student_code || selected.studentCode,
+        studentName: selected.full_name || selected.fullName,
+        major: selected.department || prev.major
+      }));
+      setFormError('');
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        studentId: '',
+        studentCode: '',
+        studentName: ''
+      }));
+    }
+  };
+
   // Open Create Modal
   const handleOpenAdd = () => {
+    setFormError('');
+    fetchStudents();
     setFormData({
       code: '',
+      studentId: '',
       studentName: '',
       studentCode: '',
       major: 'Công nghệ thông tin',
       degreeType: 'Đại học',
       educationMode: 'Chính quy',
-      gpa: '',
+      gpa: '3.50',
       classification: 'Giỏi',
       issueDate: new Date().toISOString().split('T')[0],
-      decisionNumber: '',
-      status: 'issued'
+      decisionNumber: 'QĐ-2026/QĐ-ĐH',
+      status: 'pending'
     });
     setIsAddOpen(true);
   };
@@ -87,49 +131,96 @@ const SchoolCertificates = () => {
   // Handle Create Submit
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.studentName || !formData.studentCode) {
-      alert('Vui lòng nhập tên sinh viên và MSSV!');
+    setFormError('');
+
+    const certCode = (formData.code || '').trim();
+    const stCode = (formData.studentCode || '').trim();
+    const stName = (formData.studentName || '').trim();
+
+    if (!certCode || (!stCode && !stName)) {
+      setFormError('Vui lòng nhập đầy đủ Số hiệu văn bằng và MSSV hoặc Họ tên sinh viên!');
+      return;
+    }
+
+    // 1. Ràng buộc: Kiểm tra không cho tạo trùng số hiệu văn bằng
+    const isDuplicateCode = certificates.some(
+      c => (c.certificate_code || c.code || '').toString().trim().toLowerCase() === certCode.toLowerCase()
+    );
+    if (isDuplicateCode) {
+      setAlertModal({
+        open: true,
+        title: 'Cảnh báo trùng số hiệu văn bằng',
+        message: 'Số hiệu văn bằng đã tồn tại trên hệ thống, vui lòng kiểm tra lại!',
+        type: 'warning'
+      });
+      return;
+    }
+
+    // 2. Ràng buộc: Kiểm tra sinh viên tự nhập có tồn tại trong dữ liệu sinh viên (trang Sinh viên) hay không
+    const matchedStudent = studentList.find(
+      s => (stCode && (s.student_code || s.studentCode || '').toString().trim().toLowerCase() === stCode.toLowerCase()) ||
+           (stName && (s.full_name || s.fullName || '').toString().trim().toLowerCase() === stName.toLowerCase())
+    );
+
+    if (!matchedStudent) {
+      setAlertModal({
+        open: true,
+        title: 'Thông báo dữ liệu sinh viên',
+        message: 'Không tìm thấy dữ liệu thông tin sinh viên trên hệ thống, vui lòng kiểm tra lại!',
+        type: 'warning'
+      });
       return;
     }
 
     try {
+      // Đặt status mặc định = 'pending' (Không đẩy luôn lên Blockchain khi tạo mới)
       const res = await api.createCertificate({
-        certificate_code: formData.code,
-        student_code: formData.studentCode,
-        student_name: formData.studentName,
-        major: formData.major,
+        certificate_code: certCode,
+        student_id: matchedStudent.id,
+        student_code: stCode || matchedStudent.student_code || matchedStudent.studentCode,
+        student_name: stName || matchedStudent.full_name || matchedStudent.fullName,
+        major: formData.major || matchedStudent.department,
         degree_type: formData.degreeType,
         education_mode: formData.educationMode,
-        gpa: formData.gpa,
+        gpa: formData.gpa || '3.50',
         classification: formData.classification,
         issue_date: formData.issueDate,
-        decision_number: formData.decisionNumber
+        decision_number: formData.decisionNumber,
+        status: 'pending'
       });
 
       if (res && res.success) {
         setIsAddOpen(false);
-        showToast('Cấp văn bằng mới và lưu vào CSDL thành công!');
+        showToast('Tạo văn bằng mới thành công! Văn bằng ở trạng thái chờ duyệt tại trang Xác thực.');
         fetchCertificates();
       } else {
-        alert(res.message || 'Lỗi cấp văn bằng.');
+        const msg = res.message || 'Lỗi tạo văn bằng.';
+        setAlertModal({
+          open: true,
+          title: 'Thông báo',
+          message: msg,
+          type: 'warning'
+        });
       }
     } catch (err) {
-      alert('Không thể kết nối Server.');
+      setFormError('Không thể kết nối đến máy chủ Backend.');
     }
   };
 
   // Open Edit Modal
   const handleOpenEdit = (cert) => {
+    setFormError('');
     setSelectedCert(cert);
     setFormData({
       code: cert.certificate_code || cert.code,
+      studentId: cert.student_id || '',
       studentName: cert.student_name || cert.studentName,
       studentCode: cert.student_code || cert.studentCode,
       major: cert.major,
       degreeType: cert.degree_type || cert.degreeType,
       educationMode: cert.education_mode || cert.educationMode,
-      gpa: cert.gpa,
-      classification: cert.classification,
+      gpa: cert.gpa || '',
+      classification: cert.classification || 'Giỏi',
       issueDate: cert.issue_date ? cert.issue_date.split('T')[0] : new Date().toISOString().split('T')[0],
       decisionNumber: cert.decision_number || cert.decisionNumber,
       status: cert.status
@@ -141,9 +232,25 @@ const SchoolCertificates = () => {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!selectedCert) return;
+    setFormError('');
+
+    const certCode = (formData.code || '').trim();
+    const isDuplicateCode = certificates.some(
+      c => c.id !== selectedCert.id && (c.certificate_code || c.code || '').toString().trim().toLowerCase() === certCode.toLowerCase()
+    );
+    if (isDuplicateCode) {
+      setAlertModal({
+        open: true,
+        title: 'Cảnh báo trùng số hiệu văn bằng',
+        message: 'Số hiệu văn bằng đã tồn tại trên hệ thống, vui lòng kiểm tra lại!',
+        type: 'warning'
+      });
+      return;
+    }
+
     try {
       const res = await api.updateCertificate(selectedCert.id, {
-        certificate_code: formData.code,
+        certificate_code: certCode,
         student_name: formData.studentName,
         student_code: formData.studentCode,
         major: formData.major,
@@ -159,10 +266,11 @@ const SchoolCertificates = () => {
         showToast('Cập nhật thông tin văn bằng thành công!');
         fetchCertificates();
       } else {
-        alert(res.message || 'Lỗi cập nhật văn bằng.');
+        const msg = res.message || 'Lỗi cập nhật văn bằng.';
+        setFormError(msg);
       }
     } catch (err) {
-      alert('Không thể kết nối Server.');
+      setFormError('Không thể kết nối Server.');
     }
   };
 
@@ -240,8 +348,10 @@ const SchoolCertificates = () => {
             <select className="sd-select" value={degreeFilter} onChange={(e) => setDegreeFilter(e.target.value)}>
               <option value="">Tất cả trình độ</option>
               <option value="Đại học">Đại học</option>
+              <option value="Cao đẳng">Cao đẳng</option>
               <option value="Thạc sĩ">Thạc sĩ</option>
               <option value="Tiến sĩ">Tiến sĩ</option>
+              <option value="Chứng chỉ">Chứng chỉ</option>
             </select>
             <select className="sd-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">Tất cả trạng thái</option>
@@ -318,32 +428,36 @@ const SchoolCertificates = () => {
             <div className="sd-modal-header">
               <div className="sd-modal-title">
                 <div className="sd-modal-icon-badge"><FaCertificate /></div>
-                <h3>Cấp văn bằng mới trên CSDL & Blockchain</h3>
+                <h3>Tạo văn bằng mới (Chờ xác thực Blockchain)</h3>
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsAddOpen(false)}><FaTimes /></button>
             </div>
             <form onSubmit={handleAddSubmit}>
               <div className="sd-modal-body">
+                {formError && (
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    marginBottom: '16px'
+                  }}>
+                    ⚠️ {formError}
+                  </div>
+                )}
                 <div className="sd-form-grid">
                   <div className="sd-form-group">
-                    <label>Số hiệu văn bằng</label>
+                    <label>Số hiệu văn bằng *</label>
                     <input 
                       type="text" 
                       className="sd-input" 
+                      required
                       placeholder="Ví dụ: UNI-2026-00123"
                       value={formData.code} 
                       onChange={(e) => setFormData({...formData, code: e.target.value})} 
-                    />
-                  </div>
-                  <div className="sd-form-group">
-                    <label>Họ và tên sinh viên *</label>
-                    <input 
-                      type="text" 
-                      className="sd-input" 
-                      required 
-                      placeholder="Ví dụ: Nguyễn Văn A"
-                      value={formData.studentName} 
-                      onChange={(e) => setFormData({...formData, studentName: e.target.value})} 
                     />
                   </div>
                   <div className="sd-form-group">
@@ -358,20 +472,35 @@ const SchoolCertificates = () => {
                     />
                   </div>
                   <div className="sd-form-group">
-                    <label>Ngành đào tạo</label>
-                    <select className="sd-input" value={formData.major} onChange={(e) => setFormData({...formData, major: e.target.value})}>
-                      <option value="Công nghệ thông tin">Công nghệ thông tin</option>
-                      <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
-                      <option value="Hệ thống thông tin">Hệ thống thông tin</option>
-                      <option value="Quản trị kinh doanh">Quản trị kinh doanh</option>
-                    </select>
+                    <label>Họ và tên sinh viên *</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      required 
+                      placeholder="Ví dụ: Nguyễn Văn A"
+                      value={formData.studentName} 
+                      onChange={(e) => setFormData({...formData, studentName: e.target.value})} 
+                    />
+                  </div>
+                  <div className="sd-form-group">
+                    <label>Ngành đào tạo *</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      required
+                      placeholder="Ví dụ: Công nghệ thông tin, Kỹ thuật phần mềm,..."
+                      value={formData.major} 
+                      onChange={(e) => setFormData({...formData, major: e.target.value})} 
+                    />
                   </div>
                   <div className="sd-form-group">
                     <label>Trình độ đào tạo</label>
                     <select className="sd-input" value={formData.degreeType} onChange={(e) => setFormData({...formData, degreeType: e.target.value})}>
                       <option value="Đại học">Đại học</option>
+                      <option value="Cao đẳng">Cao đẳng</option>
                       <option value="Thạc sĩ">Thạc sĩ</option>
                       <option value="Tiến sĩ">Tiến sĩ</option>
+                      <option value="Chứng chỉ">Chứng chỉ</option>
                     </select>
                   </div>
                   <div className="sd-form-group">
@@ -424,7 +553,7 @@ const SchoolCertificates = () => {
               </div>
               <div className="sd-modal-footer">
                 <button type="button" className="sd-btn-secondary" onClick={() => setIsAddOpen(false)}>Hủy</button>
-                <button type="submit" className="sd-btn-primary"><FaShieldAlt /> Xác nhận & Đẩy lên Blockchain</button>
+                <button type="submit" className="sd-btn-primary"><FaCertificate /> Tạo văn bằng (Chờ phê duyệt)</button>
               </div>
             </form>
           </div>
@@ -475,20 +604,24 @@ const SchoolCertificates = () => {
                     />
                   </div>
                   <div className="sd-form-group">
-                    <label>Ngành đào tạo</label>
-                    <select className="sd-input" value={formData.major} onChange={(e) => setFormData({...formData, major: e.target.value})}>
-                      <option value="Công nghệ thông tin">Công nghệ thông tin</option>
-                      <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
-                      <option value="Hệ thống thông tin">Hệ thống thông tin</option>
-                      <option value="Quản trị kinh doanh">Quản trị kinh doanh</option>
-                    </select>
+                    <label>Ngành đào tạo *</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      required
+                      placeholder="Ví dụ: Công nghệ thông tin, Kỹ thuật phần mềm,..."
+                      value={formData.major} 
+                      onChange={(e) => setFormData({...formData, major: e.target.value})} 
+                    />
                   </div>
                   <div className="sd-form-group">
                     <label>Trình độ đào tạo</label>
                     <select className="sd-input" value={formData.degreeType} onChange={(e) => setFormData({...formData, degreeType: e.target.value})}>
                       <option value="Đại học">Đại học</option>
+                      <option value="Cao đẳng">Cao đẳng</option>
                       <option value="Thạc sĩ">Thạc sĩ</option>
                       <option value="Tiến sĩ">Tiến sĩ</option>
+                      <option value="Chứng chỉ">Chứng chỉ</option>
                     </select>
                   </div>
                   <div className="sd-form-group">
@@ -635,6 +768,44 @@ const SchoolCertificates = () => {
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsDeleteOpen(false)}>Hủy bỏ</button>
               <button className="sd-btn-danger" onClick={handleDeleteConfirm}>Xác nhận Thu hồi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CUSTOM ON-SCREEN ALERT MODAL (Thay thế alert trình duyệt) ── */}
+      {alertModal.open && (
+        <div className="sd-modal-overlay" style={{ zIndex: 4000 }}>
+          <div className="sd-modal" style={{ maxWidth: '420px', padding: '24px', textAlign: 'center' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: alertModal.type === 'danger' ? '#fef2f2' : '#fffbeb',
+              color: alertModal.type === 'danger' ? '#ef4444' : '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '26px',
+              margin: '0 auto 16px'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+              {alertModal.title}
+            </h3>
+            <p style={{ fontSize: '15px', color: '#334155', marginBottom: '24px', fontWeight: '600', lineHeight: '1.5' }}>
+              {alertModal.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button 
+                type="button"
+                className="sd-btn-primary" 
+                style={{ minWidth: '120px', justifyContent: 'center' }}
+                onClick={() => setAlertModal({ ...alertModal, open: false })}
+              >
+                Đồng ý
+              </button>
             </div>
           </div>
         </div>

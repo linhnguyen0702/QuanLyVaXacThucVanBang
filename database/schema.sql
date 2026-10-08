@@ -107,6 +107,7 @@ CREATE TABLE students (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT,
     school_id INT NOT NULL,
+    school_name VARCHAR(255) DEFAULT 'Trường Đại học Công nghệ',
     student_code VARCHAR(50) UNIQUE NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -289,10 +290,10 @@ INSERT INTO programs (school_id, program_code, program_name, sub_name, departmen
 (1, 'CTDT-QTKD-01', 'Quản trị kinh doanh', 'Chương trình chuẩn', 'Khoa Kinh tế', 'Đại học chính quy', '4 năm', 'active', 3102);
 
 -- 4. Thêm sinh viên mẫu
-INSERT INTO students (user_id, school_id, student_code, full_name, email, date_of_birth, gender, id_number, place_of_birth, nationality, department, class_name, graduation_status) VALUES 
-(NULL, 1, '20201123', 'Trần Thị B', 'tranthib@school.edu.vn', '2002-05-14', 'Nữ', '001198001234', 'Hà Nội', 'Việt Nam', 'Công nghệ thông tin', 'CNTT-01 K65', 'issued'),
-(NULL, 1, '20203492', 'Lê Văn C', 'levanc@school.edu.vn', '2002-08-20', 'Nam', '001198005678', 'Hải Phòng', 'Việt Nam', 'Khoa học máy tính', 'KHMT-02 K65', 'eligible'),
-(NULL, 1, '20210045', 'Phạm Minh Tuấn', 'tuanpm@school.edu.vn', '2003-01-10', 'Nam', '001198009988', 'Nam Định', 'Việt Nam', 'Kỹ thuật phần mềm', 'KTPM-01 K66', 'studying');
+INSERT INTO students (user_id, school_id, school_name, student_code, full_name, email, date_of_birth, gender, id_number, place_of_birth, nationality, department, class_name, graduation_status) VALUES 
+(NULL, 1, 'Trường Đại học Công nghệ - ĐHQGHN', '20201123', 'Trần Thị B', 'tranthib@school.edu.vn', '2002-05-14', 'Nữ', '001198001234', 'Hà Nội', 'Việt Nam', 'Công nghệ thông tin', 'CNTT-01 K65', 'issued'),
+(NULL, 1, 'Trường Đại học Công nghệ - ĐHQGHN', '20203492', 'Lê Văn C', 'levanc@school.edu.vn', '2002-08-20', 'Nam', '001198005678', 'Hải Phòng', 'Việt Nam', 'Khoa học máy tính', 'KHMT-02 K65', 'eligible'),
+(NULL, 1, 'Trường Đại học Công nghệ - ĐHQGHN', '20210045', 'Phạm Minh Tuấn', 'tuanpm@school.edu.vn', '2003-01-10', 'Nam', '001198009988', 'Nam Định', 'Việt Nam', 'Kỹ thuật phần mềm', 'KTPM-01 K66', 'studying');
 
 -- 5. Thêm văn bằng đã cấp mẫu
 INSERT INTO certificates (certificate_code, student_id, school_id, program_id, student_code, student_name, major, degree_type, education_mode, gpa, classification, issue_date, decision_number, certificate_hash, blockchain_tx_hash, status) VALUES 

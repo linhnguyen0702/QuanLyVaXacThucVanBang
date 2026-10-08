@@ -24,33 +24,36 @@ const SchoolVerifyCertificates = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await api.getCertificates();
+      // 1. Nạp danh sách văn bằng đã được xác thực xuất bản lên Blockchain (status = 'issued')
+      const res = await api.getCertificates({ status: 'issued' });
       if (res && res.success && res.certificates) {
         const history = res.certificates.map(c => ({
+          id: c.id,
           code: c.certificate_code,
           studentName: c.student_name,
+          studentId: c.student_code,
           program: c.major,
           txHash: c.blockchain_tx_hash || '0x3a4b9c1d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b',
-          timestamp: c.issue_date ? new Date(c.issue_date).toLocaleString('vi-VN') : '25/07/2026',
+          timestamp: c.issue_date ? new Date(c.issue_date).toLocaleDateString('vi-VN') : '25/07/2026',
           block: c.blockchain_certificate_id || 42895612
         }));
         setHistoryList(history);
+      }
 
-        // Fetch students for pending approval list
-        const stdRes = await api.getStudents({ status: 'eligible' });
-        if (stdRes && stdRes.success && stdRes.students) {
-          const pending = stdRes.students.map((s, idx) => ({
-            code: `UNI-2026-0${105 + idx}`,
-            studentName: s.full_name,
-            studentId: s.student_code,
-            program: s.department,
-            class: s.class_name,
-            rank: 'Xuất sắc',
-            dob: s.date_of_birth ? new Date(s.date_of_birth).toLocaleDateString('vi-VN') : '14/05/2004',
-            system: 'Chính quy'
-          }));
-          setPendingList(pending);
-        }
+      // 2. Nạp danh sách văn bằng ở trạng thái 'pending' được tạo từ Trang Văn bằng
+      const pendingRes = await api.getCertificates({ status: 'pending' });
+      if (pendingRes && pendingRes.success && pendingRes.certificates) {
+        const pending = pendingRes.certificates.map((c) => ({
+          id: c.id,
+          code: c.certificate_code,
+          studentName: c.student_name,
+          studentId: c.student_code,
+          program: c.major,
+          rank: c.classification || 'Giỏi',
+          dob: c.issue_date ? new Date(c.issue_date).toLocaleDateString('vi-VN') : '14/05/2004',
+          system: c.education_mode || 'Chính quy'
+        }));
+        setPendingList(pending);
       }
     } catch (err) {
       console.error('Failed to load certificates for verification:', err);
@@ -78,7 +81,6 @@ const SchoolVerifyCertificates = () => {
 
   const handleRejectSignature = () => {
     setShowMetaMask(false);
-    alert('Người dùng đã từ chối giao dịch ký số.');
   };
 
   const handleConfirmSignature = async () => {
@@ -98,22 +100,16 @@ const SchoolVerifyCertificates = () => {
           
           const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
           const blockNum = Math.floor(Math.random() * 50000) + 42900000;
-          const timestampStr = new Date().toLocaleString('vi-VN');
+          const timestampStr = new Date().toLocaleDateString('vi-VN');
 
           try {
-            await api.createCertificate({
-              certificate_code: selectedCert.code,
-              student_code: selectedCert.studentId,
-              student_name: selectedCert.studentName,
-              major: selectedCert.program,
-              degree_type: 'Đại học',
-              education_mode: 'Chính quy',
-              gpa: '3.65',
-              classification: selectedCert.rank,
-              issue_date: new Date().toISOString().split('T')[0],
-              decision_number: 'QĐ-125/QĐ-ĐH',
-              blockchain_tx_hash: txHash
-            });
+            if (selectedCert.id) {
+              // Cập nhật trạng thái văn bằng thành issued và đẩy txHash vào CSDL
+              await api.updateCertificate(selectedCert.id, {
+                status: 'issued',
+                blockchain_tx_hash: txHash
+              });
+            }
           } catch (e) {
             console.error('Failed to save approved cert to DB:', e);
           }
@@ -150,39 +146,48 @@ const SchoolVerifyCertificates = () => {
 
   const handleBatchApprove = () => {
     if (pendingList.length === 0) return;
-    if (window.confirm(`Bạn có chắc chắn muốn phê duyệt đồng loạt ${pendingList.length} văn bằng và đẩy lên CSDL/Blockchain?`)) {
-      setIsProcessing(true);
-      setProcessStep(0);
+    setIsProcessing(true);
+    setProcessStep(0);
+    setTimeout(() => {
+      setProcessStep(1);
       setTimeout(() => {
-        setProcessStep(1);
-        setTimeout(() => {
-          setProcessStep(2);
-          setTimeout(() => {
-            setProcessStep(3);
-            const timestampStr = new Date().toLocaleString('vi-VN');
-            
-            const newHistoryItems = pendingList.map((cert, idx) => {
-              const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-              return {
-                code: cert.code,
-                studentName: cert.studentName,
-                program: cert.program,
-                txHash,
-                block: 42901100 + idx,
-                timestamp: timestampStr
-              };
+        setProcessStep(2);
+        setTimeout(async () => {
+          setProcessStep(3);
+          const timestampStr = new Date().toLocaleDateString('vi-VN');
+          
+          const newHistoryItems = [];
+          for (let i = 0; i < pendingList.length; i++) {
+            const cert = pendingList[i];
+            const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
+            if (cert.id) {
+              try {
+                await api.updateCertificate(cert.id, {
+                  status: 'issued',
+                  blockchain_tx_hash: txHash
+                });
+              } catch (err) {
+                console.error('Error updating cert:', err);
+              }
+            }
+            newHistoryItems.push({
+              code: cert.code,
+              studentName: cert.studentName,
+              program: cert.program,
+              txHash,
+              block: 42901100 + i,
+              timestamp: timestampStr
             });
+          }
 
-            setHistoryList(prev => [...newHistoryItems, ...prev]);
-            setApprovedToday(prev => prev + pendingList.length);
-            setGasSpent(prev => prev + (pendingList.length * 79500));
-            setPendingList([]);
-            setIsProcessing(false);
-            alert(`Đã phê duyệt và đồng bộ thành công ${newHistoryItems.length} văn bằng lên CSDL và Sepolia/Polygon!`);
-          }, 1200);
-        }, 1000);
-      }, 800);
-    }
+          setHistoryList(prev => [...newHistoryItems, ...prev]);
+          setApprovedToday(prev => prev + pendingList.length);
+          setGasSpent(prev => prev + (pendingList.length * 79500));
+          setPendingList([]);
+          setIsProcessing(false);
+        }, 1200);
+      }, 1000);
+    }, 800);
   };
 
   return (

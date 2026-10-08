@@ -290,17 +290,13 @@ const SchoolReports = () => {
 
             <div className="sd-form-group">
               <label>Khoa / Ngành đào tạo</label>
-              <select 
+              <input 
+                type="text" 
                 className="sd-input" 
+                placeholder="Nhập tên Khoa / Ngành hoặc Tất cả"
                 value={genForm.department} 
-                onChange={(e) => setGenForm({ ...genForm, department: e.target.value })}
-              >
-                <option value="Tất cả khoa">Tất cả các Khoa</option>
-                <option value="Khoa Công nghệ thông tin">Khoa Công nghệ thông tin</option>
-                <option value="Khoa Kinh tế">Khoa Kinh tế</option>
-                <option value="Khoa Ngoại ngữ">Khoa Ngoại ngữ</option>
-                <option value="Khoa Luật">Khoa Luật</option>
-              </select>
+                onChange={(e) => setGenForm({ ...genForm, department: e.target.value })} 
+              />
             </div>
 
             <div className="sd-form-group">
@@ -312,8 +308,10 @@ const SchoolReports = () => {
               >
                 <option value="Tất cả">Tất cả dữ liệu</option>
                 <option value="Đại học">Trình độ Đại học</option>
+                <option value="Cao đẳng">Trình độ Cao đẳng</option>
                 <option value="Thạc sĩ">Trình độ Thạc sĩ</option>
                 <option value="Tiến sĩ">Trình độ Tiến sĩ</option>
+                <option value="Chứng chỉ">Trình độ Chứng chỉ</option>
                 <option value="Đã xác thực">Chỉ bằng đã ghi Blockchain</option>
               </select>
             </div>

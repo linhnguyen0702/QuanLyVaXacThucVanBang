@@ -344,18 +344,20 @@ const SchoolPrograms = () => {
                     />
                   </div>
                   <div className="sd-form-group">
-                    <label>Khoa trực thuộc</label>
-                    <select className="sd-input" value={formData.dept} onChange={(e) => setFormData({...formData, dept: e.target.value})}>
-                      <option value="Khoa Công nghệ thông tin">Khoa Công nghệ thông tin</option>
-                      <option value="Khoa Kinh tế">Khoa Kinh tế</option>
-                      <option value="Khoa Ngoại ngữ">Khoa Ngoại ngữ</option>
-                      <option value="Khoa Luật">Khoa Luật</option>
-                    </select>
+                    <label>Khoa trực thuộc *</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      placeholder="Ví dụ: Khoa Công nghệ thông tin"
+                      value={formData.dept} 
+                      onChange={(e) => setFormData({...formData, dept: e.target.value})} 
+                    />
                   </div>
                   <div className="sd-form-group">
                     <label>Hệ đào tạo</label>
                     <select className="sd-input" value={formData.system} onChange={(e) => setFormData({...formData, system: e.target.value})}>
                       <option value="Đại học chính quy">Đại học chính quy</option>
+                      <option value="Cao đẳng chính quy">Cao đẳng chính quy</option>
                       <option value="Vừa học vừa làm">Vừa học vừa làm</option>
                       <option value="Sau đại học">Sau đại học</option>
                     </select>
@@ -434,18 +436,20 @@ const SchoolPrograms = () => {
                     />
                   </div>
                   <div className="sd-form-group">
-                    <label>Khoa trực thuộc</label>
-                    <select className="sd-input" value={formData.dept} onChange={(e) => setFormData({...formData, dept: e.target.value})}>
-                      <option value="Khoa Công nghệ thông tin">Khoa Công nghệ thông tin</option>
-                      <option value="Khoa Kinh tế">Khoa Kinh tế</option>
-                      <option value="Khoa Ngoại ngữ">Khoa Ngoại ngữ</option>
-                      <option value="Khoa Luật">Khoa Luật</option>
-                    </select>
+                    <label>Khoa trực thuộc *</label>
+                    <input 
+                      type="text" 
+                      className="sd-input" 
+                      placeholder="Ví dụ: Khoa Công nghệ thông tin"
+                      value={formData.dept} 
+                      onChange={(e) => setFormData({...formData, dept: e.target.value})} 
+                    />
                   </div>
                   <div className="sd-form-group">
                     <label>Hệ đào tạo</label>
                     <select className="sd-input" value={formData.system} onChange={(e) => setFormData({...formData, system: e.target.value})}>
                       <option value="Đại học chính quy">Đại học chính quy</option>
+                      <option value="Cao đẳng chính quy">Cao đẳng chính quy</option>
                       <option value="Vừa học vừa làm">Vừa học vừa làm</option>
                       <option value="Sau đại học">Sau đại học</option>
                     </select>

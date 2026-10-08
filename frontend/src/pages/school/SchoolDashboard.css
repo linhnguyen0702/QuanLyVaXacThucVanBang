@@ -1267,6 +1267,14 @@
   animation: sdModalZoom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.sd-modal form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 @keyframes sdModalZoom {
   from { opacity: 0; transform: scale(0.95) translateY(10px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
@@ -1283,6 +1291,7 @@
   align-items: center;
   justify-content: space-between;
   background-color: #f8fafc;
+  flex-shrink: 0;
 }
 
 .sd-modal-title {
@@ -1332,6 +1341,7 @@
   padding: 24px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 
 .sd-modal-footer {
@@ -1342,6 +1352,7 @@
   justify-content: flex-end;
   gap: 12px;
   background-color: #f8fafc;
+  flex-shrink: 0;
 }
 
 .sd-btn-danger {
