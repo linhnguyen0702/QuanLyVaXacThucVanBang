@@ -35,6 +35,24 @@ export const api = {
     return res.json();
   },
 
+  updateProfile: async (data) => {
+    const res = await fetch(`${API_BASE_URL}/auth/update-profile`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
+  changePassword: async (data) => {
+    const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
   // Certificates
   getCertificates: async (params = {}) => {
     const query = new URLSearchParams(params).toString();

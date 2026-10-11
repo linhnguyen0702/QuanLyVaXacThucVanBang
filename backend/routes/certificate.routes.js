@@ -10,6 +10,6 @@ router.get('/:id', certController.getCertificateById);
 router.post('/', protect, authorize('admin', 'school', 'officer'), certController.createCertificate);
 router.put('/:id', protect, authorize('admin', 'school', 'officer'), certController.updateCertificate);
 router.put('/:id/revoke', protect, authorize('admin', 'school'), certController.revokeCertificate);
-router.delete('/:id', protect, authorize('admin'), certController.deleteCertificate);
+router.delete('/:id', protect, authorize('admin', 'school', 'officer'), certController.deleteCertificate);
 
 module.exports = router;

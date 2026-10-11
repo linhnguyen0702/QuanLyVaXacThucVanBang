@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   FaUser, FaLock, FaKey, FaCamera, 
   FaCheck, FaLaptop, FaCopy, FaEdit, FaTimes 
 } from 'react-icons/fa';
+import { api } from '../../services/api';
 
-const SchoolProfile = () => {
+const SchoolProfile = ({ onUserUpdated }) => {
   const [activeTab, setActiveTab] = useState('account');
   const [isEditingAccount, setIsEditingAccount] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -12,17 +13,45 @@ const SchoolProfile = () => {
   
   const fileInputRef = useRef(null);
 
-  // Account Form State (Saved to localStorage)
+  const getCurrentUser = () => {
+    try {
+      const saved = localStorage.getItem('user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  };
+
+  // Account Form State (Saved to localStorage & synchronized with logged-in user)
   const [accountForm, setAccountForm] = useState(() => {
-    const saved = localStorage.getItem('user_profile_data');
-    return saved ? JSON.parse(saved) : {
-      fullName: localStorage.getItem('userName') || 'Nguyễn Văn An',
-      email: 'annv@school.edu.vn',
-      phone: '0368 251 814',
-      address: 'Số 144 Xuân Thủy, Cầu Giấy, Hà Nội',
-      department: 'Phòng Đào tạo',
-      position: 'Quản trị viên Hệ thống Văn bằng số',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
+    const loggedUser = getCurrentUser();
+    let savedProfile = null;
+    try {
+      const saved = localStorage.getItem('user_profile_data');
+      if (saved) savedProfile = JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+
+    const email = (loggedUser && loggedUser.email) || (savedProfile && savedProfile.email && savedProfile.email !== 'annv@school.edu.vn' ? savedProfile.email : 'admin@school.edu.vn');
+    const fullName = (savedProfile && savedProfile.fullName) || (loggedUser && loggedUser.full_name) || localStorage.getItem('userName') || 'Nguyễn Văn An';
+    const phone = (savedProfile && savedProfile.phone) || (loggedUser && loggedUser.phone) || '0368 251 814';
+    const address = (savedProfile && savedProfile.address) || (loggedUser && loggedUser.address) || 'Số 144 Xuân Thủy, Cầu Giấy, Hà Nội';
+    const department = (savedProfile && savedProfile.department) || (loggedUser && loggedUser.department) || 'Phòng Đào tạo';
+    const position = (savedProfile && savedProfile.position) || (loggedUser && loggedUser.position) || 'Quản trị viên Hệ thống Văn bằng số';
+    const avatar = (savedProfile && savedProfile.avatar) || (loggedUser && loggedUser.avatar_url) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150';
+    const wallet = (loggedUser && loggedUser.wallet_address) || (savedProfile && savedProfile.wallet) || '0xA3f2d9b7eC81452D819280dEAc429e81';
+
+    return {
+      fullName,
+      email,
+      phone,
+      address,
+      department,
+      position,
+      avatar,
+      wallet
     };
   });
 
@@ -36,6 +65,39 @@ const SchoolProfile = () => {
     confirmPassword: ''
   });
 
+  // Synchronize with logged in user whenever component mounts
+  useEffect(() => {
+    try {
+      const u = getCurrentUser();
+      if (u && u.email) {
+        setAccountForm(prev => {
+          const updated = {
+            ...prev,
+            email: u.email,
+            fullName: prev.fullName || u.full_name || 'Nguyễn Văn An',
+            phone: prev.phone || u.phone || '0368 251 814',
+            department: prev.department || u.department || 'Phòng Đào tạo',
+            position: prev.position || u.position || 'Quản trị viên Hệ thống Văn bằng số',
+            wallet: u.wallet_address || prev.wallet || '0xA3f2d9b7eC81452D819280dEAc429e81'
+          };
+          localStorage.setItem('user_profile_data', JSON.stringify(updated));
+          return updated;
+        });
+        setTempAccountForm(prev => ({
+          ...prev,
+          email: u.email,
+          fullName: prev.fullName || u.full_name || 'Nguyễn Văn An',
+          phone: prev.phone || u.phone || '0368 251 814',
+          department: prev.department || u.department || 'Phòng Đào tạo',
+          position: prev.position || u.position || 'Quản trị viên Hệ thống Văn bằng số',
+          wallet: u.wallet_address || prev.wallet || '0xA3f2d9b7eC81452D819280dEAc429e81'
+        }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
@@ -45,7 +107,7 @@ const SchoolProfile = () => {
     if (e) e.preventDefault();
     setTempAccountForm({ ...accountForm });
     setIsEditingAccount(true);
-    showToast('Đã mở khóa các trường. Bạn có thể nhập thông tin chỉnh sửa!');
+    showToast('Bạn có thể nhập thông tin chỉnh sửa!');
   };
 
   const handleCancelEdit = () => {
@@ -53,14 +115,77 @@ const SchoolProfile = () => {
     setIsEditingAccount(false);
   };
 
-  const handleAccountSubmit = (e) => {
+  const handleAccountSubmit = async (e) => {
     e.preventDefault();
     if (!isEditingAccount) return;
-    setAccountForm({ ...tempAccountForm });
-    localStorage.setItem('user_profile_data', JSON.stringify(tempAccountForm));
-    localStorage.setItem('userName', tempAccountForm.fullName);
-    setIsEditingAccount(false);
-    showToast('Cập nhật hồ sơ thành công!');
+
+    try {
+      // 1. Gửi dữ liệu cập nhật trực tiếp vào cơ sở dữ liệu MySQL
+      const res = await api.updateProfile({
+        full_name: tempAccountForm.fullName,
+        phone: tempAccountForm.phone,
+        department: tempAccountForm.department,
+        position: tempAccountForm.position,
+        address: tempAccountForm.address,
+        avatar_url: tempAccountForm.avatar,
+        wallet_address: tempAccountForm.wallet
+      });
+
+      let updatedUser = null;
+      if (res && res.success && res.user) {
+        updatedUser = res.user;
+      } else {
+        const oldUser = getCurrentUser() || {};
+        updatedUser = {
+          ...oldUser,
+          full_name: tempAccountForm.fullName,
+          phone: tempAccountForm.phone,
+          department: tempAccountForm.department,
+          position: tempAccountForm.position,
+          address: tempAccountForm.address,
+          avatar_url: tempAccountForm.avatar,
+          wallet_address: tempAccountForm.wallet
+        };
+      }
+
+      // 2. Cập nhật bộ nhớ phiên đăng nhập (localStorage)
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('userName', updatedUser.full_name || tempAccountForm.fullName);
+      localStorage.setItem('user_profile_data', JSON.stringify({
+        fullName: updatedUser.full_name || tempAccountForm.fullName,
+        email: updatedUser.email || tempAccountForm.email,
+        phone: updatedUser.phone || tempAccountForm.phone,
+        address: updatedUser.address || tempAccountForm.address,
+        department: updatedUser.department || tempAccountForm.department,
+        position: updatedUser.position || tempAccountForm.position,
+        avatar: updatedUser.avatar_url || tempAccountForm.avatar,
+        wallet: updatedUser.wallet_address || tempAccountForm.wallet
+      }));
+
+      // 3. Cập nhật state hiển thị của hồ sơ
+      setAccountForm({
+        fullName: updatedUser.full_name || tempAccountForm.fullName,
+        email: updatedUser.email || tempAccountForm.email,
+        phone: updatedUser.phone || tempAccountForm.phone,
+        address: updatedUser.address || tempAccountForm.address,
+        department: updatedUser.department || tempAccountForm.department,
+        position: updatedUser.position || tempAccountForm.position,
+        avatar: updatedUser.avatar_url || tempAccountForm.avatar,
+        wallet: updatedUser.wallet_address || tempAccountForm.wallet
+      });
+
+      // 4. Đồng bộ thanh Header và thông báo toàn cục
+      if (onUserUpdated) {
+        onUserUpdated(updatedUser);
+      }
+      window.dispatchEvent(new Event('user_profile_updated'));
+
+      setIsEditingAccount(false);
+      showToast('Cập nhật hồ sơ thành công!');
+    } catch (err) {
+      console.error('Lỗi khi cập nhật hồ sơ:', err);
+      showToast('Không thể kết nối máy chủ để lưu vào CSDL!');
+    }
   };
 
   // Avatar file upload simulation
@@ -77,7 +202,7 @@ const SchoolProfile = () => {
     }
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (!passwordForm.currentPassword) {
       alert('Vui lòng nhập mật khẩu hiện tại!');
@@ -87,12 +212,26 @@ const SchoolProfile = () => {
       alert('Mật khẩu mới và nhập lại mật khẩu không khớp!');
       return;
     }
-    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    showToast('Đổi mật khẩu thành công! Vui lòng bảo mật thông tin.');
+    try {
+      const res = await api.changePassword({
+        current_password: passwordForm.currentPassword,
+        new_password: passwordForm.newPassword
+      });
+
+      if (res && res.success) {
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        showToast('Đổi mật khẩu thành công và đã lưu vào CSDL!');
+      } else {
+        alert(res.message || 'Mật khẩu hiện tại không chính xác.');
+      }
+    } catch (err) {
+      alert('Không thể kết nối đến máy chủ.');
+    }
   };
 
   const handleCopyWallet = () => {
-    navigator.clipboard.writeText('0xA3f2d9b7eC81452D819280dEAc429e81');
+    const w = accountForm.wallet || '0xA3f2d9b7eC81452D819280dEAc429e81';
+    navigator.clipboard.writeText(w);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -337,7 +476,7 @@ const SchoolProfile = () => {
                 <div>
                   <span className="sd-detail-label">Mạng lưới: Polygon Mainnet</span>
                   <div className="sd-detail-value" style={{ fontSize: '16px', fontFamily: 'monospace', marginTop: '4px' }}>
-                    0xA3f2d9b7eC81452D819280dEAc429e81
+                    {accountForm.wallet || '0xA3f2d9b7eC81452D819280dEAc429e81'}
                   </div>
                 </div>
                 <button type="button" className="sd-btn-secondary" onClick={handleCopyWallet}>

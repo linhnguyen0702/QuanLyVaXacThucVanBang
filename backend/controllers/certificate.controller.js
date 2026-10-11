@@ -133,9 +133,15 @@ exports.createCertificate = async (req, res, next) => {
     const trimmedCertCode = certificate_code ? String(certificate_code).trim() : '';
     const trimmedStudentCode = student_code ? String(student_code).trim() : '';
     const trimmedStudentName = student_name ? String(student_name).trim() : '';
+    const trimmedMajor = major ? String(major).trim() : '';
+    const trimmedDecision = decision_number ? String(decision_number).trim() : '';
+    const cleanIssueDate = issue_date ? (typeof issue_date === 'string' && issue_date.includes('T') ? issue_date.split('T')[0] : String(issue_date).trim()) : '';
 
-    if (!trimmedCertCode || (!trimmedStudentCode && !trimmedStudentName && !student_id) || !issue_date || !decision_number) {
-      return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ số hiệu văn bằng, tên sinh viên/MSSV, ngày cấp và số quyết định.' });
+    if (!trimmedCertCode || !trimmedStudentCode || !trimmedStudentName || !cleanIssueDate || !trimmedDecision) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Vui lòng điền đầy đủ số hiệu văn bằng, MSSV, họ tên sinh viên, ngày cấp và số quyết định.' 
+      });
     }
 
     // 1. Kiểm tra không cho tạo trùng số hiệu văn bằng
@@ -150,33 +156,40 @@ exports.createCertificate = async (req, res, next) => {
       });
     }
 
-    // 2. Lấy đúng dữ liệu thông tin sinh viên từ bảng students (bằng MSSV hoặc Họ tên)
-    let studentQuery = 'SELECT * FROM students WHERE 1=0';
-    const queryParams = [];
-
-    if (student_id) {
-      studentQuery = 'SELECT * FROM students WHERE id = ?';
-      queryParams.push(student_id);
-    } else if (trimmedStudentCode && trimmedStudentName) {
-      studentQuery = 'SELECT * FROM students WHERE student_code = ? OR LOWER(full_name) = LOWER(?)';
-      queryParams.push(trimmedStudentCode, trimmedStudentName);
-    } else if (trimmedStudentCode) {
-      studentQuery = 'SELECT * FROM students WHERE student_code = ?';
-      queryParams.push(trimmedStudentCode);
-    } else if (trimmedStudentName) {
-      studentQuery = 'SELECT * FROM students WHERE LOWER(full_name) = LOWER(?)';
-      queryParams.push(trimmedStudentName);
-    }
-
-    const [existingStudent] = await db.query(studentQuery, queryParams);
-    if (existingStudent.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Không tìm thấy dữ liệu thông tin sinh viên trên hệ thống, vui lòng kiểm tra lại!' 
+    // 2. Ràng buộc: Kiểm tra không cho tạo trùng mã sinh viên (sinh viên đã có văn bằng chưa thu hồi)
+    const [existingStudentCert] = await db.query(
+      'SELECT id, certificate_code FROM certificates WHERE student_code = ? AND status != "revoked"',
+      [trimmedStudentCode]
+    );
+    if (existingStudentCert.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Sinh viên có mã số ${trimmedStudentCode} đã có văn bằng trên hệ thống (Số hiệu: ${existingStudentCert[0].certificate_code}), không thể tạo trùng!`
       });
     }
 
-    const validStudent = existingStudent[0];
+    // 3. Ràng buộc: Kiểm tra mã sinh viên phải tồn tại trong bảng students
+    const [studentRows] = await db.query(
+      'SELECT * FROM students WHERE student_code = ?',
+      [trimmedStudentCode]
+    );
+    if (studentRows.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Không tìm thấy sinh viên có mã "${trimmedStudentCode}" trên hệ thống, vui lòng kiểm tra lại!` 
+      });
+    }
+
+    const validStudent = studentRows[0];
+
+    // 4. Ràng buộc: Đúng mã đúng tên mới cho tạo (so sánh họ tên nhập vào với họ tên gốc trong hồ sơ)
+    const normalizeStr = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (normalizeStr(trimmedStudentName) !== normalizeStr(validStudent.full_name)) {
+      return res.status(400).json({
+        success: false,
+        message: `Họ tên sinh viên "${trimmedStudentName}" không khớp với Mã sinh viên "${trimmedStudentCode}" (Hồ sơ gốc: ${validStudent.full_name}). Vui lòng nhập đúng họ tên sinh viên!`
+      });
+    }
 
     // Mặc định tạo mới chưa đẩy luôn lên Blockchain (status = 'pending')
     const finalStatus = status || 'pending';
@@ -185,7 +198,7 @@ exports.createCertificate = async (req, res, next) => {
     const finalHash = certificate_hash || generateCertificateHash({
       certificate_code: trimmedCertCode, 
       student_code: validStudent.student_code, 
-      issue_date, 
+      issue_date: cleanIssueDate, 
       gpa: gpa || '3.50'
     });
 
@@ -200,15 +213,15 @@ exports.createCertificate = async (req, res, next) => {
         validStudent.id,
         school_id || validStudent.school_id || 1,
         program_id || null,
-        trimmedStudentCode || validStudent.student_code,
-        trimmedStudentName || validStudent.full_name,
-        major || validStudent.department,
+        validStudent.student_code,
+        validStudent.full_name,
+        trimmedMajor || validStudent.department,
         degree_type || 'Đại học',
         education_mode || 'Chính quy',
         gpa || null,
         classification || 'Giỏi',
-        issue_date,
-        decision_number,
+        cleanIssueDate,
+        trimmedDecision,
         finalHash,
         blockchain_tx_hash || null,
         blockchain_certificate_id || null,
@@ -258,27 +271,190 @@ exports.updateCertificate = async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
-      student_name, major, degree_type, education_mode, gpa,
-      classification, issue_date, decision_number, blockchain_tx_hash,
-      status, revoke_reason
+      certificate_code,
+      student_code,
+      student_name,
+      major,
+      degree_type,
+      education_mode,
+      gpa,
+      classification,
+      issue_date,
+      decision_number,
+      blockchain_tx_hash,
+      status,
+      revoke_reason
     } = req.body;
+
+    const [existing] = await db.query('SELECT * FROM certificates WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin văn bằng.' });
+    }
+
+    const currentCert = existing[0];
+
+    // Ràng buộc: Nếu văn bằng đã được đẩy lên Blockchain (status = 'issued' hoặc có blockchain_tx_hash)
+    // thì KHÔNG cho chỉnh sửa nữa!
+    const isAlreadyOnBlockchain = currentCert.status === 'issued' || Boolean(currentCert.blockchain_tx_hash);
+    const isApprovingFlow = currentCert.status === 'pending' && status === 'issued';
+
+    if (isAlreadyOnBlockchain && !isApprovingFlow) {
+      return res.status(400).json({
+        success: false,
+        message: 'Văn bằng đã được xác thực trên Blockchain, không thể chỉnh sửa thông tin!'
+      });
+    }
+
+    // Nếu đây là luồng phê duyệt từ SchoolVerifyCertificates (pending -> issued)
+    if (isApprovingFlow) {
+      await db.query(
+        `UPDATE certificates 
+         SET status = 'issued',
+             blockchain_tx_hash = COALESCE(?, blockchain_tx_hash)
+         WHERE id = ?`,
+        [blockchain_tx_hash, id]
+      );
+
+      const [updated] = await db.query('SELECT * FROM certificates WHERE id = ?', [id]);
+      return res.json({
+        success: true,
+        message: 'Xác thực văn bằng lên Blockchain thành công.',
+        certificate: updated[0]
+      });
+    }
+
+    // Xử lý luồng chỉnh sửa thông tin văn bằng thông thường:
+    let finalCertCode = currentCert.certificate_code;
+    if (certificate_code !== undefined && String(certificate_code).trim() !== '') {
+      const trimmedCertCode = String(certificate_code).trim();
+      if (trimmedCertCode !== currentCert.certificate_code) {
+        // Kiểm tra trùng số hiệu với văn bằng khác
+        const [dupCode] = await db.query(
+          'SELECT id FROM certificates WHERE certificate_code = ? AND id != ?',
+          [trimmedCertCode, id]
+        );
+        if (dupCode.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Số hiệu văn bằng "${trimmedCertCode}" đã tồn tại trên hệ thống, vui lòng kiểm tra lại!`
+          });
+        }
+        finalCertCode = trimmedCertCode;
+      }
+    }
+
+    let finalStudentId = currentCert.student_id;
+    let finalStudentCode = currentCert.student_code;
+    let finalStudentName = currentCert.student_name;
+
+    const targetStudentCode = student_code !== undefined ? String(student_code).trim() : currentCert.student_code;
+    const targetStudentName = student_name !== undefined ? String(student_name).trim() : currentCert.student_name;
+
+    if (targetStudentCode !== currentCert.student_code || targetStudentName !== currentCert.student_name) {
+      // 1. Kiểm tra trùng MSSV với văn bằng khác
+      if (targetStudentCode !== currentCert.student_code) {
+        const [dupStudent] = await db.query(
+          'SELECT id, certificate_code FROM certificates WHERE student_code = ? AND id != ? AND status != "revoked"',
+          [targetStudentCode, id]
+        );
+        if (dupStudent.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Sinh viên có mã số "${targetStudentCode}" đã có văn bằng khác trên hệ thống (Số hiệu: ${dupStudent[0].certificate_code}), không thể cập nhật trùng!`
+          });
+        }
+      }
+
+      // 2. Kiểm tra MSSV phải tồn tại trong bảng students
+      const [studentRows] = await db.query(
+        'SELECT * FROM students WHERE student_code = ?',
+        [targetStudentCode]
+      );
+      if (studentRows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Không tìm thấy sinh viên có mã "${targetStudentCode}" trên hệ thống!`
+        });
+      }
+
+      const validStudent = studentRows[0];
+      finalStudentId = validStudent.id;
+      finalStudentCode = validStudent.student_code;
+
+      // 3. Đúng mã đúng tên mới cho cập nhật
+      const normalizeStr = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      if (targetStudentName && normalizeStr(targetStudentName) !== normalizeStr(validStudent.full_name)) {
+        return res.status(400).json({
+          success: false,
+          message: `Họ tên sinh viên "${targetStudentName}" không khớp với Mã sinh viên "${targetStudentCode}" (Hồ sơ gốc: ${validStudent.full_name}). Vui lòng nhập đúng họ tên sinh viên!`
+        });
+      }
+      finalStudentName = validStudent.full_name;
+    }
+
+    const finalMajor = major !== undefined ? String(major).trim() : currentCert.major;
+    const finalDegreeType = degree_type !== undefined ? degree_type : currentCert.degree_type;
+    const finalEducationMode = education_mode !== undefined ? education_mode : currentCert.education_mode;
+    const finalGpa = gpa !== undefined ? (gpa ? String(gpa).trim() : null) : currentCert.gpa;
+    const finalClassification = classification !== undefined ? classification : currentCert.classification;
+    const finalIssueDate = issue_date !== undefined ? (typeof issue_date === 'string' && issue_date.includes('T') ? issue_date.split('T')[0] : String(issue_date).trim()) : currentCert.issue_date;
+    const finalDecisionNumber = decision_number !== undefined ? String(decision_number).trim() : currentCert.decision_number;
+
+    // Tái tạo lại hash văn bằng và mã QR tương ứng nếu có thông tin cốt lõi thay đổi
+    const finalHash = generateCertificateHash({
+      certificate_code: finalCertCode,
+      student_code: finalStudentCode,
+      issue_date: finalIssueDate,
+      gpa: finalGpa || '3.50'
+    });
+    const finalQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(finalHash)}`;
 
     await db.query(
       `UPDATE certificates
-       SET student_name = COALESCE(?, student_name),
-           major = COALESCE(?, major),
-           degree_type = COALESCE(?, degree_type),
-           education_mode = COALESCE(?, education_mode),
-           gpa = COALESCE(?, gpa),
-           classification = COALESCE(?, classification),
-           issue_date = COALESCE(?, issue_date),
-           decision_number = COALESCE(?, decision_number),
-           blockchain_tx_hash = COALESCE(?, blockchain_tx_hash),
+       SET certificate_code = ?,
+           student_id = ?,
+           student_code = ?,
+           student_name = ?,
+           major = ?,
+           degree_type = ?,
+           education_mode = ?,
+           gpa = ?,
+           classification = ?,
+           issue_date = ?,
+           decision_number = ?,
+           certificate_hash = ?,
+           qr_code_url = ?,
            status = COALESCE(?, status),
            revoke_reason = COALESCE(?, revoke_reason)
        WHERE id = ?`,
-      [student_name, major, degree_type, education_mode, gpa, classification, issue_date, decision_number, blockchain_tx_hash, status, revoke_reason, id]
+      [
+        finalCertCode,
+        finalStudentId,
+        finalStudentCode,
+        finalStudentName,
+        finalMajor,
+        finalDegreeType,
+        finalEducationMode,
+        finalGpa,
+        finalClassification,
+        finalIssueDate,
+        finalDecisionNumber,
+        finalHash,
+        finalQrCode,
+        status,
+        revoke_reason,
+        id
+      ]
     );
+
+    // Ghi audit log
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'UPDATE_CERTIFICATE', 'certificates', ?, ?, ?)`,
+        [req.user.id, id, `Cập nhật văn bằng ${finalCertCode} của sinh viên ${finalStudentName}`, req.ip]
+      );
+    }
 
     const [updated] = await db.query('SELECT * FROM certificates WHERE id = ?', [id]);
 
@@ -288,6 +464,9 @@ exports.updateCertificate = async (req, res, next) => {
       certificate: updated[0]
     });
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Số hiệu văn bằng hoặc Mã hash đã tồn tại trên hệ thống.' });
+    }
     next(error);
   }
 };
@@ -300,13 +479,22 @@ exports.revokeCertificate = async (req, res, next) => {
     const { id } = req.params;
     const { reason } = req.body;
 
-    if (!reason) {
+    if (!reason || !reason.trim()) {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do thu hồi văn bằng.' });
+    }
+
+    const [cert] = await db.query('SELECT * FROM certificates WHERE id = ?', [id]);
+    if (cert.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin văn bằng.' });
+    }
+
+    if (cert[0].status === 'revoked') {
+      return res.status(400).json({ success: false, message: 'Văn bằng này đã ở trạng thái thu hồi.' });
     }
 
     await db.query(
       `UPDATE certificates SET status = 'revoked', revoke_reason = ? WHERE id = ?`,
-      [reason, id]
+      [reason.trim(), id]
     );
 
     // Record audit log
@@ -314,7 +502,7 @@ exports.revokeCertificate = async (req, res, next) => {
       await db.query(
         `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
          VALUES (?, 'REVOKE_CERTIFICATE', 'certificates', ?, ?, ?)`,
-        [req.user.id, id, `Thu hồi văn bằng với lý do: ${reason}`, req.ip]
+        [req.user.id, id, `Thu hồi văn bằng ${cert[0].certificate_code} với lý do: ${reason.trim()}`, req.ip]
       );
     }
 
@@ -329,7 +517,7 @@ exports.revokeCertificate = async (req, res, next) => {
 
 // @desc    Delete certificate
 // @route   DELETE /api/certificates/:id
-// @access  Private (Admin)
+// @access  Private (Admin, School, Officer)
 exports.deleteCertificate = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -339,7 +527,24 @@ exports.deleteCertificate = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Văn bằng không tồn tại.' });
     }
 
+    // Nếu văn bằng đã được đẩy lên Blockchain thì không cho xóa trực tiếp, chỉ cho thu hồi
+    if (cert[0].status === 'issued' || Boolean(cert[0].blockchain_tx_hash)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Văn bằng đã được xác thực trên Blockchain, không thể xóa trực tiếp. Vui lòng sử dụng tính năng thu hồi văn bằng.' 
+      });
+    }
+
     await db.query('DELETE FROM certificates WHERE id = ?', [id]);
+
+    // Record audit log
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'DELETE_CERTIFICATE', 'certificates', ?, ?, ?)`,
+        [req.user.id, id, `Xóa phôi văn bằng chưa xác thực ${cert[0].certificate_code}`, req.ip]
+      );
+    }
 
     res.json({
       success: true,

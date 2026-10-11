@@ -25,7 +25,7 @@ const SchoolPrograms = () => {
     code: '',
     name: '',
     sub: '',
-    dept: 'Khoa Công nghệ thông tin',
+    dept: '', // Để trống không nhập sẵn
     system: 'Đại học chính quy',
     duration: '',
     status: 'active'
@@ -73,7 +73,7 @@ const SchoolPrograms = () => {
       code: '',
       name: '',
       sub: '',
-      dept: 'Khoa Công nghệ thông tin',
+      dept: '', // Để trống không nhập sẵn
       system: 'Đại học chính quy',
       duration: '',
       status: 'active'
@@ -83,8 +83,8 @@ const SchoolPrograms = () => {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.code) {
-      alert('Vui lòng nhập tên và mã chương trình!');
+    if (!formData.name || !formData.code || !formData.dept) {
+      alert('Vui lòng nhập đầy đủ mã chương trình, tên chương trình và khoa trực thuộc!');
       return;
     }
 
@@ -348,10 +348,18 @@ const SchoolPrograms = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      required
                       placeholder="Ví dụ: Khoa Công nghệ thông tin"
+                      list="deptSuggestions"
                       value={formData.dept} 
                       onChange={(e) => setFormData({...formData, dept: e.target.value})} 
                     />
+                    <datalist id="deptSuggestions">
+                      <option value="Khoa Công nghệ thông tin" />
+                      <option value="Khoa Kinh tế" />
+                      <option value="Khoa Ngoại ngữ" />
+                      <option value="Khoa Điện tử viễn thông" />
+                    </datalist>
                   </div>
                   <div className="sd-form-group">
                     <label>Hệ đào tạo</label>

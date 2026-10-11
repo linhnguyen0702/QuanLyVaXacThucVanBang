@@ -4,6 +4,7 @@ import {
   FaTimes, FaCheck, FaFileUpload, FaSpinner 
 } from 'react-icons/fa';
 import { api } from '../../services/api';
+import { formatDateForInput, formatDateDisplay } from '../../utils/dateUtils';
 
 const SchoolStudents = () => {
   const [students, setStudents] = useState([]);
@@ -170,7 +171,7 @@ const SchoolStudents = () => {
       fullName: student.full_name || student.fullName,
       schoolName: student.school_name || student.schoolName || '',
       email: student.email,
-      dob: student.date_of_birth ? student.date_of_birth.split('T')[0] : '',
+      dob: formatDateForInput(student.date_of_birth || student.dob),
       gender: student.gender || 'Nam',
       idNumber: student.id_number || student.idNumber || '',
       placeOfBirth: student.place_of_birth || student.placeOfBirth || '',
@@ -775,7 +776,7 @@ const SchoolStudents = () => {
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Ngày sinh:</span>
-                    <span className="sd-detail-value">{selectedStudent.date_of_birth ? new Date(selectedStudent.date_of_birth).toLocaleDateString('vi-VN') : selectedStudent.dob} ({selectedStudent.gender || 'Nam'})</span>
+                    <span className="sd-detail-value">{formatDateDisplay(selectedStudent.date_of_birth || selectedStudent.dob)} ({selectedStudent.gender || 'Nam'})</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Nơi sinh:</span>

@@ -91,10 +91,29 @@ const SchoolDashboard = () => {
   const [showNotifyDropdown, setShowNotifyDropdown] = useState(false);
 
   // User state
-  const currentUser = (() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  })();
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      try {
+        const saved = localStorage.getItem('user');
+        if (saved) setCurrentUser(JSON.parse(saved));
+      } catch (e) {}
+    };
+    window.addEventListener('user_profile_updated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('user_profile_updated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
+  }, []);
 
   const [notifications, setNotifications] = useState(INITIAL_SCHOOL_NOTIFICATIONS);
 
@@ -167,7 +186,7 @@ const SchoolDashboard = () => {
       case 'logs':
         return <SchoolLogs onNavigate={(tab) => setActiveTab(tab)} />;
       case 'profile':
-        return <SchoolProfile onNavigate={(tab) => setActiveTab(tab)} />;
+        return <SchoolProfile onNavigate={(tab) => setActiveTab(tab)} onUserUpdated={(u) => setCurrentUser(u)} />;
       case 'notifications':
         return (
           <SchoolNotifications 
@@ -324,6 +343,14 @@ const SchoolDashboard = () => {
 
               {showUserDropdown && (
                 <div className="sd-dropdown">
+                  <div style={{ padding: '10px 14px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', borderRadius: '8px 8px 0 0' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
+                      {(currentUser && currentUser.full_name) || 'Nguyễn Văn An'}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                      {(currentUser && currentUser.email) || 'admin@school.edu.vn'}
+                    </div>
+                  </div>
                   <div className="sd-dropdown-item" onClick={() => { setActiveTab('profile'); setShowUserDropdown(false); }}>
                     <FaUser className="sd-menu-icon" />
                     <span>Hồ sơ cá nhân</span>

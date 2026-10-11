@@ -21,7 +21,7 @@ const protect = async (req, res, next) => {
 
     // Fetch user from DB without password
     const [users] = await db.query(
-      'SELECT id, email, full_name, role, phone, department, position, wallet_address, is_active FROM users WHERE id = ?',
+      'SELECT id, email, full_name, role, phone, department, position, address, avatar_url, wallet_address, is_active FROM users WHERE id = ?',
       [decoded.id]
     );
 
