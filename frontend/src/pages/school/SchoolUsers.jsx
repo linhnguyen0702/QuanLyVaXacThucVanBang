@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaEdit, FaTrash, FaUser, FaSearch, 
-  FaTimes, FaCheck, FaSpinner 
+  FaTimes, FaCheck, FaSpinner, FaUserGraduate
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 
@@ -18,6 +18,12 @@ const SchoolUsers = () => {
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [formError, setFormError] = useState('');
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'warning' });
+
+  const showAlertModal = (message, title = 'Thông báo hệ thống', type = 'warning') => {
+    setAlertModal({ open: true, title, message, type });
+  };
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -27,6 +33,9 @@ const SchoolUsers = () => {
     role: 'officer',
     status: 'active'
   });
+
+  // Email regex validation
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -58,10 +67,14 @@ const SchoolUsers = () => {
     switch (role) {
       case 'admin':
         return <span className="sd-badge purple">Quản trị viên</span>;
+      case 'school':
+        return <span className="sd-badge blue">Quản lý trường</span>;
       case 'officer':
         return <span className="sd-badge orange">Cán bộ nhập liệu</span>;
       case 'viewer':
         return <span className="sd-badge green">Nhân viên tra cứu</span>;
+      case 'student':
+        return <span className="sd-badge teal">Sinh viên</span>;
       default:
         return <span className="sd-badge gray">Người dùng</span>;
     }
@@ -76,20 +89,45 @@ const SchoolUsers = () => {
       role: 'officer',
       status: 'active'
     });
+    setFormError('');
     setIsAddOpen(true);
   };
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.email) {
-      alert('Vui lòng nhập họ tên và email!');
+    setFormError('');
+
+    const name = (formData.fullName || '').trim();
+    const email = (formData.email || '').trim();
+
+    if (!name || !email) {
+      setFormError('Vui lòng nhập đầy đủ Họ tên và Email!');
       return;
     }
+
+    // Kiểm tra định dạng email
+    if (!emailRegex.test(email)) {
+      setFormError('Email không đúng định dạng. Vui lòng kiểm tra lại!');
+      return;
+    }
+
+    // Kiểm tra trùng email (frontend)
+    const isDupEmail = users.some(
+      u => (u.email || '').trim().toLowerCase() === email.toLowerCase()
+    );
+    if (isDupEmail) {
+      showAlertModal(
+        `Email "${email}" đã được sử dụng bởi một tài khoản khác trên hệ thống. Vui lòng sử dụng email khác!`,
+        'Cảnh báo trùng Email'
+      );
+      return;
+    }
+
     try {
       const res = await api.register({
-        email: formData.email,
+        email: email,
         password: formData.password || '123456',
-        full_name: formData.fullName,
+        full_name: name,
         role: formData.role,
         department: formData.department
       });
@@ -99,33 +137,71 @@ const SchoolUsers = () => {
         showToast('Thêm người dùng mới vào CSDL thành công!');
         fetchUsers();
       } else {
-        alert(res.message || 'Lỗi tạo tài khoản.');
+        const msg = res.message || 'Lỗi tạo tài khoản.';
+        if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('đã được sử dụng')) {
+          showAlertModal(
+            `Email "${email}" đã được sử dụng bởi tài khoản khác. Vui lòng chọn email khác!`,
+            'Cảnh báo trùng Email'
+          );
+        } else {
+          setFormError(msg);
+        }
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setFormError('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối.');
     }
   };
 
   const handleOpenEdit = (user) => {
     setSelectedUser(user);
     setFormData({
-      fullName: user.full_name || user.fullName,
-      email: user.email,
+      fullName: user.full_name || user.fullName || '',
+      email: user.email || '',
       password: '',
       department: user.department || 'Phòng Đào tạo',
-      role: user.role,
+      role: user.role || 'viewer',
       status: user.is_active ? 'active' : 'inactive'
     });
+    setFormError('');
     setIsEditOpen(true);
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     if (!selectedUser) return;
+
+    const name = (formData.fullName || '').trim();
+    const email = (formData.email || '').trim();
+
+    if (!name || !email) {
+      setFormError('Vui lòng nhập đầy đủ Họ tên và Email!');
+      return;
+    }
+
+    // Kiểm tra định dạng email
+    if (!emailRegex.test(email)) {
+      setFormError('Email không đúng định dạng. Vui lòng kiểm tra lại!');
+      return;
+    }
+
+    // Kiểm tra trùng email với tài khoản khác (frontend)
+    const isDupEmail = users.some(
+      u => u.id !== selectedUser.id &&
+           (u.email || '').trim().toLowerCase() === email.toLowerCase()
+    );
+    if (isDupEmail) {
+      showAlertModal(
+        `Email "${email}" đã được sử dụng bởi một tài khoản khác trên hệ thống. Vui lòng sử dụng email khác!`,
+        'Cảnh báo trùng Email'
+      );
+      return;
+    }
+
     try {
       const res = await api.updateUser(selectedUser.id, {
-        full_name: formData.fullName,
-        email: formData.email,
+        full_name: name,
+        email: email,
         department: formData.department,
         role: formData.role
       });
@@ -134,10 +210,18 @@ const SchoolUsers = () => {
         showToast('Cập nhật người dùng thành công!');
         fetchUsers();
       } else {
-        alert(res.message || 'Lỗi cập nhật người dùng.');
+        const msg = res.message || 'Lỗi cập nhật người dùng.';
+        if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('đã được sử dụng')) {
+          showAlertModal(
+            `Email "${email}" đã được sử dụng bởi tài khoản khác. Vui lòng chọn email khác!`,
+            'Cảnh báo trùng Email'
+          );
+        } else {
+          setFormError(msg);
+        }
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setFormError('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối.');
     }
   };
 
@@ -155,10 +239,12 @@ const SchoolUsers = () => {
         showToast(`Đã xóa tài khoản thành công!`);
         fetchUsers();
       } else {
-        alert(res.message || 'Lỗi xóa tài khoản.');
+        setIsDeleteOpen(false);
+        showAlertModal(res.message || 'Lỗi xóa tài khoản.', 'Lỗi xóa tài khoản', 'danger');
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setIsDeleteOpen(false);
+      showAlertModal('Không thể kết nối máy chủ.', 'Lỗi kết nối', 'danger');
     }
   };
 
@@ -167,7 +253,7 @@ const SchoolUsers = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý người dùng</h2>
-          <p>Danh sách các cán bộ, nhân viên được cấp quyền truy cập hệ thống từ CSDL MySQL</p>
+          <p>Danh sách các cán bộ, nhân viên và sinh viên được cấp quyền truy cập hệ thống từ CSDL MySQL</p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Thêm người dùng
@@ -192,6 +278,7 @@ const SchoolUsers = () => {
               <option value="admin">Quản trị viên</option>
               <option value="officer">Cán bộ nhập liệu</option>
               <option value="viewer">Nhân viên tra cứu</option>
+              <option value="student">Sinh viên</option>
             </select>
           </div>
         </div>
@@ -264,6 +351,20 @@ const SchoolUsers = () => {
             </div>
             <form onSubmit={handleAddSubmit}>
               <div className="sd-modal-body">
+                {formError && (
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    marginBottom: '16px'
+                  }}>
+                    ⚠️ {formError}
+                  </div>
+                )}
                 <div className="sd-form-grid">
                   <div className="sd-form-group">
                     <label>Họ và tên *</label>
@@ -292,7 +393,7 @@ const SchoolUsers = () => {
                     <input 
                       type="password" 
                       className="sd-input" 
-                      placeholder="Mặc định: 123456"
+                      placeholder="Nhập mật khẩu"
                       value={formData.password} 
                       onChange={(e) => setFormData({...formData, password: e.target.value})} 
                     />
@@ -307,12 +408,13 @@ const SchoolUsers = () => {
                       onChange={(e) => setFormData({...formData, department: e.target.value})} 
                     />
                   </div>
-                  <div className="sd-form-group">
+                  <div className="sd-form-group full-width">
                     <label>Vai trò</label>
                     <select className="sd-input" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
                       <option value="admin">Quản trị viên (Admin)</option>
                       <option value="officer">Cán bộ nhập liệu</option>
                       <option value="viewer">Nhân viên tra cứu</option>
+                      <option value="student">Sinh viên</option>
                     </select>
                   </div>
                 </div>
@@ -339,6 +441,20 @@ const SchoolUsers = () => {
             </div>
             <form onSubmit={handleEditSubmit}>
               <div className="sd-modal-body">
+                {formError && (
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    marginBottom: '16px'
+                  }}>
+                    ⚠️ {formError}
+                  </div>
+                )}
                 <div className="sd-form-grid">
                   <div className="sd-form-group">
                     <label>Họ và tên *</label>
@@ -375,6 +491,7 @@ const SchoolUsers = () => {
                       <option value="admin">Quản trị viên (Admin)</option>
                       <option value="officer">Cán bộ nhập liệu</option>
                       <option value="viewer">Nhân viên tra cứu</option>
+                      <option value="student">Sinh viên</option>
                     </select>
                   </div>
                 </div>
@@ -400,13 +517,54 @@ const SchoolUsers = () => {
               <button className="sd-modal-close-btn" onClick={() => setIsDeleteOpen(false)}><FaTimes /></button>
             </div>
             <div className="sd-modal-body">
-              <p style={{ fontSize: '14px', color: '#334155' }}>
+              <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6' }}>
                 Bạn có chắc chắn muốn xóa tài khoản của <strong>{selectedUser.full_name || selectedUser.fullName}</strong> ({selectedUser.email})?
+              </p>
+              <p style={{ fontSize: '13px', color: '#b91c1c', fontWeight: '600', marginTop: '10px' }}>
+                ⚠️ Tài khoản sẽ bị xóa vĩnh viễn và không thể khôi phục.
               </p>
             </div>
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsDeleteOpen(false)}>Hủy</button>
               <button className="sd-btn-danger" onClick={handleDeleteConfirm}>Xác nhận Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CUSTOM ON-SCREEN ALERT MODAL ── */}
+      {alertModal.open && (
+        <div className="sd-modal-overlay" style={{ zIndex: 4000 }}>
+          <div className="sd-modal" style={{ maxWidth: '420px', padding: '24px', textAlign: 'center' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: alertModal.type === 'danger' ? '#fef2f2' : '#fffbeb',
+              color: alertModal.type === 'danger' ? '#ef4444' : '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '26px',
+              margin: '0 auto 16px'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+              {alertModal.title}
+            </h3>
+            <p style={{ fontSize: '15px', color: '#334155', marginBottom: '24px', fontWeight: '600', lineHeight: '1.5' }}>
+              {alertModal.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button 
+                type="button"
+                className="sd-btn-primary" 
+                style={{ minWidth: '120px', justifyContent: 'center' }}
+                onClick={() => setAlertModal({ ...alertModal, open: false })}
+              >
+                Đồng ý
+              </button>
             </div>
           </div>
         </div>

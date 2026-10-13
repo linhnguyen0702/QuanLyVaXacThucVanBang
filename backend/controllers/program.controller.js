@@ -63,6 +63,18 @@ exports.createProgram = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Vui lòng điền mã chương trình, tên chương trình và khoa quản lý.' });
     }
 
+    // Kiểm tra trùng mã chương trình
+    const [existCode] = await db.query('SELECT id FROM programs WHERE program_code = ?', [program_code]);
+    if (existCode.length > 0) {
+      return res.status(400).json({ success: false, message: 'Mã chương trình đào tạo đã tồn tại. Vui lòng chọn mã khác.' });
+    }
+
+    // Kiểm tra trùng tên chương trình
+    const [existName] = await db.query('SELECT id FROM programs WHERE program_name = ?', [program_name]);
+    if (existName.length > 0) {
+      return res.status(400).json({ success: false, message: 'Tên chương trình đào tạo đã tồn tại. Vui lòng chọn tên khác.' });
+    }
+
     const [result] = await db.query(
       `INSERT INTO programs (school_id, program_code, program_name, sub_name, department, education_system, duration, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -99,19 +111,40 @@ exports.createProgram = async (req, res, next) => {
 exports.updateProgram = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { program_name, sub_name, department, education_system, duration, status } = req.body;
+    const { program_code, program_name, sub_name, department, education_system, duration, status } = req.body;
 
-    await db.query(
+    if (!program_code || !program_name || !department) {
+      return res.status(400).json({ success: false, message: 'Vui lòng điền mã chương trình, tên chương trình và khoa quản lý.' });
+    }
+
+    // Kiểm tra trùng mã chương trình (ngoại trừ bản ghi hiện tại)
+    const [existCode] = await db.query('SELECT id FROM programs WHERE program_code = ? AND id != ?', [program_code, id]);
+    if (existCode.length > 0) {
+      return res.status(400).json({ success: false, message: 'Mã chương trình đào tạo đã tồn tại. Vui lòng chọn mã khác.' });
+    }
+
+    // Kiểm tra trùng tên chương trình (ngoại trừ bản ghi hiện tại)
+    const [existName] = await db.query('SELECT id FROM programs WHERE program_name = ? AND id != ?', [program_name, id]);
+    if (existName.length > 0) {
+      return res.status(400).json({ success: false, message: 'Tên chương trình đào tạo đã tồn tại. Vui lòng chọn tên khác.' });
+    }
+
+    const [updateResult] = await db.query(
       `UPDATE programs
-       SET program_name = COALESCE(?, program_name),
-           sub_name = COALESCE(?, sub_name),
-           department = COALESCE(?, department),
-           education_system = COALESCE(?, education_system),
-           duration = COALESCE(?, duration),
-           status = COALESCE(?, status)
+       SET program_code = ?,
+           program_name = ?,
+           sub_name = ?,
+           department = ?,
+           education_system = ?,
+           duration = ?,
+           status = ?
        WHERE id = ?`,
-      [program_name, sub_name, department, education_system, duration, status, id]
+      [program_code, program_name, sub_name || '', department, education_system || 'Đại học chính quy', duration || '', status || 'active', id]
     );
+
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chương trình đào tạo.' });
+    }
 
     const [updated] = await db.query('SELECT * FROM programs WHERE id = ?', [id]);
 
@@ -121,6 +154,9 @@ exports.updateProgram = async (req, res, next) => {
       program: updated[0]
     });
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Mã chương trình đào tạo đã tồn tại.' });
+    }
     next(error);
   }
 };

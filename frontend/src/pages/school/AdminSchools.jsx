@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaUniversity, FaSearch, FaEye, FaEdit, FaTrash, 
-  FaCheck, FaTimes, FaShieldAlt, FaSpinner 
+  FaCheck, FaTimes, FaShieldAlt, FaSpinner, FaExclamationTriangle
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 
@@ -10,7 +10,6 @@ const AdminSchools = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [verifiedFilter, setVerifiedFilter] = useState('');
 
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -20,6 +19,12 @@ const AdminSchools = () => {
 
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [formError, setFormError] = useState('');
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'warning' });
+
+  const showAlertModal = (message, title = 'Thông báo hệ thống', type = 'warning') => {
+    setAlertModal({ open: true, title, message, type });
+  };
 
   const [formData, setFormData] = useState({
     schoolName: '',
@@ -75,19 +80,65 @@ const AdminSchools = () => {
       walletAddress: '',
       isVerified: true
     });
+    setFormError('');
     setIsAddOpen(true);
   };
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.schoolName || !formData.schoolCode) {
-      alert('Vui lòng nhập tên trường và mã trường!');
+    setFormError('');
+
+    const name = (formData.schoolName || '').trim();
+    const code = (formData.schoolCode || '').trim();
+
+    if (!name || !code) {
+      setFormError('Vui lòng nhập đầy đủ Tên trường và Mã trường!');
       return;
     }
+
+    // Kiểm tra trùng mã trường (frontend)
+    const isDupCode = schools.some(
+      s => (s.school_code || s.schoolCode || '').toString().trim().toLowerCase() === code.toLowerCase()
+    );
+    if (isDupCode) {
+      showAlertModal(
+        `Mã trường "${code}" đã tồn tại trên hệ thống. Vui lòng chọn mã trường khác!`,
+        'Cảnh báo trùng mã trường'
+      );
+      return;
+    }
+
+    // Kiểm tra trùng Tên trường (frontend)
+    const isDupName = schools.some(
+      s => (s.school_name || s.schoolName || '').trim().toLowerCase() === name.toLowerCase()
+    );
+    if (isDupName) {
+      showAlertModal(
+        `Tên trường "${name}" đã tồn tại trên hệ thống. Vui lòng kiểm tra lại!`,
+        'Cảnh báo trùng tên trường'
+      );
+      return;
+    }
+
+    // Kiểm tra trùng Số giấy phép hoạt động
+    const license = (formData.licenseNumber || '').trim();
+    if (license) {
+      const isDupLicense = schools.some(
+        s => (s.license_number || s.licenseNumber || '').trim().toLowerCase() === license.toLowerCase()
+      );
+      if (isDupLicense) {
+        showAlertModal(
+          `Số giấy phép hoạt động "${license}" đã được sử dụng bởi một cơ sở khác. Vui lòng kiểm tra lại!`,
+          'Cảnh báo trùng số giấy phép'
+        );
+        return;
+      }
+    }
+
     try {
       const res = await api.createSchool({
-        school_name: formData.schoolName,
-        school_code: formData.schoolCode,
+        school_name: name,
+        school_code: code,
         school_type: formData.schoolType,
         establishment_year: formData.establishmentYear,
         license_number: formData.licenseNumber,
@@ -100,35 +151,93 @@ const AdminSchools = () => {
         showToast('Thêm mới cơ sở giáo dục thành công!');
         fetchSchools();
       } else {
-        alert(res.message || 'Lỗi tạo trường học.');
+        const msg = res.message || 'Lỗi tạo trường học.';
+        if (msg.toLowerCase().includes('mã trường') || msg.toLowerCase().includes('tên trường')) {
+          showAlertModal(msg, 'Cảnh báo dữ liệu trùng');
+        } else {
+          setFormError(msg);
+        }
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setFormError('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối.');
     }
   };
 
   const handleOpenEdit = (sch) => {
     setSelectedSchool(sch);
     setFormData({
-      schoolName: sch.school_name || sch.schoolName,
-      schoolCode: sch.school_code || sch.schoolCode,
+      schoolName: sch.school_name || sch.schoolName || '',
+      schoolCode: sch.school_code || sch.schoolCode || '',
       schoolType: sch.school_type || sch.schoolType || 'university',
-      establishmentYear: sch.establishment_year || sch.establishmentYear || 2000,
-      licenseNumber: sch.license_number || sch.licenseNumber,
-      website: sch.website,
-      walletAddress: sch.wallet_address || sch.walletAddress,
+      establishmentYear: sch.establishment_year || sch.establishmentYear || '',
+      licenseNumber: sch.license_number || sch.licenseNumber || '',
+      website: sch.website || '',
+      walletAddress: sch.wallet_address || sch.walletAddress || '',
       isVerified: sch.is_verified ?? sch.isVerified ?? true
     });
+    setFormError('');
     setIsEditOpen(true);
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     if (!selectedSchool) return;
+
+    const name = (formData.schoolName || '').trim();
+    const code = (formData.schoolCode || '').trim();
+
+    if (!name || !code) {
+      setFormError('Vui lòng nhập đầy đủ Tên trường và Mã trường!');
+      return;
+    }
+
+    // Kiểm tra trùng mã trường với trường khác (frontend)
+    const isDupCode = schools.some(
+      s => s.id !== selectedSchool.id &&
+           (s.school_code || s.schoolCode || '').toString().trim().toLowerCase() === code.toLowerCase()
+    );
+    if (isDupCode) {
+      showAlertModal(
+        `Mã trường "${code}" đã tồn tại trên hệ thống. Vui lòng chọn mã trường khác!`,
+        'Cảnh báo trùng mã trường'
+      );
+      return;
+    }
+
+    // Kiểm tra trùng tên trường với trường khác (frontend)
+    const isDupName = schools.some(
+      s => s.id !== selectedSchool.id &&
+           (s.school_name || s.schoolName || '').trim().toLowerCase() === name.toLowerCase()
+    );
+    if (isDupName) {
+      showAlertModal(
+        `Tên trường "${name}" đã tồn tại trên hệ thống. Vui lòng kiểm tra lại!`,
+        'Cảnh báo trùng tên trường'
+      );
+      return;
+    }
+
+    // Kiểm tra trùng Số giấy phép hoạt động với cơ sở khác
+    const license = (formData.licenseNumber || '').trim();
+    if (license) {
+      const isDupLicense = schools.some(
+        s => s.id !== selectedSchool.id &&
+             (s.license_number || s.licenseNumber || '').trim().toLowerCase() === license.toLowerCase()
+      );
+      if (isDupLicense) {
+        showAlertModal(
+          `Số giấy phép hoạt động "${license}" đã được sử dụng bởi một cơ sở khác. Vui lòng kiểm tra lại!`,
+          'Cảnh báo trùng số giấy phép'
+        );
+        return;
+      }
+    }
+
     try {
       const res = await api.updateSchool(selectedSchool.id, {
-        school_name: formData.schoolName,
-        school_code: formData.schoolCode,
+        school_name: name,
+        school_code: code,
         school_type: formData.schoolType,
         establishment_year: formData.establishmentYear,
         license_number: formData.licenseNumber,
@@ -140,10 +249,15 @@ const AdminSchools = () => {
         showToast('Cập nhật thông tin nhà trường thành công!');
         fetchSchools();
       } else {
-        alert(res.message || 'Lỗi cập nhật nhà trường.');
+        const msg = res.message || 'Lỗi cập nhật nhà trường.';
+        if (msg.toLowerCase().includes('mã trường') || msg.toLowerCase().includes('tên trường')) {
+          showAlertModal(msg, 'Cảnh báo dữ liệu trùng');
+        } else {
+          setFormError(msg);
+        }
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setFormError('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối.');
     }
   };
 
@@ -166,27 +280,31 @@ const AdminSchools = () => {
         showToast(`Đã xóa cơ sở đào tạo thành công!`);
         fetchSchools();
       } else {
-        alert(res.message || 'Lỗi xóa cơ sở nhà trường.');
+        setIsDeleteOpen(false);
+        showAlertModal(res.message || 'Lỗi xóa cơ sở nhà trường.', 'Lỗi xóa dữ liệu', 'danger');
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setIsDeleteOpen(false);
+      showAlertModal('Không thể kết nối máy chủ.', 'Lỗi kết nối', 'danger');
     }
   };
 
   const filteredSchools = schools.filter(s => {
     const name = s.school_name || s.schoolName || '';
     const code = s.school_code || s.schoolCode || '';
+    const type = s.school_type || s.schoolType || '';
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           code.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    const matchesType = !typeFilter || type === typeFilter;
+    return matchesSearch && matchesType;
   });
 
   return (
     <div className="sd-view">
       <div className="sd-page-header">
         <div className="sd-page-title-area">
-          <h2>Quản lý Trường học & Đơn vị cấp bằng</h2>
-          <p>Danh sách các cơ sở giáo dục đã được lưu trên CSDL & xác minh địa chỉ ví Blockchain</p>
+          <h2>Quản lý Trường học &amp; Đơn vị cấp bằng</h2>
+          <p>Danh sách các cơ sở giáo dục đã được lưu trên CSDL &amp; xác minh địa chỉ ví Blockchain</p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Thêm trường mới
@@ -308,6 +426,20 @@ const AdminSchools = () => {
             </div>
             <form onSubmit={handleAddSubmit}>
               <div className="sd-modal-body">
+                {formError && (
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    marginBottom: '16px'
+                  }}>
+                    ⚠️ {formError}
+                  </div>
+                )}
                 <div className="sd-form-grid">
                   <div className="sd-form-group">
                     <label>Tên trường học *</label>
@@ -404,6 +536,20 @@ const AdminSchools = () => {
             </div>
             <form onSubmit={handleEditSubmit}>
               <div className="sd-modal-body">
+                {formError && (
+                  <div style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    marginBottom: '16px'
+                  }}>
+                    ⚠️ {formError}
+                  </div>
+                )}
                 <div className="sd-form-grid">
                   <div className="sd-form-group">
                     <label>Tên trường học *</label>
@@ -511,10 +657,18 @@ const AdminSchools = () => {
                     <span className="sd-detail-label">Năm thành lập:</span>
                     <span className="sd-detail-value">{selectedSchool.establishment_year || selectedSchool.establishmentYear}</span>
                   </div>
+                  <div className="sd-detail-item">
+                    <span className="sd-detail-label">Số giấy phép:</span>
+                    <span className="sd-detail-value">{selectedSchool.license_number || selectedSchool.licenseNumber || 'Chưa cập nhật'}</span>
+                  </div>
+                  <div className="sd-detail-item">
+                    <span className="sd-detail-label">Website:</span>
+                    <span className="sd-detail-value">{selectedSchool.website || 'Chưa cập nhật'}</span>
+                  </div>
                 </div>
                 <div className="sd-cert-hash-box" style={{ marginTop: '16px' }}>
                   <strong>Ví Smart Contract Polygon/Sepolia:</strong><br />
-                  {selectedSchool.wallet_address || selectedSchool.walletAddress}
+                  {selectedSchool.wallet_address || selectedSchool.walletAddress || 'Chưa kết nối ví'}
                 </div>
               </div>
             </div>
@@ -537,13 +691,54 @@ const AdminSchools = () => {
               <button className="sd-modal-close-btn" onClick={() => setIsDeleteOpen(false)}><FaTimes /></button>
             </div>
             <div className="sd-modal-body">
-              <p style={{ fontSize: '14px', color: '#334155' }}>
+              <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6' }}>
                 Bạn có chắc chắn muốn xóa <strong>{selectedSchool.school_name || selectedSchool.schoolName}</strong> ({selectedSchool.school_code || selectedSchool.schoolCode})?
+              </p>
+              <p style={{ fontSize: '13px', color: '#b91c1c', fontWeight: '600', marginTop: '10px' }}>
+                ⚠️ Hành động này sẽ xóa vĩnh viễn cơ sở đào tạo khỏi hệ thống và không thể khôi phục.
               </p>
             </div>
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsDeleteOpen(false)}>Hủy</button>
               <button className="sd-btn-danger" onClick={handleDeleteConfirm}>Xác nhận Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CUSTOM ON-SCREEN ALERT MODAL (Thay thế alert trình duyệt) ── */}
+      {alertModal.open && (
+        <div className="sd-modal-overlay" style={{ zIndex: 4000 }}>
+          <div className="sd-modal" style={{ maxWidth: '420px', padding: '24px', textAlign: 'center' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: alertModal.type === 'danger' ? '#fef2f2' : '#fffbeb',
+              color: alertModal.type === 'danger' ? '#ef4444' : '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '26px',
+              margin: '0 auto 16px'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+              {alertModal.title}
+            </h3>
+            <p style={{ fontSize: '15px', color: '#334155', marginBottom: '24px', fontWeight: '600', lineHeight: '1.5' }}>
+              {alertModal.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button 
+                type="button"
+                className="sd-btn-primary" 
+                style={{ minWidth: '120px', justifyContent: 'center' }}
+                onClick={() => setAlertModal({ ...alertModal, open: false })}
+              >
+                Đồng ý
+              </button>
             </div>
           </div>
         </div>

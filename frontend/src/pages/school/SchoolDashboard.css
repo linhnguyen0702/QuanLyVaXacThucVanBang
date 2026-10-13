@@ -1483,7 +1483,26 @@
 
 .sd-toast.success { background-color: #10b981; }
 .sd-toast.danger { background-color: #ef4444; }
+.sd-toast.error { background-color: #ef4444; }
 .sd-toast.info { background-color: #0f4cf5; }
 
+/* Inline error banner inside modals */
+.sd-form-error-banner {
+  margin: 0 24px 16px 24px;
+  padding: 12px 16px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  animation: sdToastSlide 0.25s ease;
+}
 
-
+.sd-form-error-banner span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #b91c1c;
+  line-height: 1.5;
+}

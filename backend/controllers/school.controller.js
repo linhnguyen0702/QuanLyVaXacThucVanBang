@@ -61,8 +61,28 @@ exports.createSchool = async (req, res, next) => {
       license_number, website, logo_url, description, wallet_address
     } = req.body;
 
-    if (!school_name || !school_code || !wallet_address) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp Tên trường, Mã trường và Địa chỉ ví Blockchain.' });
+    if (!school_name || !school_code) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp Tên trường và Mã trường.' });
+    }
+
+    // Kiểm tra trùng mã trường
+    const [existCode] = await db.query('SELECT id FROM schools WHERE school_code = ?', [school_code]);
+    if (existCode.length > 0) {
+      return res.status(400).json({ success: false, message: 'Mã trường đã tồn tại trên hệ thống. Vui lòng chọn mã khác.' });
+    }
+
+    // Kiểm tra trùng tên trường
+    const [existName] = await db.query('SELECT id FROM schools WHERE school_name = ?', [school_name]);
+    if (existName.length > 0) {
+      return res.status(400).json({ success: false, message: 'Tên trường đã tồn tại trên hệ thống. Vui lòng kiểm tra lại.' });
+    }
+
+    // Kiểm tra trùng số giấy phép hoạt động
+    if (license_number) {
+      const [existLicense] = await db.query('SELECT id FROM schools WHERE license_number = ?', [license_number]);
+      if (existLicense.length > 0) {
+        return res.status(400).json({ success: false, message: 'Số giấy phép hoạt động này đã được sử dụng bởi cơ sở khác. Vui lòng kiểm tra lại.' });
+      }
     }
 
     const [result] = await db.query(
@@ -70,7 +90,7 @@ exports.createSchool = async (req, res, next) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
       [
         school_name, school_code, school_type || 'university', establishment_year || 2000,
-        license_number || null, website || null, logo_url || null, description || null, wallet_address
+        license_number || null, website || null, logo_url || null, description || null, wallet_address || null
       ]
     );
 
@@ -96,24 +116,63 @@ exports.updateSchool = async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
-      school_name, school_type, establishment_year, license_number,
+      school_name, school_code, school_type, establishment_year, license_number,
       website, logo_url, description, wallet_address, is_verified
     } = req.body;
 
-    await db.query(
+    if (!school_name || !school_code) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp Tên trường và Mã trường.' });
+    }
+
+    // Kiểm tra trùng mã trường (ngoại trừ bản ghi hiện tại)
+    const [existCode] = await db.query('SELECT id FROM schools WHERE school_code = ? AND id != ?', [school_code, id]);
+    if (existCode.length > 0) {
+      return res.status(400).json({ success: false, message: 'Mã trường đã tồn tại trên hệ thống. Vui lòng chọn mã khác.' });
+    }
+
+    // Kiểm tra trùng tên trường (ngoại trừ bản ghi hiện tại)
+    const [existName] = await db.query('SELECT id FROM schools WHERE school_name = ? AND id != ?', [school_name, id]);
+    if (existName.length > 0) {
+      return res.status(400).json({ success: false, message: 'Tên trường đã tồn tại trên hệ thống. Vui lòng kiểm tra lại.' });
+    }
+
+    // Kiểm tra trùng số giấy phép hoạt động (ngoại trừ bản ghi hiện tại)
+    if (license_number) {
+      const [existLicense] = await db.query('SELECT id FROM schools WHERE license_number = ? AND id != ?', [license_number, id]);
+      if (existLicense.length > 0) {
+        return res.status(400).json({ success: false, message: 'Số giấy phép hoạt động này đã được sử dụng bởi cơ sở khác. Vui lòng kiểm tra lại.' });
+      }
+    }
+
+    const [updateResult] = await db.query(
       `UPDATE schools
-       SET school_name = COALESCE(?, school_name),
-           school_type = COALESCE(?, school_type),
-           establishment_year = COALESCE(?, establishment_year),
-           license_number = COALESCE(?, license_number),
-           website = COALESCE(?, website),
-           logo_url = COALESCE(?, logo_url),
-           description = COALESCE(?, description),
-           wallet_address = COALESCE(?, wallet_address),
-           is_verified = COALESCE(?, is_verified)
+       SET school_name = ?,
+           school_code = ?,
+           school_type = ?,
+           establishment_year = ?,
+           license_number = ?,
+           website = ?,
+           logo_url = ?,
+           description = ?,
+           wallet_address = ?
        WHERE id = ?`,
-      [school_name, school_type, establishment_year, license_number, website, logo_url, description, wallet_address, is_verified, id]
+      [
+        school_name,
+        school_code,
+        school_type || 'university',
+        establishment_year || null,
+        license_number || null,
+        website || null,
+        logo_url || null,
+        description || null,
+        wallet_address || null,
+        id
+      ]
     );
+
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy cơ sở giáo dục.' });
+    }
 
     const [updated] = await db.query('SELECT * FROM schools WHERE id = ?', [id]);
 
@@ -123,6 +182,9 @@ exports.updateSchool = async (req, res, next) => {
       school: updated[0]
     });
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Mã trường đã tồn tại.' });
+    }
     next(error);
   }
 };

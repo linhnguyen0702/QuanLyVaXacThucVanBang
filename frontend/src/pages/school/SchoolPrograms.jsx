@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaPlus, FaBook, FaUserGraduate, FaSearch, 
-  FaEye, FaEdit, FaTrash, FaTimes, FaCheck, FaSpinner 
+  FaEye, FaEdit, FaTrash, FaTimes, FaCheck, FaSpinner, FaExclamationTriangle
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 
@@ -20,12 +20,19 @@ const SchoolPrograms = () => {
 
   const [selectedProg, setSelectedProg] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const [formError, setFormError] = useState('');
+  const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'warning' });
+
+  const showAlertModal = (message, title = 'Thông báo hệ thống', type = 'warning') => {
+    setAlertModal({ open: true, title, message, type });
+  };
 
   const [formData, setFormData] = useState({
     code: '',
     name: '',
     sub: '',
-    dept: '', // Để trống không nhập sẵn
+    dept: '',
     system: 'Đại học chính quy',
     duration: '',
     status: 'active'
@@ -53,9 +60,10 @@ const SchoolPrograms = () => {
     fetchPrograms();
   }, [searchQuery, deptFilter, statusFilter]);
 
-  const showToast = (msg) => {
+  const showToast = (msg, type = 'success') => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
+    setToastType(type);
+    setTimeout(() => setToastMessage(''), 3500);
   };
 
   const getStatusLabel = (status) => {
@@ -73,18 +81,44 @@ const SchoolPrograms = () => {
       code: '',
       name: '',
       sub: '',
-      dept: '', // Để trống không nhập sẵn
+      dept: '',
       system: 'Đại học chính quy',
       duration: '',
       status: 'active'
     });
+    setFormError('');
     setIsAddOpen(true);
   };
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     if (!formData.name || !formData.code || !formData.dept) {
-      alert('Vui lòng nhập đầy đủ mã chương trình, tên chương trình và khoa trực thuộc!');
+      setFormError('Vui lòng nhập đầy đủ mã chương trình, tên chương trình và khoa trực thuộc!');
+      return;
+    }
+
+    // Kiểm tra trùng mã chương trình (frontend)
+    const isDupCode = programs.some(
+      p => (p.program_code || p.code || '').toString().trim().toLowerCase() === formData.code.trim().toLowerCase()
+    );
+    if (isDupCode) {
+      showAlertModal(
+        `Mã chương trình "${formData.code.trim()}" đã tồn tại trên hệ thống. Vui lòng chọn mã khác!`,
+        'Cảnh báo trùng mã chương trình'
+      );
+      return;
+    }
+
+    // Kiểm tra trùng tên chương trình (frontend)
+    const isDupName = programs.some(
+      p => (p.program_name || p.name || '').trim().toLowerCase() === formData.name.trim().toLowerCase()
+    );
+    if (isDupName) {
+      showAlertModal(
+        `Tên chương trình "${formData.name.trim()}" đã tồn tại trên hệ thống. Vui lòng chọn tên khác!`,
+        'Cảnh báo trùng tên chương trình'
+      );
       return;
     }
 
@@ -104,30 +138,68 @@ const SchoolPrograms = () => {
         showToast('Thêm chương trình đào tạo thành công!');
         fetchPrograms();
       } else {
-        alert(res.message || 'Lỗi thêm mới.');
+        const msg = res.message || 'Lỗi thêm mới. Vui lòng thử lại.';
+        if (msg.toLowerCase().includes('mã') || msg.toLowerCase().includes('tên')) {
+          showAlertModal(msg, 'Cảnh báo dữ liệu trùng');
+        } else {
+          setFormError(msg);
+        }
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setFormError('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối.');
     }
   };
 
   const handleOpenEdit = (prog) => {
     setSelectedProg(prog);
     setFormData({
-      code: prog.program_code || prog.code,
-      name: prog.program_name || prog.name,
-      sub: prog.sub_name || prog.sub || 'Chương trình chuẩn',
-      dept: prog.department || prog.dept,
+      code: prog.program_code || prog.code || '',
+      name: prog.program_name || prog.name || '',
+      sub: prog.sub_name || prog.sub || '',
+      dept: prog.department || prog.dept || '',
       system: prog.education_system || prog.system || 'Đại học chính quy',
-      duration: prog.duration,
-      status: prog.status
+      duration: prog.duration || '',
+      status: prog.status || 'active'
     });
+    setFormError('');
     setIsEditOpen(true);
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
     if (!selectedProg) return;
+    if (!formData.name || !formData.code || !formData.dept) {
+      setFormError('Vui lòng nhập đầy đủ mã chương trình, tên chương trình và khoa trực thuộc!');
+      return;
+    }
+
+    // Kiểm tra trùng mã chương trình với chương trình khác (frontend)
+    const isDupCode = programs.some(
+      p => p.id !== selectedProg.id &&
+           (p.program_code || p.code || '').toString().trim().toLowerCase() === formData.code.trim().toLowerCase()
+    );
+    if (isDupCode) {
+      showAlertModal(
+        `Mã chương trình "${formData.code.trim()}" đã tồn tại trên hệ thống. Vui lòng chọn mã khác!`,
+        'Cảnh báo trùng mã chương trình'
+      );
+      return;
+    }
+
+    // Kiểm tra trùng tên chương trình với chương trình khác (frontend)
+    const isDupName = programs.some(
+      p => p.id !== selectedProg.id &&
+           (p.program_name || p.name || '').trim().toLowerCase() === formData.name.trim().toLowerCase()
+    );
+    if (isDupName) {
+      showAlertModal(
+        `Tên chương trình "${formData.name.trim()}" đã tồn tại trên hệ thống. Vui lòng chọn tên khác!`,
+        'Cảnh báo trùng tên chương trình'
+      );
+      return;
+    }
+
     try {
       const res = await api.updateProgram(selectedProg.id, {
         program_code: formData.code,
@@ -140,13 +212,18 @@ const SchoolPrograms = () => {
       });
       if (res && res.success) {
         setIsEditOpen(false);
-        showToast('Cập nhật chương trình thành công!');
+        showToast('Cập nhật chương trình đào tạo thành công!');
         fetchPrograms();
       } else {
-        alert(res.message || 'Lỗi cập nhật chương trình.');
+        const msg = res.message || 'Lỗi cập nhật chương trình. Vui lòng thử lại.';
+        if (msg.toLowerCase().includes('mã') || msg.toLowerCase().includes('tên')) {
+          showAlertModal(msg, 'Cảnh báo dữ liệu trùng');
+        } else {
+          setFormError(msg);
+        }
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setFormError('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối.');
     }
   };
 
@@ -166,13 +243,15 @@ const SchoolPrograms = () => {
       const res = await api.deleteProgram(selectedProg.id);
       if (res && res.success) {
         setIsDeleteOpen(false);
-        showToast(`Đã xóa chương trình đào tạo thành công!`);
+        showToast('Đã xóa chương trình đào tạo thành công!');
         fetchPrograms();
       } else {
-        alert(res.message || 'Lỗi xóa chương trình.');
+        setIsDeleteOpen(false);
+        showToast(res.message || 'Lỗi xóa chương trình.', 'error');
       }
     } catch (err) {
-      alert('Không thể kết nối máy chủ.');
+      setIsDeleteOpen(false);
+      showToast('Không thể kết nối máy chủ.', 'error');
     }
   };
 
@@ -391,6 +470,20 @@ const SchoolPrograms = () => {
                   </div>
                 </div>
               </div>
+              {formError && (
+                <div style={{
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  color: '#991b1b',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13.5px',
+                  fontWeight: '600',
+                  marginBottom: '16px'
+                }}>
+                  ⚠️ {formError}
+                </div>
+              )}
               <div className="sd-modal-footer">
                 <button type="button" className="sd-btn-secondary" onClick={() => setIsAddOpen(false)}>Hủy</button>
                 <button type="submit" className="sd-btn-primary">Thêm chương trình</button>
@@ -482,6 +575,20 @@ const SchoolPrograms = () => {
                   </div>
                 </div>
               </div>
+              {formError && (
+                <div style={{
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  color: '#991b1b',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13.5px',
+                  fontWeight: '600',
+                  marginBottom: '16px'
+                }}>
+                  ⚠️ {formError}
+                </div>
+              )}
               <div className="sd-modal-footer">
                 <button type="button" className="sd-btn-secondary" onClick={() => setIsEditOpen(false)}>Hủy</button>
                 <button type="submit" className="sd-btn-primary">Lưu thay đổi</button>
@@ -563,8 +670,46 @@ const SchoolPrograms = () => {
         </div>
       )}
 
+      {/* ── CUSTOM ON-SCREEN ALERT MODAL (Thay thế alert trình duyệt) ── */}
+      {alertModal.open && (
+        <div className="sd-modal-overlay" style={{ zIndex: 4000 }}>
+          <div className="sd-modal" style={{ maxWidth: '420px', padding: '24px', textAlign: 'center' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: alertModal.type === 'danger' ? '#fef2f2' : '#fffbeb',
+              color: alertModal.type === 'danger' ? '#ef4444' : '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '26px',
+              margin: '0 auto 16px'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+              {alertModal.title}
+            </h3>
+            <p style={{ fontSize: '15px', color: '#334155', marginBottom: '24px', fontWeight: '600', lineHeight: '1.5' }}>
+              {alertModal.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button 
+                type="button"
+                className="sd-btn-primary" 
+                style={{ minWidth: '120px', justifyContent: 'center' }}
+                onClick={() => setAlertModal({ ...alertModal, open: false })}
+              >
+                Đồng ý
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toastMessage && (
-        <div className="sd-toast success">
+        <div className={`sd-toast ${toastType}`}>
           <FaCheck /> {toastMessage}
         </div>
       )}
