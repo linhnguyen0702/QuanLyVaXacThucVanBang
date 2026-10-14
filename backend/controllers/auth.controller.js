@@ -1,6 +1,7 @@
 const db = require("../config/database");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { getAddress, isAddress } = require("ethers");
 const { getDefaultPosition } = require("../utils/user-roles");
 
 // Helper to generate JWT Token
@@ -28,7 +29,6 @@ exports.register = async (req, res, next) => {
       phone,
       department,
       position,
-      wallet_address,
     } = req.body;
 
     if (!email || !password || !full_name) {
@@ -66,7 +66,7 @@ exports.register = async (req, res, next) => {
         phone || null,
         department || "Phòng Đào tạo",
         position || getDefaultPosition(userRole),
-        wallet_address || null,
+        null,
       ],
     );
 
@@ -217,7 +217,6 @@ exports.updateProfile = async (req, res, next) => {
       position,
       address,
       avatar_url,
-      wallet_address,
     } = req.body;
 
     await db.query(
@@ -227,8 +226,7 @@ exports.updateProfile = async (req, res, next) => {
            department = COALESCE(?, department),
            position = COALESCE(?, position),
            address = COALESCE(?, address),
-           avatar_url = COALESCE(?, avatar_url),
-           wallet_address = COALESCE(?, wallet_address)
+           avatar_url = COALESCE(?, avatar_url)
        WHERE id = ?`,
       [
         full_name,
@@ -237,7 +235,6 @@ exports.updateProfile = async (req, res, next) => {
         position,
         address,
         avatar_url,
-        wallet_address,
         req.user.id,
       ],
     );
@@ -251,6 +248,105 @@ exports.updateProfile = async (req, res, next) => {
       success: true,
       message: "Cập nhật thông tin cá nhân thành công.",
       user: updatedUser[0],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Connect / bind MetaMask wallet address to user account (1 address per account)
+// @route   POST /api/auth/connect-wallet
+// @access  Private
+exports.connectWallet = async (req, res, next) => {
+  try {
+    const { wallet_address } = req.body;
+
+    if (!isAddress(wallet_address || '')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Địa chỉ ví không hợp lệ. Vui lòng kết nối MetaMask đúng cách.'
+      });
+    }
+
+    const normalizedWalletAddress = getAddress(wallet_address);
+
+    const [currentUsers] = await db.query(
+      'SELECT wallet_address FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    if (currentUsers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy tài khoản cần liên kết ví.'
+      });
+    }
+    if (currentUsers[0].wallet_address) {
+      if (currentUsers[0].wallet_address.toLowerCase() !== normalizedWalletAddress.toLowerCase()) {
+        return res.status(409).json({
+          success: false,
+          message: 'Tài khoản đã được liên kết với một ví khác. Mỗi tài khoản chỉ được liên kết một ví.'
+        });
+      }
+      return res.json({
+        success: true,
+        message: 'Ví này đã được liên kết với tài khoản.',
+        user: req.user
+      });
+    }
+
+    // Kiểm tra ví này có đang được dùng bởi tài khoản khác không
+    const [walletCheck] = await db.query(
+      'SELECT id, email FROM users WHERE LOWER(wallet_address) = LOWER(?) AND id != ?',
+      [normalizedWalletAddress, req.user.id]
+    );
+    if (walletCheck.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Địa chỉ ví này đã được liên kết với tài khoản khác (${walletCheck[0].email}). Mỗi tài khoản chỉ được dùng 1 ví duy nhất.`
+      });
+    }
+
+    // Lưu wallet_address vào DB
+    try {
+      const [updateResult] = await db.query(
+        'UPDATE users SET wallet_address = ? WHERE id = ? AND wallet_address IS NULL',
+        [normalizedWalletAddress, req.user.id]
+      );
+      if (updateResult.affectedRows === 0) {
+        const [linkedUsers] = await db.query(
+          'SELECT wallet_address FROM users WHERE id = ?',
+          [req.user.id]
+        );
+        if (
+          !linkedUsers[0] ||
+          !linkedUsers[0].wallet_address ||
+          linkedUsers[0].wallet_address.toLowerCase() !== normalizedWalletAddress.toLowerCase()
+        ) {
+          return res.status(409).json({
+            success: false,
+            message: 'Tài khoản đã được liên kết với một ví khác. Mỗi tài khoản chỉ được liên kết một ví.'
+          });
+        }
+      }
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({
+          success: false,
+          message: 'Địa chỉ ví này đã được liên kết với tài khoản khác. Mỗi tài khoản chỉ được dùng một ví duy nhất.'
+        });
+      }
+      throw error;
+    }
+
+    const [updatedUser] = await db.query(
+      'SELECT id, email, full_name, role, phone, department, position, address, avatar_url, wallet_address FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    res.json({
+      success: true,
+      message: `Đã liên kết ví MetaMask ${normalizedWalletAddress.substring(0, 8)}... vào tài khoản thành công!`,
+      user: updatedUser[0]
     });
   } catch (error) {
     next(error);

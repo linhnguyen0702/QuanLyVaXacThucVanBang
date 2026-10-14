@@ -221,14 +221,77 @@ const VerificationPage = () => {
                 </div>
 
                 {result.blockchainVerification && (
-                  <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #cbd5e1', fontSize: '12px', color: '#475569' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <FaShieldAlt style={{ color: '#3b82f6' }} />
-                      <span><strong>Blockchain Network:</strong> {result.blockchainVerification.network}</span>
+                  <div style={{
+                    marginTop: '14px',
+                    padding: '14px 16px',
+                    borderRadius: '8px',
+                    background: result.blockchainVerification.verifiedOnChain
+                      ? 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)'
+                      : '#f8fafc',
+                    border: `1px solid ${result.blockchainVerification.verifiedOnChain ? '#3b82f6' : '#cbd5e1'}`,
+                    fontSize: '12.5px',
+                    color: '#475569'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                      <FaShieldAlt style={{ color: result.blockchainVerification.verifiedOnChain ? '#3b82f6' : '#94a3b8', fontSize: '16px' }} />
+                      <strong style={{ fontSize: '13px', color: '#1e293b' }}>
+                        Xác thực Blockchain — {result.blockchainVerification.network}
+                      </strong>
+                      {result.blockchainVerification.verifiedOnChain ? (
+                        <span style={{ marginLeft: 'auto', backgroundColor: '#dcfce7', color: '#15803d', padding: '2px 10px', borderRadius: '20px', fontWeight: 700, fontSize: '11px' }}>
+                          ✅ ON-CHAIN HỢP LỆ
+                        </span>
+                      ) : result.blockchainVerification.txHash ? (
+                        <span style={{ marginLeft: 'auto', backgroundColor: '#fef9c3', color: '#92400e', padding: '2px 10px', borderRadius: '20px', fontWeight: 700, fontSize: '11px' }}>
+                          ⏳ ĐANG XÁC NHẬN
+                        </span>
+                      ) : (
+                        <span style={{ marginLeft: 'auto', backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 10px', borderRadius: '20px', fontWeight: 700, fontSize: '11px' }}>
+                          📋 CHỈ LƯU CSDL
+                        </span>
+                      )}
                     </div>
-                    <div style={{ wordBreak: 'break-all', marginTop: '4px' }}>
-                      <strong>Transaction Hash:</strong> {result.blockchainVerification.txHash}
-                    </div>
+
+                    {result.blockchainVerification.txHash ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                          <span style={{ color: '#64748b', minWidth: '120px', flexShrink: 0 }}>Transaction Hash:</span>
+                          <span style={{ wordBreak: 'break-all', color: '#1e293b', fontFamily: 'monospace', fontSize: '11px' }}>
+                            {result.blockchainVerification.txHash}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ color: '#64748b', minWidth: '120px' }}>Xem giao dịch:</span>
+                          <a
+                            href={result.blockchainVerification.explorerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#2563eb', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                          >
+                            <FaExternalLinkAlt style={{ fontSize: '10px' }} />
+                            Sepolia Etherscan ↗
+                          </a>
+                        </div>
+                        {result.blockchainVerification.contractAddress && (
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ color: '#64748b', minWidth: '120px' }}>Smart Contract:</span>
+                            <a
+                              href={result.blockchainVerification.contractExplorerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#7c3aed', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', fontSize: '11px', fontFamily: 'monospace' }}
+                            >
+                              <FaExternalLinkAlt style={{ fontSize: '9px' }} />
+                              {result.blockchainVerification.contractAddress.substring(0, 16)}...
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, color: '#64748b' }}>
+                        Văn bằng này chưa được phát hành lên Blockchain (đang ở trạng thái chờ duyệt hoặc lưu DB).
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

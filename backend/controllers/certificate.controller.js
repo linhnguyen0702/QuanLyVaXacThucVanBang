@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const crypto = require('crypto');
+const { issueCertificateOnChain, isBlockchainReady } = require('../config/blockchain');
 
 // Helper to generate SHA-256 certificate hash
 const generateCertificateHash = (certData) => {
@@ -307,19 +308,82 @@ exports.updateCertificate = async (req, res, next) => {
 
     // Nếu đây là luồng phê duyệt từ SchoolVerifyCertificates (pending -> issued)
     if (isApprovingFlow) {
+      let finalTxHash = blockchain_tx_hash || null;
+      let finalBlockNumber = null;
+      let finalBlockchainCertId = currentCert.blockchain_certificate_id || null;
+      let blockchainError = null;
+
+      // ── Gọi Smart Contract Ethereum Sepolia thật ──────────────────────────
+      if (isBlockchainReady()) {
+        try {
+          // Lấy thông tin trường để điền vào contract
+          const [schoolRows] = await db.query('SELECT school_name FROM schools WHERE id = ?', [currentCert.school_id]);
+          const universityName = schoolRows.length > 0 ? schoolRows[0].school_name : 'Truong Dai hoc';
+
+          const onChainResult = await issueCertificateOnChain({
+            certificateCode: currentCert.certificate_code,
+            studentName: currentCert.student_name,
+            studentId: currentCert.student_code,
+            university: universityName,
+            major: currentCert.major || '',
+            degreeType: currentCert.degree_type || 'Dai hoc',
+            issueDate: currentCert.issue_date,
+            certificateHash: currentCert.certificate_hash
+          });
+
+          finalTxHash = onChainResult.txHash;
+          finalBlockNumber = onChainResult.blockNumber;
+          finalBlockchainCertId = onChainResult.blockchainCertificateId;
+
+          console.log(`Cert ${currentCert.certificate_code} issued on-chain. TxHash: ${finalTxHash}`);
+        } catch (chainErr) {
+          blockchainError = chainErr.message;
+          console.error('Blockchain issuance failed:', chainErr.message);
+        }
+      } else {
+        console.warn('Blockchain not ready — approving certificate in DB only (off-chain mode).');
+      }
+
       await db.query(
         `UPDATE certificates 
          SET status = 'issued',
-             blockchain_tx_hash = COALESCE(?, blockchain_tx_hash)
+             blockchain_tx_hash = COALESCE(?, blockchain_tx_hash),
+             blockchain_certificate_id = COALESCE(?, blockchain_certificate_id)
          WHERE id = ?`,
-        [blockchain_tx_hash, id]
+        [finalTxHash, finalBlockchainCertId, id]
       );
+
+      // Ghi audit log cho sự kiện phê duyệt blockchain
+      if (req.user) {
+        await db.query(
+          `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+           VALUES (?, 'BLOCKCHAIN_ISSUE', 'certificates', ?, ?, ?)`,
+          [
+            req.user.id,
+            id,
+            finalTxHash
+              ? 'Da phe duyet va ghi len Blockchain Sepolia. TxHash: ' + finalTxHash
+              : 'Da phe duyet (off-chain). ' + (blockchainError ? 'Loi blockchain: ' + blockchainError : ''),
+            req.ip
+          ]
+        );
+      }
 
       const [updated] = await db.query('SELECT * FROM certificates WHERE id = ?', [id]);
       return res.json({
         success: true,
-        message: 'Xác thực văn bằng lên Blockchain thành công.',
-        certificate: updated[0]
+        message: finalTxHash
+          ? 'Xac thuc van bang len Blockchain Sepolia thanh cong! TxHash: ' + finalTxHash
+          : 'Da phe duyet van bang (luu DB). Blockchain tam thoi khong kha dung.',
+        certificate: updated[0],
+        blockchain: finalTxHash ? {
+          txHash: finalTxHash,
+          blockNumber: finalBlockNumber,
+          blockchainCertificateId: finalBlockchainCertId,
+          network: 'Sepolia Testnet',
+          explorerUrl: 'https://sepolia.etherscan.io/tx/' + finalTxHash
+        } : null,
+        blockchainError: blockchainError || undefined
       });
     }
 

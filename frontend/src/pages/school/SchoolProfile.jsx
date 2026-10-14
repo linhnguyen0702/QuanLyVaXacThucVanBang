@@ -41,7 +41,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
     const department = (savedProfile && savedProfile.department) || (loggedUser && loggedUser.department) || 'Phòng Đào tạo';
     const position = (savedProfile && savedProfile.position) || (loggedUser && loggedUser.position) || 'Quản trị viên Hệ thống Văn bằng số';
     const avatar = (savedProfile && savedProfile.avatar) || (loggedUser && loggedUser.avatar_url) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150';
-    const wallet = (loggedUser && loggedUser.wallet_address) || (savedProfile && savedProfile.wallet) || '0xA3f2d9b7eC81452D819280dEAc429e81';
+    const wallet = (loggedUser && loggedUser.wallet_address) || '';
 
     return {
       fullName,
@@ -78,7 +78,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
             phone: prev.phone || u.phone || '0368 251 814',
             department: prev.department || u.department || 'Phòng Đào tạo',
             position: prev.position || u.position || 'Quản trị viên Hệ thống Văn bằng số',
-            wallet: u.wallet_address || prev.wallet || '0xA3f2d9b7eC81452D819280dEAc429e81'
+            wallet: u.wallet_address || ''
           };
           localStorage.setItem('user_profile_data', JSON.stringify(updated));
           return updated;
@@ -90,7 +90,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
           phone: prev.phone || u.phone || '0368 251 814',
           department: prev.department || u.department || 'Phòng Đào tạo',
           position: prev.position || u.position || 'Quản trị viên Hệ thống Văn bằng số',
-          wallet: u.wallet_address || prev.wallet || '0xA3f2d9b7eC81452D819280dEAc429e81'
+          wallet: u.wallet_address || ''
         }));
       }
     } catch (e) {
@@ -127,8 +127,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
         department: tempAccountForm.department,
         position: tempAccountForm.position,
         address: tempAccountForm.address,
-        avatar_url: tempAccountForm.avatar,
-        wallet_address: tempAccountForm.wallet
+        avatar_url: tempAccountForm.avatar
       });
 
       let updatedUser = null;
@@ -143,8 +142,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
           department: tempAccountForm.department,
           position: tempAccountForm.position,
           address: tempAccountForm.address,
-          avatar_url: tempAccountForm.avatar,
-          wallet_address: tempAccountForm.wallet
+          avatar_url: tempAccountForm.avatar
         };
       }
 
@@ -159,7 +157,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
         department: updatedUser.department || tempAccountForm.department,
         position: updatedUser.position || tempAccountForm.position,
         avatar: updatedUser.avatar_url || tempAccountForm.avatar,
-        wallet: updatedUser.wallet_address || tempAccountForm.wallet
+        wallet: updatedUser.wallet_address || ''
       }));
 
       // 3. Cập nhật state hiển thị của hồ sơ
@@ -171,7 +169,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
         department: updatedUser.department || tempAccountForm.department,
         position: updatedUser.position || tempAccountForm.position,
         avatar: updatedUser.avatar_url || tempAccountForm.avatar,
-        wallet: updatedUser.wallet_address || tempAccountForm.wallet
+        wallet: updatedUser.wallet_address || ''
       });
 
       // 4. Đồng bộ thanh Header và thông báo toàn cục
@@ -230,7 +228,8 @@ const SchoolProfile = ({ onUserUpdated }) => {
   };
 
   const handleCopyWallet = () => {
-    const w = accountForm.wallet || '0xA3f2d9b7eC81452D819280dEAc429e81';
+    const w = accountForm.wallet;
+    if (!w) return;
     navigator.clipboard.writeText(w);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -469,14 +468,14 @@ const SchoolProfile = ({ onUserUpdated }) => {
         {/* Tab 3: Wallet Connection */}
         {activeTab === 'wallet' && (
           <div>
-            <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '16px' }}>Địa chỉ ví quản trị cấp bằng Polygon</h4>
+            <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '16px' }}>Ví Blockchain đã liên kết</h4>
             
             <div className="sd-detail-card" style={{ background: '#f0f7ff', border: '1px solid #bfdbfe' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <span className="sd-detail-label">Mạng lưới: Polygon Mainnet</span>
+                  <span className="sd-detail-label">Mạng lưới: Ethereum Sepolia</span>
                   <div className="sd-detail-value" style={{ fontSize: '16px', fontFamily: 'monospace', marginTop: '4px' }}>
-                    {accountForm.wallet || '0xA3f2d9b7eC81452D819280dEAc429e81'}
+                    {accountForm.wallet || 'Chưa kết nối ví'}
                   </div>
                 </div>
                 <button type="button" className="sd-btn-secondary" onClick={handleCopyWallet}>
@@ -487,7 +486,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
 
             <div style={{ marginTop: '20px' }}>
               <p style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>
-                Địa chỉ ví này được cấp quyền Ký duyệt điện tử (Digital Signature) trên hợp đồng thông minh. Mỗi bằng tốt nghiệp phát hành sẽ được ký trực tiếp bởi ví quản trị nhà trường.
+                Địa chỉ ví đã liên kết cố định với tài khoản này. Mỗi tài khoản chỉ có thể sử dụng một địa chỉ ví.
               </p>
             </div>
           </div>

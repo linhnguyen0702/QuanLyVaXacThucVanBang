@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { verifyCertificateOnChain, verifyCertificateByHashOnChain, isBlockchainReady } = require('../config/blockchain');
 
 // @desc    Verify certificate by code, hash or QR URL
 // @route   POST /api/verification/verify
@@ -60,18 +61,49 @@ exports.verifyCertificate = async (req, res, next) => {
     }
 
     const isRevoked = certificate.status === 'revoked';
+    const txHash = certificate.blockchain_tx_hash;
+
+    // ── Xác thực on-chain từ Blockchain Sepolia (nếu blockchain khả dụng) ──
+    let onChainResult = null;
+    let onChainVerified = false;
+    if (isBlockchainReady() && certificate.status === 'issued') {
+      try {
+        // Thử xác thực theo mã số văn bằng trước
+        onChainResult = await verifyCertificateOnChain(certificate.certificate_code);
+        if (onChainResult) {
+          onChainVerified = onChainResult.isValid;
+        } else if (certificate.certificate_hash) {
+          // Fallback: xác thực theo hash
+          const hashResult = await verifyCertificateByHashOnChain(certificate.certificate_hash);
+          if (hashResult) {
+            onChainVerified = hashResult.isValid;
+            onChainResult = hashResult;
+          }
+        }
+      } catch (chainErr) {
+        console.error('On-chain verification error (non-fatal):', chainErr.message);
+      }
+    }
 
     res.json({
       success: true,
       verified: !isRevoked,
       isRevoked,
-      message: isRevoked ? 'Văn bằng đã bị THU HỒI!' : 'Văn bằng HỢP LỆ & đã được xác thực thành công!',
+      message: isRevoked
+        ? 'Van bang da bi THU HOI!'
+        : 'Van bang HOP LE & da duoc xac thuc thanh cong!',
       certificate,
       blockchainVerification: {
         network: 'Ethereum Sepolia Testnet',
-        txHash: certificate.blockchain_tx_hash || '0xa1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
-        verifiedOnChain: true,
-        contractAddress: process.env.CONTRACT_ADDRESS || '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
+        txHash: txHash || null,
+        verifiedOnChain: txHash ? onChainVerified : false,
+        onChainStatus: onChainResult ? (onChainResult.isValid ? 'VALID' : 'REVOKED') : (txHash ? 'PENDING_CHECK' : 'NOT_ON_CHAIN'),
+        contractAddress: process.env.CONTRACT_ADDRESS || null,
+        explorerUrl: txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : null,
+        contractExplorerUrl: process.env.CONTRACT_ADDRESS
+          ? `https://sepolia.etherscan.io/address/${process.env.CONTRACT_ADDRESS}`
+          : null,
+        blockchainEnabled: isBlockchainReady()
       }
     });
   } catch (error) {

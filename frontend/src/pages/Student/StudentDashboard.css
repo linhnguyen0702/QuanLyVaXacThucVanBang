@@ -205,7 +205,7 @@
 .std-sidebar.collapsed .std-logo-text,
 .std-sidebar.collapsed .std-group-title,
 .std-sidebar.collapsed .std-menu-label,
-.std-sidebar.collapsed .std-blockchain-card {
+.std-sidebar.collapsed .wallet-status-card {
   display: none;
 }
 

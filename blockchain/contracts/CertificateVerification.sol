@@ -2,15 +2,15 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 /**
  * @title CertificateVerification
- * @dev Smart contract for managing and verifying digital certificates
+ * @dev Smart contract for managing and verifying digital certificates.
+ *      Updated for OpenZeppelin contracts v5.x (Counters library removed).
  */
 contract CertificateVerification is Ownable {
-    using Counters for Counters.Counter;
-    Counters.Counter private _certificateIds;
+    // Auto-incrementing ID counter (replaces deprecated Counters library)
+    uint256 private _nextCertificateId = 1;
 
     struct Certificate {
         uint256 id;
@@ -91,14 +91,6 @@ contract CertificateVerification is Ownable {
 
     /**
      * @dev Issue a new certificate
-     * @param _certificateCode Unique certificate code
-     * @param _studentName Name of the student
-     * @param _studentId Student ID
-     * @param _university Name of the university
-     * @param _major Major/field of study
-     * @param _degreeType Type of degree
-     * @param _issueDate Issue date (Unix timestamp)
-     * @param _certificateHash Hash of the certificate document
      */
     function issueCertificate(
         string memory _certificateCode,
@@ -114,8 +106,8 @@ contract CertificateVerification is Ownable {
         require(certificateCodeToId[_certificateCode] == 0, "Certificate code already exists");
         require(certificateHashToId[_certificateHash] == 0, "Certificate hash already exists");
 
-        _certificateIds.increment();
-        uint256 newCertificateId = _certificateIds.current();
+        uint256 newCertificateId = _nextCertificateId;
+        _nextCertificateId++;
 
         Certificate memory newCertificate = Certificate({
             id: newCertificateId,
@@ -152,7 +144,7 @@ contract CertificateVerification is Ownable {
      * @param _certificateId ID of the certificate to revoke
      */
     function revokeCertificate(uint256 _certificateId) external onlyAuthorizedIssuer {
-        require(_certificateId > 0 && _certificateId <= _certificateIds.current(), "Invalid certificate ID");
+        require(_certificateId > 0 && _certificateId < _nextCertificateId, "Invalid certificate ID");
         Certificate storage cert = certificates[_certificateId];
         require(cert.issuedBy == msg.sender, "Not certificate issuer");
         require(cert.isValid, "Certificate already revoked");
@@ -230,7 +222,7 @@ contract CertificateVerification is Ownable {
         view 
         returns (Certificate memory) 
     {
-        require(_certificateId > 0 && _certificateId <= _certificateIds.current(), "Invalid certificate ID");
+        require(_certificateId > 0 && _certificateId < _nextCertificateId, "Invalid certificate ID");
         return certificates[_certificateId];
     }
 
@@ -238,6 +230,6 @@ contract CertificateVerification is Ownable {
      * @dev Get total number of certificates issued
      */
     function getTotalCertificates() external view returns (uint256) {
-        return _certificateIds.current();
+        return _nextCertificateId - 1;
     }
 }

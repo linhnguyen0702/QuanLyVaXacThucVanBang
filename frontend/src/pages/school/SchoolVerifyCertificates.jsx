@@ -7,7 +7,7 @@ import {
 import { api } from '../../services/api';
 import './SchoolVerifyCertificates.css';
 
-const SchoolVerifyCertificates = () => {
+const SchoolVerifyCertificates = ({ walletAddress }) => {
   const [pendingList, setPendingList] = useState([]);
   const [historyList, setHistoryList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,60 +88,77 @@ const SchoolVerifyCertificates = () => {
     setIsProcessing(true);
     setProcessStep(0);
 
-    // Step 1: Calculate Hash
-    setTimeout(async () => {
-      setProcessStep(1);
-      // Step 2: Send transaction to backend/blockchain
-      setTimeout(async () => {
-        setProcessStep(2);
-        // Step 3: Wait for confirmation
-        setTimeout(async () => {
-          setProcessStep(3);
-          
-          const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-          const blockNum = Math.floor(Math.random() * 50000) + 42900000;
-          const timestampStr = new Date().toLocaleDateString('vi-VN');
+    // Step 1: Tính hash
+    await new Promise(r => setTimeout(r, 800));
+    setProcessStep(1);
 
-          try {
-            if (selectedCert.id) {
-              // Cập nhật trạng thái văn bằng thành issued và đẩy txHash vào CSDL
-              await api.updateCertificate(selectedCert.id, {
-                status: 'issued',
-                blockchain_tx_hash: txHash
-              });
-            }
-          } catch (e) {
-            console.error('Failed to save approved cert to DB:', e);
-          }
+    // Step 2: Gửi lên Backend → Blockchain Sepolia
+    await new Promise(r => setTimeout(r, 600));
+    setProcessStep(2);
 
-          const updatedCert = {
-            ...selectedCert,
-            txHash,
-            blockNum,
-            timestamp: timestampStr
-          };
+    try {
+      let txHash = null;
+      let blockNum = null;
+      let explorerUrl = null;
+      let blockchainCertId = null;
 
-          setPendingList(prev => prev.filter(item => item.code !== selectedCert.code));
-          setHistoryList(prev => [
-            {
-              code: selectedCert.code,
-              studentName: selectedCert.studentName,
-              program: selectedCert.program,
-              txHash,
-              block: blockNum,
-              timestamp: timestampStr
-            },
-            ...prev
-          ]);
+      if (selectedCert.id) {
+        // Gọi API backend — backend sẽ gọi Smart Contract Sepolia thật
+        const apiResult = await api.updateCertificate(selectedCert.id, {
+          status: 'issued'
+          // Không gửi blockchain_tx_hash giả nữa — backend tự lấy từ chain
+        });
 
-          setApprovedToday(prev => prev + 1);
-          setGasSpent(prev => prev + 84150);
+        if (apiResult && apiResult.blockchain) {
+          // Lấy dữ liệu thật từ Sepolia
+          txHash = apiResult.blockchain.txHash;
+          blockNum = apiResult.blockchain.blockNumber;
+          explorerUrl = apiResult.blockchain.explorerUrl;
+          blockchainCertId = apiResult.blockchain.blockchainCertificateId;
+        } else if (apiResult && apiResult.certificate && apiResult.certificate.blockchain_tx_hash) {
+          // Fallback: lấy từ certificate object
+          txHash = apiResult.certificate.blockchain_tx_hash;
+          explorerUrl = txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : null;
+        }
+      }
 
-          setSuccessResult(updatedCert);
-          setIsProcessing(false);
-        }, 1200);
-      }, 1000);
-    }, 800);
+      // Nếu không có txHash thật (blockchain lỗi hoặc chưa cấu hình) → vẫn cập nhật UI
+      const timestampStr = new Date().toLocaleDateString('vi-VN');
+
+      setProcessStep(3);
+      await new Promise(r => setTimeout(r, 800));
+
+      const updatedCert = {
+        ...selectedCert,
+        txHash: txHash || null,
+        blockNum: blockNum || null,
+        timestamp: timestampStr,
+        explorerUrl: explorerUrl || null
+      };
+
+      setPendingList(prev => prev.filter(item => item.code !== selectedCert.code));
+      setHistoryList(prev => [
+        {
+          code: selectedCert.code,
+          studentName: selectedCert.studentName,
+          program: selectedCert.program,
+          txHash: txHash || null,
+          block: blockNum || null,
+          timestamp: timestampStr,
+          explorerUrl: explorerUrl || null
+        },
+        ...prev
+      ]);
+
+      setApprovedToday(prev => prev + 1);
+      setGasSpent(prev => prev + 84150);
+      setSuccessResult(updatedCert);
+    } catch (e) {
+      console.error('Failed to approve cert on blockchain:', e);
+      alert('Lỗi khi phê duyệt văn bằng: ' + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleBatchApprove = () => {
@@ -339,12 +356,24 @@ const SchoolVerifyCertificates = () => {
                   <td className="sd-td-bold">{item.studentName}</td>
                   <td>{item.program}</td>
                   <td>
-                    <span className="sd-bc-detail-val" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} title="Bấm để xem chi tiết">
-                      <FaLink style={{ fontSize: '10px', color: '#0f4cf5' }} /> 
-                      {item.txHash.substring(0, 16)}...
-                    </span>
+                    {item.txHash ? (
+                      <a
+                        href={item.explorerUrl || `https://sepolia.etherscan.io/tx/${item.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="sd-bc-detail-val"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#2563eb', textDecoration: 'none' }}
+                        title="Xem giao dịch trên Etherscan Sepolia"
+                      >
+                        <FaLink style={{ fontSize: '10px' }} />
+                        {item.txHash.substring(0, 14)}...
+                        <FaExternalLinkAlt style={{ fontSize: '9px' }} />
+                      </a>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+                    )}
                   </td>
-                  <td className="sd-td-bold">#{item.block}</td>
+                  <td className="sd-td-bold">{item.block ? `#${item.block}` : <span style={{ color: '#94a3b8' }}>—</span>}</td>
                   <td>{item.timestamp}</td>
                   <td>
                     <span className="svc-badge-approved">
@@ -402,7 +431,7 @@ const SchoolVerifyCertificates = () => {
                   <div className="svc-blockchain-data">
                     <div className="svc-bc-row">
                       <span className="svc-bc-label"><FaKey /> Ví ký phát hành đại diện:</span>
-                      <span className="svc-bc-value">0xA3f2d9b7eC81452D819280dEAc429e81</span>
+                      <span className="svc-bc-value">{walletAddress || 'Chưa kết nối ví'}</span>
                     </div>
                     <div className="svc-bc-row">
                       <span className="svc-bc-label"><FaDatabase /> Mạng lưới phát hành:</span>
@@ -423,14 +452,41 @@ const SchoolVerifyCertificates = () => {
                       <span className="svc-bc-label">Số hiệu văn bằng:</span>
                       <span className="svc-bc-value" style={{ backgroundColor: '#e6fdf0', color: '#15803d' }}>{successResult.code}</span>
                     </div>
-                    <div className="svc-bc-row">
-                      <span className="svc-bc-label">Transaction Hash:</span>
-                      <span className="svc-bc-value copyable" onClick={() => alert('Đã copy TxHash')} style={{ width: '220px' }}>{successResult.txHash}</span>
-                    </div>
-                    <div className="svc-bc-row">
-                      <span className="svc-bc-label">Khối ghi nhận:</span>
-                      <span className="svc-bc-value">#{successResult.blockNum}</span>
-                    </div>
+                    {successResult.txHash ? (
+                      <>
+                        <div className="svc-bc-row">
+                          <span className="svc-bc-label">Transaction Hash (Sepolia):</span>
+                          <span
+                            className="svc-bc-value copyable"
+                            onClick={() => { navigator.clipboard.writeText(successResult.txHash); }}
+                            title="Bấm để copy TxHash"
+                            style={{ width: '220px', cursor: 'pointer' }}
+                          >
+                            {successResult.txHash.substring(0, 20)}...
+                          </span>
+                        </div>
+                        <div className="svc-bc-row">
+                          <span className="svc-bc-label">Xem trên Etherscan:</span>
+                          <a
+                            href={successResult.explorerUrl || `https://sepolia.etherscan.io/tx/${successResult.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#2563eb', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <FaExternalLinkAlt style={{ fontSize: '10px' }} /> Sepolia Etherscan
+                          </a>
+                        </div>
+                        <div className="svc-bc-row">
+                          <span className="svc-bc-label">Khối ghi nhận:</span>
+                          <span className="svc-bc-value">#{successResult.blockNum || 'Đang xác nhận...'}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="svc-bc-row">
+                        <span className="svc-bc-label">Trạng thái Blockchain:</span>
+                        <span className="sd-badge orange" style={{ fontSize: '11px' }}>Đã lưu DB — Blockchain đang xử lý</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -473,7 +529,7 @@ const SchoolVerifyCertificates = () => {
             </div>
             
             <div className="svc-mm-body">
-              <div className="svc-mm-account">Ví quản trị: 0xA3f2...9b7e</div>
+              <div className="svc-mm-account">Ví quản trị: {walletAddress ? `${walletAddress.slice(0, 10)}...` : 'Chưa kết nối ví'}</div>
               <FaShieldAlt style={{ fontSize: '40px', color: '#f97316' }} />
               <div className="svc-mm-title">Yêu cầu ký chữ ký số</div>
               <div className="svc-mm-desc">Xác nhận ký số phôi bằng {selectedCert?.code} và đẩy lên CSDL hệ thống.</div>

@@ -103,7 +103,7 @@ const LoginPage = () => {
           department: res.user.department || 'Phòng Đào tạo',
           position: res.user.position || 'Quản trị viên Hệ thống Văn bằng số',
           avatar: res.user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-          wallet: res.user.wallet_address || '0xA3f2d9b7eC81452D819280dEAc429e81'
+          wallet: res.user.wallet_address || ''
         }));
 
         // Redirect based on role

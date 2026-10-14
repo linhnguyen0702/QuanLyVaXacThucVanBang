@@ -6,6 +6,7 @@ import {
   FaFileAlt, FaCog, FaDatabase, FaUser, FaLock, FaSignOutAlt, FaUniversity
 } from 'react-icons/fa';
 import './SchoolDashboard.css';
+import { WalletConnectionGate, WalletStatusCard } from '../../components/WalletConnection/WalletConnection';
 
 // Sub-components
 import SchoolOverview from './SchoolOverview';
@@ -86,7 +87,6 @@ const SchoolDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [collapsed, setCollapsed] = useState(false);
   const [menuActive, setMenuActive] = useState(false);
-  const [copiedWallet, setCopiedWallet] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifyDropdown, setShowNotifyDropdown] = useState(false);
 
@@ -150,13 +150,6 @@ const SchoolDashboard = () => {
     return group;
   });
 
-  const handleCopyWallet = () => {
-    const wallet = (currentUser && currentUser.wallet_address) || '0xA3f2d9b7eC81452D819280dEAc429e';
-    navigator.clipboard.writeText(wallet);
-    setCopiedWallet(true);
-    setTimeout(() => setCopiedWallet(false), 2000);
-  };
-
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -170,7 +163,7 @@ const SchoolDashboard = () => {
       case 'schools':
         return <AdminSchools onNavigate={(tab) => setActiveTab(tab)} />;
       case 'verify-certificates':
-        return <SchoolVerifyCertificates onNavigate={(tab) => setActiveTab(tab)} />;
+        return <SchoolVerifyCertificates onNavigate={(tab) => setActiveTab(tab)} walletAddress={currentUser && currentUser.wallet_address} />;
       case 'stats':
         return <SchoolStats onNavigate={(tab) => setActiveTab(tab)} />;
       case 'history':
@@ -202,6 +195,7 @@ const SchoolDashboard = () => {
   };
 
   return (
+    <WalletConnectionGate user={currentUser} onWalletConnected={setCurrentUser}>
     <div className="sd-layout">
       {/* ── SIDEBAR ── */}
       <aside className={`sd-sidebar ${collapsed ? 'collapsed' : ''} ${menuActive ? 'active' : ''}`}>
@@ -241,32 +235,7 @@ const SchoolDashboard = () => {
           ))}
         </div>
 
-        {/* Blockchain Status Box */}
-        <div className="sd-blockchain-card">
-          <div className="sd-bc-header">
-            <div className="sd-bc-logo"><FaShieldAlt /></div>
-            <div>
-              <div className="sd-bc-title">Blockchain</div>
-              <div className="sd-bc-status">
-                <span className="sd-bc-dot"></span>
-                <span>Đã kết nối</span>
-              </div>
-            </div>
-          </div>
-          <div className="sd-bc-details">
-            <div className="sd-bc-detail-row">
-              <span>Mạng lưới:</span>
-              <span className="sd-bc-detail-val">Ethereum Sepolia</span>
-            </div>
-            <div className="sd-bc-detail-row">
-              <span>Địa chỉ ví:</span>
-              <span className="sd-bc-detail-val" style={{ cursor: 'pointer' }} onClick={handleCopyWallet} title="Bấm để sao chép">
-                {copiedWallet ? 'Đã copy!' : (currentUser && currentUser.wallet_address ? currentUser.wallet_address.substring(0, 10) + '...' : '0xA3f2...9b7e')}
-              </span>
-            </div>
-          </div>
-          <button className="sd-bc-btn" onClick={() => alert('Smart contract address: 0x71C7656EC7ab88b098defB751B7401B5f6d8976F')}>Xem chi tiết</button>
-        </div>
+        <WalletStatusCard walletAddress={(currentUser && currentUser.wallet_address) || ''} />
       </aside>
 
       {/* ── MAIN CONTENT ── */}
@@ -376,6 +345,7 @@ const SchoolDashboard = () => {
         </div>
       </div>
     </div>
+    </WalletConnectionGate>
   );
 };
 

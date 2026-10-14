@@ -49,7 +49,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
     INDEX idx_role (role),
-    INDEX idx_wallet_address (wallet_address)
+    UNIQUE KEY uq_users_wallet_address (wallet_address)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================================================
@@ -272,8 +272,8 @@ CREATE TABLE sessions (
 
 -- 1. Thêm tài khoản người dùng mẫu
 INSERT INTO users (email, password_hash, full_name, role, phone, department, position, wallet_address, is_active) VALUES 
-('admin@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Nguyễn Văn An', 'admin', '0368 251 814', 'Phòng Đào tạo', 'Quản trị viên Hệ thống Văn bằng số', '0xA3f2d9b7eC81452D819280dEAc429e81', TRUE),
-('officer@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Lê Hoài Nam', 'officer', '0912 345 678', 'Phòng Đào tạo', 'Cán bộ nhập liệu văn bằng', '0xB821c9e4a11295D31918aC391e82A123', TRUE),
+('admin@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Nguyễn Văn An', 'admin', '0368 251 814', 'Phòng Đào tạo', 'Quản trị viên Hệ thống Văn bằng số', NULL, TRUE),
+('officer@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Lê Hoài Nam', 'officer', '0912 345 678', 'Phòng Đào tạo', 'Cán bộ nhập liệu văn bằng', NULL, TRUE),
 ('viewer@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Phạm Thị D', 'viewer', '0988 777 666', 'Khoa Công nghệ thông tin', 'Nhân viên tra cứu', NULL, TRUE);
 
 -- 2. Thêm trường học mẫu

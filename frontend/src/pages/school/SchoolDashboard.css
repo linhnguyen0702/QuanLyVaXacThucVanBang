@@ -135,7 +135,7 @@
 .sd-sidebar.collapsed .sd-logo-text,
 .sd-sidebar.collapsed .sd-group-title,
 .sd-sidebar.collapsed .sd-menu-label,
-.sd-sidebar.collapsed .sd-blockchain-card {
+.sd-sidebar.collapsed .wallet-status-card {
   display: none;
 }
 

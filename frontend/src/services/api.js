@@ -44,6 +44,15 @@ export const api = {
     return res.json();
   },
 
+  connectWallet: async (wallet_address) => {
+    const res = await fetch(`${API_BASE_URL}/auth/connect-wallet`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ wallet_address })
+    });
+    return res.json();
+  },
+
   changePassword: async (data) => {
     const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
       method: 'PUT',

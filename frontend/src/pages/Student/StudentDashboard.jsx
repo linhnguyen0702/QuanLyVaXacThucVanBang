@@ -6,6 +6,7 @@ import {
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 import './StudentDashboard.css';
+import { WalletConnectionGate, WalletStatusCard } from '../../components/WalletConnection/WalletConnection';
 
 // Sub-components
 import StudentOverview from './StudentOverview';
@@ -35,6 +36,15 @@ const INITIAL_NOTIFICATIONS = [
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      console.error('Failed to load signed-in user:', error);
+      return null;
+    }
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [collapsed, setCollapsed] = useState(false);
   const [menuActive, setMenuActive] = useState(false);
@@ -177,6 +187,7 @@ const StudentDashboard = () => {
   };
 
   return (
+    <WalletConnectionGate user={currentUser} onWalletConnected={setCurrentUser}>
     <div className="std-layout">
       {/* ── SIDEBAR ── */}
       <aside className={`std-sidebar ${collapsed ? 'collapsed' : ''} ${menuActive ? 'active' : ''}`}>
@@ -260,6 +271,7 @@ const StudentDashboard = () => {
             </div>
           </div>
         </div>
+        <WalletStatusCard walletAddress={(currentUser && currentUser.wallet_address) || ''} />
       </aside>
 
       {/* ── MAIN CONTENT ── */}
@@ -370,6 +382,7 @@ const StudentDashboard = () => {
         </div>
       </div>
     </div>
+    </WalletConnectionGate>
   );
 };
 

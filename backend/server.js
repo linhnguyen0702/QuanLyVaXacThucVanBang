@@ -6,6 +6,10 @@ const errorHandler = require('./middleware/error.middleware');
 // Load environment variables
 dotenv.config();
 
+// Initialize Blockchain connection (Ethereum Sepolia)
+const { initBlockchain } = require('./config/blockchain');
+initBlockchain();
+
 // Initialize Express app
 const app = express();
 
