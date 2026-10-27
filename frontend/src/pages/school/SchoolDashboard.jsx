@@ -6,7 +6,7 @@ import {
   FaFileAlt, FaCog, FaDatabase, FaUser, FaLock, FaSignOutAlt, FaUniversity
 } from 'react-icons/fa';
 import './SchoolDashboard.css';
-import { WalletConnectionGate, WalletStatusCard } from '../../components/WalletConnection/WalletConnection';
+import { WalletConnectButton } from '../../components/WalletConnection/WalletConnection';
 
 // Sub-components
 import SchoolOverview from './SchoolOverview';
@@ -195,7 +195,6 @@ const SchoolDashboard = () => {
   };
 
   return (
-    <WalletConnectionGate user={currentUser} onWalletConnected={setCurrentUser}>
     <div className="sd-layout">
       {/* ── SIDEBAR ── */}
       <aside className={`sd-sidebar ${collapsed ? 'collapsed' : ''} ${menuActive ? 'active' : ''}`}>
@@ -235,7 +234,7 @@ const SchoolDashboard = () => {
           ))}
         </div>
 
-        <WalletStatusCard walletAddress={(currentUser && currentUser.wallet_address) || ''} />
+        <WalletConnectButton user={currentUser} onWalletConnected={setCurrentUser} />
       </aside>
 
       {/* ── MAIN CONTENT ── */}
@@ -345,7 +344,6 @@ const SchoolDashboard = () => {
         </div>
       </div>
     </div>
-    </WalletConnectionGate>
   );
 };
 

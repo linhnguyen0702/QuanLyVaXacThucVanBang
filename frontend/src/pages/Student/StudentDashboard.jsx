@@ -6,7 +6,7 @@ import {
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 import './StudentDashboard.css';
-import { WalletConnectionGate, WalletStatusCard } from '../../components/WalletConnection/WalletConnection';
+import { WalletConnectButton } from '../../components/WalletConnection/WalletConnection';
 
 // Sub-components
 import StudentOverview from './StudentOverview';
@@ -187,7 +187,6 @@ const StudentDashboard = () => {
   };
 
   return (
-    <WalletConnectionGate user={currentUser} onWalletConnected={setCurrentUser}>
     <div className="std-layout">
       {/* ── SIDEBAR ── */}
       <aside className={`std-sidebar ${collapsed ? 'collapsed' : ''} ${menuActive ? 'active' : ''}`}>
@@ -271,7 +270,7 @@ const StudentDashboard = () => {
             </div>
           </div>
         </div>
-        <WalletStatusCard walletAddress={(currentUser && currentUser.wallet_address) || ''} />
+        <WalletConnectButton user={currentUser} onWalletConnected={setCurrentUser} />
       </aside>
 
       {/* ── MAIN CONTENT ── */}
@@ -382,7 +381,6 @@ const StudentDashboard = () => {
         </div>
       </div>
     </div>
-    </WalletConnectionGate>
   );
 };
 

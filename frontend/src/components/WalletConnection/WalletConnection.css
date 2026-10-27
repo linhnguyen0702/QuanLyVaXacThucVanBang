@@ -1,84 +1,144 @@
-.wallet-connect-page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+/* ── Wallet Connect Sidebar (nút kết nối khi chưa có ví) ── */
+.wallet-connect-sidebar {
+  margin: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   background: #f8fafc;
-  font-family: 'Inter', sans-serif;
-}
-
-.wallet-connect-panel {
-  width: min(100%, 460px);
-  padding: 36px;
-  text-align: center;
-  background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
 }
 
-.wallet-connect-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 18px;
+/* Thông tin ví đã đăng ký (hiển thị khi chưa connect trong phiên) */
+.wallet-connect-sidebar-registered {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+}
+
+.wallet-registered-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #3b82f6;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wallet-registered-addr {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  color: #1e3a8a;
+  word-break: break-all;
+}
+
+.wallet-connect-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wallet-connect-sidebar-icon {
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
-  color: #0284c7;
-  background: #e0f2fe;
+  flex-shrink: 0;
+  color: #f59e0b;
+  background: #fef3c7;
   border-radius: 50%;
-  font-size: 24px;
+  font-size: 15px;
 }
 
-.wallet-connect-panel h1 {
-  margin: 0 0 12px;
+.wallet-connect-sidebar-title {
   color: #0f172a;
-  font-size: 22px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.wallet-connect-panel p {
-  margin: 0 0 24px;
-  color: #64748b;
-  font-size: 14px;
-  line-height: 1.6;
+.wallet-connect-sidebar-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
-.wallet-connect-panel > button {
+.wallet-connect-sidebar-status.disconnected {
+  color: #94a3b8;
+}
+
+.wallet-connect-sidebar-status.disconnected span {
+  width: 6px;
+  height: 6px;
+  background: #94a3b8;
+  border-radius: 50%;
+}
+
+.wallet-connect-sidebar-btn {
   width: 100%;
-  min-height: 46px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 8px;
   border: 0;
   border-radius: 8px;
   color: #ffffff;
-  background: #2563eb;
-  font-size: 14px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
 }
 
-.wallet-connect-panel > button:disabled {
-  opacity: 0.7;
+.wallet-connect-sidebar-btn:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.wallet-connect-sidebar-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.wallet-connect-sidebar-btn:disabled {
+  opacity: 0.65;
   cursor: wait;
 }
 
-.wallet-connect-error,
-.wallet-status-error {
-  margin-top: 14px;
+.wallet-connect-sidebar-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
   color: #b91c1c;
-  font-size: 12px;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
-.wallet-connect-spinner {
-  animation: wallet-connect-spin 1s linear infinite;
+.wallet-connect-sidebar-success {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  color: #15803d;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
-@keyframes wallet-connect-spin {
-  to { transform: rotate(360deg); }
-}
-
+/* ── Wallet Status Card (sau khi đã kết nối) ── */
 .wallet-status-card {
   margin: 10px;
   padding: 12px 14px;
@@ -89,6 +149,25 @@
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
+}
+
+/* Nút ngắt kết nối ví */
+.wallet-disconnect-btn {
+  margin-left: auto;
+  padding: 4px 6px;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.wallet-disconnect-btn:hover {
+  background: #fecaca;
+  color: #7f1d1d;
 }
 
 .wallet-status-header {
@@ -145,6 +224,7 @@
 .wallet-status-details > div {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 8px;
 }
 
@@ -160,14 +240,38 @@
 }
 
 .wallet-status-details button {
-  max-width: 110px;
+  max-width: 100px;
   padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
 }
 
+.wallet-copy-icon-btn {
+  flex-shrink: 0;
+  padding: 2px 4px !important;
+  max-width: unset !important;
+  color: #64748b !important;
+  font-size: 11px !important;
+  transition: color 0.15s;
+}
+
+.wallet-copy-icon-btn:hover {
+  color: #2563eb !important;
+}
+
+.wallet-status-error {
+  margin-top: 4px;
+  color: #b91c1c;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .wallet-status-details-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 5px;
   color: #334155;
   background: #ffffff;
@@ -177,9 +281,19 @@
   font-weight: 600;
   text-align: center;
   text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .wallet-status-details-link:hover {
   background: #f1f5f9;
   border-color: #94a3b8;
+}
+
+/* ── Spinner animation ── */
+.wallet-connect-spinner {
+  animation: wallet-connect-spin 0.9s linear infinite;
+}
+
+@keyframes wallet-connect-spin {
+  to { transform: rotate(360deg); }
 }

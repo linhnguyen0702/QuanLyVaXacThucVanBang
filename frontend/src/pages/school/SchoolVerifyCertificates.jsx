@@ -440,54 +440,83 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                   </div>
                 </>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', textAlign: 'center', padding: '20px 0' }}>
-                  <FaCheckCircle style={{ fontSize: '60px', color: '#10b981' }} />
-                  <div>
-                    <h3 className="svc-modal-title" style={{ color: '#10b981', fontSize: '20px' }}>PHÊ DUYỆT & ĐĂNG KÝ CSDL & BLOCKCHAIN THÀNH CÔNG</h3>
-                    <p className="sd-td-subtext" style={{ marginTop: '8px' }}>Văn bằng của sinh viên <strong>{successResult.studentName}</strong> đã được lưu trữ vào CSDL MySQL và Blockchain.</p>
+                <div className="svc-success-container">
+                  {/* Animated success icon */}
+                  <div className="svc-success-icon-wrap">
+                    <div className="svc-success-ring svc-ring-1" />
+                    <div className="svc-success-ring svc-ring-2" />
+                    <div className="svc-success-icon-inner">
+                      <FaCheckCircle />
+                    </div>
                   </div>
 
-                  <div className="svc-blockchain-data" style={{ width: '100%', borderLeft: '4px solid #10b981' }}>
-                    <div className="svc-bc-row">
-                      <span className="svc-bc-label">Số hiệu văn bằng:</span>
-                      <span className="svc-bc-value" style={{ backgroundColor: '#e6fdf0', color: '#15803d' }}>{successResult.code}</span>
-                    </div>
-                    {successResult.txHash ? (
-                      <>
-                        <div className="svc-bc-row">
-                          <span className="svc-bc-label">Transaction Hash (Sepolia):</span>
-                          <span
-                            className="svc-bc-value copyable"
-                            onClick={() => { navigator.clipboard.writeText(successResult.txHash); }}
-                            title="Bấm để copy TxHash"
-                            style={{ width: '220px', cursor: 'pointer' }}
-                          >
-                            {successResult.txHash.substring(0, 20)}...
-                          </span>
-                        </div>
-                        <div className="svc-bc-row">
-                          <span className="svc-bc-label">Xem trên Etherscan:</span>
-                          <a
-                            href={successResult.explorerUrl || `https://sepolia.etherscan.io/tx/${successResult.txHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: '#2563eb', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <FaExternalLinkAlt style={{ fontSize: '10px' }} /> Sepolia Etherscan
-                          </a>
-                        </div>
-                        <div className="svc-bc-row">
-                          <span className="svc-bc-label">Khối ghi nhận:</span>
-                          <span className="svc-bc-value">#{successResult.blockNum || 'Đang xác nhận...'}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="svc-bc-row">
-                        <span className="svc-bc-label">Trạng thái Blockchain:</span>
-                        <span className="sd-badge orange" style={{ fontSize: '11px' }}>Đã lưu DB — Blockchain đang xử lý</span>
-                      </div>
-                    )}
+                  {/* Headline */}
+                  <div className="svc-success-headline">
+                    <h3 className="svc-success-title">Phê duyệt &amp; Đăng ký thành công!</h3>
+                    <p className="svc-success-subtitle">
+                      Văn bằng của <strong>{successResult.studentName}</strong> đã được lưu trữ vào
+                      <span className="svc-success-tag svc-tag-db"> &nbsp;CSDL MySQL&nbsp; </span>
+                      &amp;
+                      <span className="svc-success-tag svc-tag-chain"> &nbsp;Blockchain Sepolia&nbsp; </span>
+                    </p>
                   </div>
+
+                  {/* Info cards grid */}
+                  <div className="svc-success-grid">
+                    <div className="svc-info-card svc-info-card--green">
+                      <div className="svc-info-card-label">Số hiệu văn bằng</div>
+                      <div className="svc-info-card-value">{successResult.code}</div>
+                    </div>
+                    <div className="svc-info-card svc-info-card--blue">
+                      <div className="svc-info-card-label">Khối ghi nhận</div>
+                      <div className="svc-info-card-value">
+                        {successResult.blockNum ? `#${successResult.blockNum}` : '—'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transaction Hash row */}
+                  {successResult.txHash ? (
+                    <>
+                      <div className="svc-txhash-row">
+                        <div className="svc-txhash-label">
+                          <FaLink style={{ fontSize: 11 }} /> Transaction Hash (Sepolia)
+                        </div>
+                        <div className="svc-txhash-value-wrap">
+                          <code
+                            className="svc-txhash-code"
+                            onClick={() => navigator.clipboard.writeText(successResult.txHash)}
+                            title="Bấm để sao chép toàn bộ hash"
+                          >
+                            {successResult.txHash.substring(0, 24)}...{successResult.txHash.slice(-8)}
+                          </code>
+                          <button
+                            className="svc-copy-btn"
+                            onClick={() => navigator.clipboard.writeText(successResult.txHash)}
+                            title="Sao chép"
+                          >
+                            <FaKey style={{ fontSize: 10 }} /> Copy
+                          </button>
+                        </div>
+                      </div>
+                      <a
+                        className="svc-etherscan-btn"
+                        href={successResult.explorerUrl || `https://sepolia.etherscan.io/tx/${successResult.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <FaExternalLinkAlt style={{ fontSize: 11 }} />
+                        Xem giao dịch trên Sepolia Etherscan
+                      </a>
+                    </>
+                  ) : (
+                    <div className="svc-txhash-row">
+                      <div className="svc-txhash-label">
+                        <FaDatabase style={{ fontSize: 11 }} /> Trạng thái Blockchain
+                      </div>
+                      <span className="svc-success-tag svc-tag-pending">Đã lưu DB — Blockchain đang xử lý</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
