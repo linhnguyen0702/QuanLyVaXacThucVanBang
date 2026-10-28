@@ -316,7 +316,7 @@ const SchoolDashboard = () => {
                       {(currentUser && currentUser.full_name) || 'Nguyễn Văn An'}
                     </div>
                     <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
-                      {(currentUser && currentUser.email) || 'admin@school.edu.vn'}
+                      {(currentUser && currentUser.email) || 'linhyang0702@gmail.com'}
                     </div>
                   </div>
                   <div className="sd-dropdown-item" onClick={() => { setActiveTab('profile'); setShowUserDropdown(false); }}>

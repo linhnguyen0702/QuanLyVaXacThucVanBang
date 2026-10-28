@@ -34,7 +34,7 @@ const SchoolProfile = ({ onUserUpdated }) => {
       console.error(e);
     }
 
-    const email = (loggedUser && loggedUser.email) || (savedProfile && savedProfile.email && savedProfile.email !== 'annv@school.edu.vn' ? savedProfile.email : 'admin@school.edu.vn');
+    const email = (loggedUser && loggedUser.email) || (savedProfile && savedProfile.email && savedProfile.email !== 'annv@school.edu.vn' ? savedProfile.email : 'linhyang0702@gmail.com');
     const fullName = (savedProfile && savedProfile.fullName) || (loggedUser && loggedUser.full_name) || localStorage.getItem('userName') || 'Nguyễn Văn An';
     const phone = (savedProfile && savedProfile.phone) || (loggedUser && loggedUser.phone) || '0368 251 814';
     const address = (savedProfile && savedProfile.address) || (loggedUser && loggedUser.address) || 'Số 144 Xuân Thủy, Cầu Giấy, Hà Nội';

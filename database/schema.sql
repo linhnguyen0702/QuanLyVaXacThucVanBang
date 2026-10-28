@@ -34,6 +34,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     email VARCHAR(255) UNIQUE NOT NULL,
+    google_id VARCHAR(255) NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     role ENUM('admin', 'school', 'officer', 'viewer', 'student') NOT NULL DEFAULT 'viewer',
@@ -272,7 +273,7 @@ CREATE TABLE sessions (
 
 -- 1. Thêm tài khoản người dùng mẫu
 INSERT INTO users (email, password_hash, full_name, role, phone, department, position, wallet_address, is_active) VALUES 
-('admin@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Nguyễn Văn An', 'admin', '0368 251 814', 'Phòng Đào tạo', 'Quản trị viên Hệ thống Văn bằng số', NULL, TRUE),
+('linhyang0702@gmail.com', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Nguyễn Văn An', 'admin', '0368 251 814', 'Phòng Đào tạo', 'Quản trị viên Hệ thống Văn bằng số', NULL, TRUE),
 ('officer@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Lê Hoài Nam', 'officer', '0912 345 678', 'Phòng Đào tạo', 'Cán bộ nhập liệu văn bằng', NULL, TRUE),
 ('viewer@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Phạm Thị D', 'viewer', '0988 777 666', 'Khoa Công nghệ thông tin', 'Nhân viên tra cứu', NULL, TRUE);
 

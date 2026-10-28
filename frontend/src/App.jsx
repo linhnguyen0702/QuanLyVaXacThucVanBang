@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import './App.css'
 
 // Components
@@ -47,11 +48,16 @@ function AppContent() {
 }
 
 function App() {
-  return (
+  const app = (
     <Router>
       <AppContent />
     </Router>
   );
+
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+  return googleClientId
+    ? <GoogleOAuthProvider clientId={googleClientId}>{app}</GoogleOAuthProvider>
+    : app;
 }
 
 export default App

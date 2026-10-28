@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { 
   FaShieldAlt, FaUserGraduate, FaUniversity, FaEnvelope, 
   FaLock, FaEye, FaEyeSlash, FaCheckCircle, FaEdit, 
@@ -9,7 +10,31 @@ import { FcGoogle } from 'react-icons/fc';
 import { api } from '../../services/api';
 import './LoginPage.css';
 
+const GoogleSignInButton = ({ loading, onSuccess, onError }) => {
+  const googleLogin = useGoogleLogin({
+    flow: 'auth-code',
+    scope: 'openid email profile',
+    onSuccess: (codeResponse) => onSuccess(codeResponse.code),
+    onError
+  });
+
+  return (
+    <button
+      type="button"
+      className="btn btn-google"
+      disabled={loading}
+      onClick={() => googleLogin()}
+    >
+      <FcGoogle style={{ fontSize: '20px' }} />
+      {loading ? 'Đang đăng nhập...' : 'Đăng nhập bằng Google'}
+    </button>
+  );
+};
+
 const LoginPage = () => {
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+  const connectionErrorMessage = 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối và thử lại.';
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [userType, setUserType] = useState('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +42,7 @@ const LoginPage = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Support / Account Request Modal State
   const [isSupportOpen, setIsSupportOpen] = useState(false);
@@ -29,8 +55,30 @@ const LoginPage = () => {
     reason: ''
   });
   const [supportSuccessMsg, setSupportSuccessMsg] = useState('');
+  const [supportErrorMsg, setSupportErrorMsg] = useState('');
+  const [supportLoading, setSupportLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  const saveLoginSession = (user, token) => {
+    const actualRole = user.role;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('userRole', actualRole || userType);
+    localStorage.setItem('userName', user.full_name || '');
+    localStorage.setItem('user_profile_data', JSON.stringify({
+      fullName: user.full_name || 'Nguyễn Văn An',
+      email: user.email || '',
+      phone: user.phone || '0368 251 814',
+      address: user.address || 'Số 144 Xuân Thủy, Cầu Giấy, Hà Nội',
+      department: user.department || 'Phòng Đào tạo',
+      position: user.position || 'Quản trị viên Hệ thống Văn bằng số',
+      avatar: user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
+      wallet: user.wallet_address || ''
+    }));
+
+    navigate(actualRole === 'student' ? '/student/dashboard' : '/school/dashboard');
+  };
 
   // Load remembered credentials on mount
   useEffect(() => {
@@ -40,16 +88,30 @@ const LoginPage = () => {
     const isRemembered = localStorage.getItem('rememberMe') === 'true';
 
     if (isRemembered && savedEmail) {
-      setEmail(savedEmail);
+      const emailToRestore = savedEmail === 'admin@school.edu.vn'
+        ? 'linhyang0702@gmail.com'
+        : savedEmail;
+      setEmail(emailToRestore);
+      if (emailToRestore !== savedEmail) {
+        localStorage.setItem('rememberedEmail', emailToRestore);
+      }
       if (savedPassword) setPassword(savedPassword);
       if (savedRole) setUserType(savedRole);
       setRememberMe(true);
     }
   }, []);
 
+  useEffect(() => {
+    if (!errorMessage) return undefined;
+
+    const timeoutId = setTimeout(() => setErrorMessage(''), 5000);
+    return () => clearTimeout(timeoutId);
+  }, [errorMessage]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
@@ -90,34 +152,14 @@ const LoginPage = () => {
           localStorage.removeItem('rememberMe');
         }
 
-        // Save active session data into localStorage
-        localStorage.setItem('token', res.token);
-        localStorage.setItem('user', JSON.stringify(res.user));
-        localStorage.setItem('userRole', actualRole || userType);
-        localStorage.setItem('userName', res.user.full_name || '');
-        localStorage.setItem('user_profile_data', JSON.stringify({
-          fullName: res.user.full_name || 'Nguyễn Văn An',
-          email: res.user.email || '',
-          phone: res.user.phone || '0368 251 814',
-          address: res.user.address || 'Số 144 Xuân Thủy, Cầu Giấy, Hà Nội',
-          department: res.user.department || 'Phòng Đào tạo',
-          position: res.user.position || 'Quản trị viên Hệ thống Văn bằng số',
-          avatar: res.user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
-          wallet: res.user.wallet_address || ''
-        }));
-
-        // Redirect based on role
-        if (actualRole === 'student') {
-          navigate('/student/dashboard');
-        } else {
-          navigate('/school/dashboard');
-        }
+        setSuccessMessage(res.message || 'Đăng nhập thành công. Đang chuyển trang...');
+        setTimeout(() => saveLoginSession(res.user, res.token), 900);
       } else {
         setErrorMessage(res.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.');
       }
     } catch (error) {
       setLoading(false);
-      setErrorMessage('Không thể kết nối tới máy chủ Backend (http://localhost:5000). Vui lòng đảm bảo Server Node Backend đang chạy!');
+      setErrorMessage(connectionErrorMessage);
     }
   };
 
@@ -131,20 +173,68 @@ const LoginPage = () => {
       reason: ''
     });
     setSupportSuccessMsg('');
+    setSupportErrorMsg('');
     setIsSupportOpen(true);
   };
 
-  const handleSupportSubmit = (e) => {
+  const handleSupportSubmit = async (e) => {
     e.preventDefault();
-    setSupportSuccessMsg(`Yêu cầu của bạn đã được gửi thành công tới Quản trị viên (linhyang0702@gmail.com)! Admin sẽ xác minh và cấp tài khoản/mật khẩu mới qua Email ${supportFormData.email || email} trong thời gian sớm nhất.`);
-    setTimeout(() => {
-      setIsSupportOpen(false);
-      setSupportSuccessMsg('');
-    }, 4000);
+    setSupportErrorMsg('');
+    setSupportLoading(true);
+
+    try {
+      const res = await api.sendSupportRequest({
+        requestType: supportType,
+        ...supportFormData
+      });
+      if (!res?.success) {
+        setSupportErrorMsg(res?.message || 'Không gửi được yêu cầu. Vui lòng thử lại.');
+        return;
+      }
+
+      setSupportSuccessMsg(res.message);
+      setTimeout(() => {
+        setIsSupportOpen(false);
+        setSupportSuccessMsg('');
+      }, 4000);
+    } catch {
+      setSupportErrorMsg('Không thể kết nối máy chủ gửi email. Vui lòng thử lại sau.');
+    } finally {
+      setSupportLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    alert('Tính năng Đăng nhập bằng Google đang được cập nhật.');
+  const handleGoogleSuccess = async (code) => {
+    setErrorMessage('');
+    setSuccessMessage('');
+    setGoogleLoading(true);
+
+    try {
+      const res = await api.googleLogin(code);
+      if (!res?.success) {
+        setErrorMessage(res.message || 'Đăng nhập Google không thành công.');
+        return;
+      }
+
+      const actualRole = res.user.role;
+      const roleMatches = userType === 'student'
+        ? actualRole === 'student'
+        : userType === 'school'
+          ? ['admin', 'school'].includes(actualRole)
+          : ['admin', 'officer'].includes(actualRole);
+
+      if (!roleMatches) {
+        setErrorMessage(`Tài khoản Google này không thuộc vai trò đã chọn (${userType}).`);
+        return;
+      }
+
+      setSuccessMessage(res.message || 'Đăng nhập Google thành công. Đang chuyển trang...');
+      setTimeout(() => saveLoginSession(res.user, res.token), 900);
+    } catch (error) {
+      setErrorMessage(connectionErrorMessage);
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const stats = [
@@ -224,24 +314,6 @@ const LoginPage = () => {
           <div className="login-form-container">
             <h2 className="login-title">ĐĂNG NHẬP</h2>
             <p className="login-subtitle">Chào mừng bạn quay trở lại!</p>
-
-            {errorMessage && (
-              <div style={{
-                backgroundColor: '#fee2e2',
-                border: '1px solid #f87171',
-                color: '#b91c1c',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                marginBottom: '16px',
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <FaExclamationTriangle style={{ flexShrink: 0 }} />
-                <span>{errorMessage}</span>
-              </div>
-            )}
 
             <div className="user-type-selector">
               <p className="selector-label">Chọn vai trò của bạn</p>
@@ -349,10 +421,22 @@ const LoginPage = () => {
               <span>Hoặc</span>
             </div>
 
-            <button type="button" className="btn btn-google" onClick={handleGoogleLogin}>
-              <FcGoogle style={{ fontSize: '20px' }} />
-              Đăng nhập bằng Google
-            </button>
+            {googleClientId ? (
+              <GoogleSignInButton
+                loading={googleLoading}
+                onSuccess={handleGoogleSuccess}
+                onError={() => setErrorMessage('Không thể đăng nhập bằng Google. Vui lòng thử lại.')}
+              />
+            ) : (
+              <button
+                type="button"
+                className="btn btn-google"
+                onClick={() => setErrorMessage('Chưa cấu hình Google Client ID trong frontend/.env.')}
+              >
+                <FcGoogle style={{ fontSize: '20px' }} />
+                Đăng nhập bằng Google
+              </button>
+            )}
 
             <p className="signup-text">
               Chưa có tài khoản?{' '}
@@ -479,20 +563,47 @@ const LoginPage = () => {
                     </div>
                   </div>
                 )}
+
+                {supportErrorMsg && (
+                  <p className="login-support-error" role="alert">
+                    {supportErrorMsg}
+                  </p>
+                )}
               </div>
 
               {!supportSuccessMsg && (
                 <div className="login-modal-footer">
-                  <button type="button" className="sd-btn-secondary" style={{ padding: '8px 16px', cursor: 'pointer' }} onClick={() => setIsSupportOpen(false)}>
+                  <button type="button" className="sd-btn-secondary" style={{ padding: '8px 16px', cursor: 'pointer' }} onClick={() => setIsSupportOpen(false)} disabled={supportLoading}>
                     Hủy bỏ
                   </button>
-                  <button type="submit" className="sd-btn-primary" style={{ padding: '8px 20px', cursor: 'pointer' }}>
-                    <FaEnvelope /> Gửi yêu cầu tới Admin
+                  <button type="submit" className="sd-btn-primary" style={{ padding: '8px 20px', cursor: 'pointer' }} disabled={supportLoading}>
+                    {supportLoading ? <FaSpinner className="fa-spin" /> : <FaEnvelope />}
+                    {supportLoading ? 'Đang gửi...' : 'Gửi yêu cầu tới Admin'}
                   </button>
                 </div>
               )}
             </form>
           </div>
+        </div>
+      )}
+      {errorMessage && (
+        <div className="login-toast" role="alert" aria-live="assertive">
+          <FaExclamationTriangle className="login-toast-icon" />
+          <span>{errorMessage}</span>
+          <button
+            type="button"
+            className="login-toast-close"
+            aria-label="Đóng thông báo"
+            onClick={() => setErrorMessage('')}
+          >
+            <FaTimes />
+          </button>
+        </div>
+      )}
+      {successMessage && (
+        <div className="login-toast login-toast-success" role="status" aria-live="polite">
+          <FaCheckCircle className="login-toast-icon" />
+          <span>{successMessage}</span>
         </div>
       )}
     </div>

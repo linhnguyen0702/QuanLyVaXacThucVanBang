@@ -27,7 +27,10 @@ Tạo file `.env`:
 ```env
 REACT_APP_API_URL=http://localhost:5000/api
 REACT_APP_CONTRACT_ADDRESS=<your-contract-address>
+REACT_APP_GOOGLE_CLIENT_ID=<your-google-oauth-client-id>
 ```
+
+Đăng nhập Google cần cùng một **OAuth 2.0 Client ID** ở frontend và backend. Trong Google Cloud Console, cấu hình Authorized JavaScript origins cho `http://localhost:3000` và domain frontend khi triển khai. Luồng authorization-code cần cả Client ID và Client Secret ở backend; **chỉ Client ID** được đặt ở frontend. Không đưa Client Secret vào frontend, file mẫu hoặc repository.
 
 Khởi chạy:
 ```bash
@@ -56,10 +59,19 @@ DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=certificate_verification
 JWT_SECRET=your_secret_key
+GOOGLE_CLIENT_ID=<your-google-oauth-client-id>
+GOOGLE_CLIENT_SECRET=<your-rotated-google-oauth-client-secret>
+EMAIL_USER=<your-gmail-address>
+EMAIL_APP_PASSWORD=<your-gmail-app-password>
+SUPPORT_NOTIFICATION_EMAIL=linhyang0702@gmail.com
 CONTRACT_ADDRESS=your_contract_address
 INFURA_PROJECT_ID=your_infura_id
 PRIVATE_KEY=your_private_key
 ```
+
+Để đăng nhập Google hoạt động, cấu hình `GOOGLE_CLIENT_ID` giống Client ID ở frontend và đặt `GOOGLE_CLIENT_SECRET` trong `backend/.env` bằng secret đã tạo mới sau khi thu hồi secret bị lộ. Không chia sẻ hoặc commit secret này; tuyệt đối không đặt client secret trong biến `REACT_APP_*` vì các biến đó được đóng gói vào frontend. Origin của frontend (ví dụ `http://localhost:3000`) phải nằm trong Authorized JavaScript origins của OAuth client. Server sử dụng origin của yêu cầu đăng nhập khi đổi authorization code. Nếu database đã tồn tại, chạy migration `database/migrations/20261027_add_google_id_to_users.sql` một lần trước khi khởi động backend; schema mới đã có sẵn cột này.
+Để nhận email khi người dùng gửi yêu cầu tạo tài khoản/cấp lại mật khẩu, cấu hình `EMAIL_USER` và `EMAIL_APP_PASSWORD` trong `backend/.env` bằng Gmail và mật khẩu ứng dụng của Gmail (không phải mật khẩu đăng nhập Gmail). Đặt `SUPPORT_NOTIFICATION_EMAIL=linhyang0702@gmail.com` để chọn hộp thư nhận yêu cầu. Biểu mẫu chỉ báo gửi thành công sau khi email được gửi; lỗi SMTP sẽ hiển thị để người dùng thử lại.
+Đăng nhập Google chỉ dùng được với email đã có tài khoản trong hệ thống. Email chưa đăng ký sẽ bị từ chối đăng nhập; quản trị viên cần cấp tài khoản trước. Vai trò nhà trường/cán bộ cũng cần được quản trị viên cấp riêng.
 
 Khởi chạy:
 ```bash
@@ -76,6 +88,9 @@ mysql -u root -p < database/schema.sql
 ```
 
 Hoặc import trực tiếp trong MySQL Workbench/phpMyAdmin.
+
+Nếu database đã có tài khoản admin với email `admin@school.edu.vn`, chạy một lần migration
+`database/migrations/20261028_update_admin_email.sql` để đổi sang `linhyang0702@gmail.com`.
 
 ### 5. Cài đặt Blockchain (Hardhat)
 
