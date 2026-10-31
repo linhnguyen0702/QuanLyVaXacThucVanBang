@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { getPagination } = require('../utils/pagination');
 
 // @desc    Get all training programs
 // @route   GET /api/programs
@@ -6,6 +7,7 @@ const db = require('../config/database');
 exports.getPrograms = async (req, res, next) => {
   try {
     const { school_id, search, department, status } = req.query;
+    const pagination = getPagination(req.query);
 
     let query = `
       SELECT p.*, s.school_name, s.school_code
@@ -38,11 +40,40 @@ exports.getPrograms = async (req, res, next) => {
 
     query += ` ORDER BY p.created_at DESC`;
 
+    let total;
+    let activeTotal;
+    if (pagination.requested) {
+      const countQuery = `
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(CASE WHEN p.status = 'active' THEN 1 ELSE 0 END), 0) AS active_total
+        FROM programs p
+        LEFT JOIN schools s ON p.school_id = s.id
+        WHERE 1=1
+        ${school_id ? 'AND p.school_id = ?' : ''}
+        ${search ? 'AND (p.program_name LIKE ? OR p.program_code LIKE ? OR p.department LIKE ?)' : ''}
+        ${department ? 'AND p.department = ?' : ''}
+        ${status ? 'AND p.status = ?' : ''}
+      `;
+      const [countRows] = await db.query(countQuery, params);
+      total = countRows[0] ? countRows[0].total : 0;
+      activeTotal = countRows[0] ? countRows[0].active_total : 0;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(pagination.limit, pagination.offset);
+    }
+
     const [programs] = await db.query(query, params);
+    if (total === undefined) total = programs.length;
+    if (activeTotal === undefined) {
+      activeTotal = programs.filter((program) => program.status === 'active').length;
+    }
 
     res.json({
       success: true,
-      count: programs.length,
+      count: total,
+      total,
+      activeTotal,
+      page: pagination.page,
+      limit: pagination.limit,
       programs
     });
   } catch (error) {
@@ -91,6 +122,14 @@ exports.createProgram = async (req, res, next) => {
     );
 
     const [newProg] = await db.query('SELECT * FROM programs WHERE id = ?', [result.insertId]);
+
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'CREATE_PROGRAM', 'programs', ?, ?, ?)`,
+        [req.user.id, result.insertId, `Tạo chương trình ${newProg[0].program_code} - ${newProg[0].program_name}`, req.ip]
+      );
+    }
 
     res.status(201).json({
       success: true,
@@ -148,6 +187,14 @@ exports.updateProgram = async (req, res, next) => {
 
     const [updated] = await db.query('SELECT * FROM programs WHERE id = ?', [id]);
 
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'UPDATE_PROGRAM', 'programs', ?, ?, ?)`,
+        [req.user.id, id, `Cập nhật chương trình ${updated[0].program_code} - ${updated[0].program_name}`, req.ip]
+      );
+    }
+
     res.json({
       success: true,
       message: 'Cập nhật chương trình đào tạo thành công.',
@@ -167,7 +214,15 @@ exports.updateProgram = async (req, res, next) => {
 exports.deleteProgram = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const [programs] = await db.query('SELECT program_code, program_name FROM programs WHERE id = ?', [id]);
     await db.query('DELETE FROM programs WHERE id = ?', [id]);
+    if (req.user && programs.length > 0) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'DELETE_PROGRAM', 'programs', ?, ?, ?)`,
+        [req.user.id, id, `Xóa chương trình ${programs[0].program_code} - ${programs[0].program_name}`, req.ip]
+      );
+    }
     res.json({ success: true, message: 'Xóa chương trình đào tạo thành công.' });
   } catch (error) {
     next(error);

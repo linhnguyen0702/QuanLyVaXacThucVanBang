@@ -3,6 +3,7 @@ import { FaCheck, FaTrash, FaLink, FaExclamationTriangle, FaShieldAlt } from 're
 
 const SchoolNotifications = ({ 
   notifications = [], 
+  error = '',
   onMarkAsRead = () => {}, 
   onMarkAllAsRead = () => {},
   onClearNotification = () => {}
@@ -25,6 +26,12 @@ const SchoolNotifications = ({
           </button>
         )}
       </div>
+
+      {error && (
+        <div role="alert" className="sd-card" style={{ color: '#b91c1c', marginBottom: '16px' }}>
+          {error}
+        </div>
+      )}
 
       {notifications.length > 0 ? (
         <div style={{ width: '100%' }}>
@@ -54,7 +61,9 @@ const SchoolNotifications = ({
                 <div className="std-notif-desc">{notif.desc}</div>
                 
                 <div className="std-notif-footer">
-                  <span className="std-notif-time">{notif.time}</span>
+                  <span className="std-notif-time">
+                    {notif.time ? new Date(notif.time).toLocaleString('vi-VN') : ''}
+                  </span>
                   
                   <div style={{ display: 'flex', gap: '12px' }}>
                     {notif.unread && (

@@ -137,8 +137,10 @@ export const api = {
   },
 
   // Schools
-  getSchools: async (search = '') => {
-    const res = await fetch(`${API_BASE_URL}/schools?search=${encodeURIComponent(search)}`);
+  getSchools: async (params = {}) => {
+    const queryParams = typeof params === 'string' ? { search: params } : params;
+    const query = new URLSearchParams(queryParams).toString();
+    const res = await fetch(`${API_BASE_URL}/schools?${query}`);
     return res.json();
   },
 
@@ -297,8 +299,41 @@ export const api = {
   },
 
   // Audit Logs
-  getAuditLogs: async () => {
-    const res = await fetch(`${API_BASE_URL}/logs/audit`, {
+  getAuditLogs: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE_URL}/logs/audit?${query}`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  // Role-scoped notifications
+  getNotifications: async () => {
+    const res = await fetch(`${API_BASE_URL}/notifications`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  markNotificationRead: async (id) => {
+    const res = await fetch(`${API_BASE_URL}/notifications/${encodeURIComponent(id)}/read`, {
+      method: 'PATCH',
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  markAllNotificationsRead: async () => {
+    const res = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: 'PATCH',
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  dismissNotification: async (id) => {
+    const res = await fetch(`${API_BASE_URL}/notifications/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
       headers: getHeaders()
     });
     return res.json();

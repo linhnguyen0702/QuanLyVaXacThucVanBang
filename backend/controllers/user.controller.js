@@ -1,5 +1,6 @@
 const db = require("../config/database");
 const { getDefaultPosition } = require("../utils/user-roles");
+const { getPagination } = require("../utils/pagination");
 
 // @desc    Get list of all users
 // @route   GET /api/users
@@ -7,6 +8,7 @@ const { getDefaultPosition } = require("../utils/user-roles");
 exports.getUsers = async (req, res, next) => {
   try {
     const { role, search } = req.query;
+    const pagination = getPagination(req.query);
 
     let query =
       "SELECT id, email, full_name, role, phone, department, position, wallet_address, is_active, last_login, created_at FROM users WHERE 1=1";
@@ -25,11 +27,28 @@ exports.getUsers = async (req, res, next) => {
 
     query += " ORDER BY created_at DESC";
 
+    let total;
+    if (pagination.requested) {
+      const countQuery = `
+        SELECT COUNT(*) AS total FROM users WHERE 1=1
+        ${role ? "AND role = ?" : ""}
+        ${search ? "AND (email LIKE ? OR full_name LIKE ? OR department LIKE ?)" : ""}
+      `;
+      const [countRows] = await db.query(countQuery, params);
+      total = countRows[0] ? countRows[0].total : 0;
+      query += " LIMIT ? OFFSET ?";
+      params.push(pagination.limit, pagination.offset);
+    }
+
     const [users] = await db.query(query, params);
+    if (total === undefined) total = users.length;
 
     res.json({
       success: true,
-      count: users.length,
+      count: total,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
       users,
     });
   } catch (error) {
@@ -129,6 +148,14 @@ exports.updateUser = async (req, res, next) => {
       [id],
     );
 
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'UPDATE_USER', 'users', ?, ?, ?)`,
+        [req.user.id, id, `Cập nhật tài khoản ${updated[0].email} (${updated[0].role})`, req.ip],
+      );
+    }
+
     res.json({
       success: true,
       message: "Cập nhật người dùng thành công.",
@@ -145,7 +172,15 @@ exports.updateUser = async (req, res, next) => {
 exports.deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const [users] = await db.query('SELECT email, full_name FROM users WHERE id = ?', [id]);
     await db.query("DELETE FROM users WHERE id = ?", [id]);
+    if (req.user && users.length > 0) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'DELETE_USER', 'users', ?, ?, ?)`,
+        [req.user.id, id, `Xóa tài khoản ${users[0].email} - ${users[0].full_name}`, req.ip],
+      );
+    }
     res.json({ success: true, message: "Xóa tài khoản thành công." });
   } catch (error) {
     next(error);

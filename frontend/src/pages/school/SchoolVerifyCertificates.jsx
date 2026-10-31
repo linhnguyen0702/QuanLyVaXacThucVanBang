@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaShieldAlt, FaClock, FaCheckCircle, FaTimes, FaSpinner,
   FaFileSignature, FaDatabase, FaKey, FaLink, FaExternalLinkAlt, 
@@ -6,10 +6,17 @@ import {
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 import './SchoolVerifyCertificates.css';
+import Pagination from '../../components/Pagination/Pagination';
+
+const PAGE_SIZE = 10;
 
 const SchoolVerifyCertificates = ({ walletAddress }) => {
   const [pendingList, setPendingList] = useState([]);
   const [historyList, setHistoryList] = useState([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [pendingPage, setPendingPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedCert, setSelectedCert] = useState(null);
   
@@ -21,11 +28,14 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
   const [approvedToday, setApprovedToday] = useState(12);
   const [gasSpent, setGasSpent] = useState(1015295);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // 1. Nạp danh sách văn bằng đã được xác thực xuất bản lên Blockchain (status = 'issued')
-      const res = await api.getCertificates({ status: 'issued' });
+      const [res, pendingRes] = await Promise.all([
+        api.getCertificates({ status: 'issued', page: historyPage, limit: PAGE_SIZE }),
+        api.getCertificates({ status: 'pending', page: pendingPage, limit: PAGE_SIZE })
+      ]);
       if (res && res.success && res.certificates) {
         const history = res.certificates.map(c => ({
           id: c.id,
@@ -38,10 +48,10 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
           block: c.blockchain_certificate_id || 42895612
         }));
         setHistoryList(history);
+        setHistoryTotal(res.total || 0);
       }
 
       // 2. Nạp danh sách văn bằng ở trạng thái 'pending' được tạo từ Trang Văn bằng
-      const pendingRes = await api.getCertificates({ status: 'pending' });
       if (pendingRes && pendingRes.success && pendingRes.certificates) {
         const pending = pendingRes.certificates.map((c) => ({
           id: c.id,
@@ -54,17 +64,18 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
           system: c.education_mode || 'Chính quy'
         }));
         setPendingList(pending);
+        setPendingTotal(pendingRes.total || 0);
       }
     } catch (err) {
       console.error('Failed to load certificates for verification:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [pendingPage, historyPage]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleOpenApprove = (cert) => {
     setSelectedCert(cert);
@@ -137,6 +148,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
       };
 
       setPendingList(prev => prev.filter(item => item.code !== selectedCert.code));
+      setPendingTotal(prev => Math.max(0, prev - 1));
       setHistoryList(prev => [
         {
           code: selectedCert.code,
@@ -149,6 +161,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
         },
         ...prev
       ]);
+      setHistoryTotal(prev => prev + 1);
 
       setApprovedToday(prev => prev + 1);
       setGasSpent(prev => prev + 84150);
@@ -198,9 +211,13 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
           }
 
           setHistoryList(prev => [...newHistoryItems, ...prev]);
+          setHistoryTotal(prev => prev + newHistoryItems.length);
           setApprovedToday(prev => prev + pendingList.length);
           setGasSpent(prev => prev + (pendingList.length * 79500));
           setPendingList([]);
+          setPendingTotal(prev => Math.max(0, prev - pendingList.length));
+          setPendingPage(1);
+          setHistoryPage(1);
           setIsProcessing(false);
         }, 1200);
       }, 1000);
@@ -221,7 +238,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
           disabled={pendingList.length === 0 || isProcessing}
           style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)' }}
         >
-          <FaFileSignature /> Phê duyệt đồng loạt ({pendingList.length})
+          <FaFileSignature /> Phê duyệt đồng loạt trang này ({pendingList.length})
         </button>
       </div>
 
@@ -232,7 +249,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
           <div className="sd-stat-content">
             <span className="sd-stat-label">Văn bằng chờ phê duyệt</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">{pendingList.length}</span>
+              <span className="sd-stat-value">{pendingTotal}</span>
               <span className="sd-stat-badge orange">Cần xử lý</span>
             </div>
           </div>
@@ -331,6 +348,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
             </tbody>
           </table>
         </div>
+        <Pagination page={pendingPage} total={pendingTotal} limit={PAGE_SIZE} onPageChange={setPendingPage} />
       </div>
 
       {/* ── Secondary Data Card: Published Blockchain History ── */}
@@ -385,6 +403,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
             </tbody>
           </table>
         </div>
+        <Pagination page={historyPage} total={historyTotal} limit={PAGE_SIZE} onPageChange={setHistoryPage} />
       </div>
 
       {/* ── MODAL: Detail & Approve Certificate ── */}

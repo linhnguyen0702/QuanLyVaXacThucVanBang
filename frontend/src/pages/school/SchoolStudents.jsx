@@ -1,13 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaUserGraduate, 
   FaTimes, FaCheck, FaFileUpload, FaSpinner 
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 import { formatDateForInput, formatDateDisplay } from '../../utils/dateUtils';
+import Pagination from '../../components/Pagination/Pagination';
+
+const PAGE_SIZE = 10;
+
+const getTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const isAtLeastEighteen = (dateOfBirth) => {
+  const [birthYear, birthMonth, birthDay] = dateOfBirth.split('-').map(Number);
+  const today = new Date();
+  let age = today.getFullYear() - birthYear;
+  const birthdayHasPassed = today.getMonth() + 1 > birthMonth
+    || (today.getMonth() + 1 === birthMonth && today.getDate() >= birthDay);
+
+  if (!birthdayHasPassed) age -= 1;
+  return age >= 18;
+};
 
 const SchoolStudents = () => {
+  const todayDate = getTodayDate();
   const [students, setStudents] = useState([]);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
@@ -50,27 +75,30 @@ const SchoolStudents = () => {
   const isEmailInvalid = formData.email.trim().length > 0 && !emailRegex.test(formData.email.trim());
   const isCccdInvalid = formData.idNumber.trim().length > 0 && !cccdRegex.test(formData.idNumber.trim());
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getStudents({
         search: searchQuery,
         status: statusFilter,
-        department: deptFilter
+        department: deptFilter,
+        page,
+        limit: PAGE_SIZE
       });
       if (res && res.success) {
         setStudents(res.students || []);
+        setTotalStudents(res.total || 0);
       }
     } catch (err) {
       console.error('Lỗi khi tải danh sách sinh viên:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, statusFilter, deptFilter, page]);
 
   useEffect(() => {
     fetchStudents();
-  }, [searchQuery, statusFilter, deptFilter]);
+  }, [fetchStudents]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -107,6 +135,16 @@ const SchoolStudents = () => {
 
     if (!code || !name || !emailStr || !idNum || !dobStr) {
       setFormError('Vui lòng nhập đầy đủ thông tin bắt buộc (MSSV, Họ tên, Email, Ngày sinh, Số CCCD)!');
+      return;
+    }
+
+    if (dobStr > todayDate) {
+      showAlertModal('Ngày sinh không thể lớn hơn ngày hiện tại.', 'Ngày sinh không hợp lệ', 'danger');
+      return;
+    }
+
+    if (!isAtLeastEighteen(dobStr)) {
+      showAlertModal('Sinh viên phải đủ 18 tuổi mới có thể tạo hồ sơ.', 'Không đủ điều kiện tạo sinh viên', 'danger');
       return;
     }
 
@@ -154,6 +192,8 @@ const SchoolStudents = () => {
         const msg = res.message || 'Lỗi thêm sinh viên.';
         if (msg.includes('mã số sinh viên') || msg.toLowerCase().includes('mssv')) {
           showAlertModal('kiểm tra lại mã số sinh viên', 'Thông báo trùng mã sinh viên');
+        } else if (msg.includes('đủ 18 tuổi') || msg.includes('Ngày sinh không hợp lệ')) {
+          showAlertModal(msg, 'Ngày sinh không hợp lệ', 'danger');
         } else {
           setFormError(msg);
         }
@@ -193,8 +233,18 @@ const SchoolStudents = () => {
     const idNum = (formData.idNumber || '').trim();
     const dobStr = (formData.dob || '').trim();
 
-    if (!code || !name || !emailStr || !idNum) {
-      setFormError('Vui lòng nhập đầy đủ MSSV, Họ tên, Email và Số CCCD!');
+    if (!code || !name || !emailStr || !idNum || !dobStr) {
+      setFormError('Vui lòng nhập đầy đủ MSSV, Họ tên, Email, Ngày sinh và Số CCCD!');
+      return;
+    }
+
+    if (dobStr > todayDate) {
+      showAlertModal('Ngày sinh không thể lớn hơn ngày hiện tại.', 'Ngày sinh không hợp lệ', 'danger');
+      return;
+    }
+
+    if (!isAtLeastEighteen(dobStr)) {
+      showAlertModal('Sinh viên phải đủ 18 tuổi mới có thể cập nhật hồ sơ.', 'Không đủ điều kiện cập nhật sinh viên', 'danger');
       return;
     }
 
@@ -242,6 +292,8 @@ const SchoolStudents = () => {
         const msg = res.message || 'Lỗi cập nhật sinh viên.';
         if (msg.includes('mã số sinh viên') || msg.toLowerCase().includes('mssv')) {
           showAlertModal('kiểm tra lại mã số sinh viên', 'Thông báo trùng mã sinh viên');
+        } else if (msg.includes('đủ 18 tuổi') || msg.includes('Ngày sinh không hợp lệ')) {
+          showAlertModal(msg, 'Ngày sinh không hợp lệ', 'danger');
         } else {
           setFormError(msg);
         }
@@ -319,16 +371,25 @@ const SchoolStudents = () => {
                 className="sd-search-input" 
                 placeholder="Tìm theo tên, MSSV, Email..." 
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
-            <select className="sd-select" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+            <select className="sd-select" value={deptFilter} onChange={(e) => {
+              setDeptFilter(e.target.value);
+              setPage(1);
+            }}>
               <option value="">Tất cả khoa</option>
               <option value="Công nghệ thông tin">Công nghệ thông tin</option>
               <option value="Khoa học máy tính">Khoa học máy tính</option>
               <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
             </select>
-            <select className="sd-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select className="sd-select" value={statusFilter} onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}>
               <option value="">Tất cả trạng thái tốt nghiệp</option>
               <option value="issued">Đã cấp bằng</option>
               <option value="eligible">Đủ điều kiện</option>
@@ -391,6 +452,7 @@ const SchoolStudents = () => {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={totalStudents} limit={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* ── CREATE STUDENT MODAL ── */}
@@ -476,6 +538,7 @@ const SchoolStudents = () => {
                       type="date" 
                       className="sd-input" 
                       required
+                      max={todayDate}
                       value={formData.dob} 
                       onChange={(e) => setFormData({...formData, dob: e.target.value})} 
                     />

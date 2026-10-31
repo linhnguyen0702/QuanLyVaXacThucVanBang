@@ -1,11 +1,13 @@
 const db = require('../config/database');
+const { getPagination } = require('../utils/pagination');
 
 // @desc    Get list of all schools
 // @route   GET /api/schools
 // @access  Public
 exports.getSchools = async (req, res, next) => {
   try {
-    const { search } = req.query;
+    const { search, school_type } = req.query;
+    const pagination = getPagination(req.query);
 
     let query = 'SELECT * FROM schools WHERE 1=1';
     const params = [];
@@ -15,13 +17,43 @@ exports.getSchools = async (req, res, next) => {
       params.push(`%${search}%`, `%${search}%`);
     }
 
+    if (school_type) {
+      query += ' AND school_type = ?';
+      params.push(school_type);
+    }
+
     query += ' ORDER BY created_at DESC';
 
+    let total;
+    let verifiedTotal;
+    if (pagination.requested) {
+      const countQuery = `
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(CASE WHEN is_verified = TRUE THEN 1 ELSE 0 END), 0) AS verified_total
+        FROM schools WHERE 1=1
+        ${search ? 'AND (school_name LIKE ? OR school_code LIKE ?)' : ''}
+        ${school_type ? 'AND school_type = ?' : ''}
+      `;
+      const [countRows] = await db.query(countQuery, params);
+      total = countRows[0] ? countRows[0].total : 0;
+      verifiedTotal = countRows[0] ? countRows[0].verified_total : 0;
+      query += ' LIMIT ? OFFSET ?';
+      params.push(pagination.limit, pagination.offset);
+    }
+
     const [schools] = await db.query(query, params);
+    if (total === undefined) total = schools.length;
+    if (verifiedTotal === undefined) {
+      verifiedTotal = schools.filter((school) => school.is_verified).length;
+    }
 
     res.json({
       success: true,
-      count: schools.length,
+      count: total,
+      total,
+      verifiedTotal,
+      page: pagination.page,
+      limit: pagination.limit,
       schools
     });
   } catch (error) {
@@ -95,6 +127,14 @@ exports.createSchool = async (req, res, next) => {
     );
 
     const [newSchool] = await db.query('SELECT * FROM schools WHERE id = ?', [result.insertId]);
+
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'CREATE_SCHOOL', 'schools', ?, ?, ?)`,
+        [req.user.id, result.insertId, `Thêm cơ sở đào tạo ${school_name} (${school_code})`, req.ip]
+      );
+    }
 
     res.status(201).json({
       success: true,
@@ -176,6 +216,14 @@ exports.updateSchool = async (req, res, next) => {
 
     const [updated] = await db.query('SELECT * FROM schools WHERE id = ?', [id]);
 
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'UPDATE_SCHOOL', 'schools', ?, ?, ?)`,
+        [req.user.id, id, `Cập nhật cơ sở đào tạo ${school_name} (${school_code})`, req.ip]
+      );
+    }
+
     res.json({
       success: true,
       message: 'Cập nhật cơ sở giáo dục thành công.',
@@ -195,7 +243,15 @@ exports.updateSchool = async (req, res, next) => {
 exports.deleteSchool = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const [schools] = await db.query('SELECT school_name, school_code FROM schools WHERE id = ?', [id]);
     await db.query('DELETE FROM schools WHERE id = ?', [id]);
+    if (req.user && schools.length > 0) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'DELETE_SCHOOL', 'schools', ?, ?, ?)`,
+        [req.user.id, id, `Xóa cơ sở đào tạo ${schools[0].school_name} (${schools[0].school_code})`, req.ip]
+      );
+    }
     res.json({ success: true, message: 'Xóa cơ sở giáo dục thành công.' });
   } catch (error) {
     next(error);

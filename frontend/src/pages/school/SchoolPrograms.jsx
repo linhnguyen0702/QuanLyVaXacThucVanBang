@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaPlus, FaBook, FaUserGraduate, FaSearch, 
   FaEye, FaEdit, FaTrash, FaTimes, FaCheck, FaSpinner, FaExclamationTriangle
 } from 'react-icons/fa';
 import { api } from '../../services/api';
+import Pagination from '../../components/Pagination/Pagination';
+
+const PAGE_SIZE = 10;
 
 const SchoolPrograms = () => {
   const [programs, setPrograms] = useState([]);
+  const [totalPrograms, setTotalPrograms] = useState(0);
+  const [activePrograms, setActivePrograms] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
@@ -38,27 +44,31 @@ const SchoolPrograms = () => {
     status: 'active'
   });
 
-  const fetchPrograms = async () => {
+  const fetchPrograms = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getPrograms({
         search: searchQuery,
         department: deptFilter,
-        status: statusFilter
+        status: statusFilter,
+        page,
+        limit: PAGE_SIZE
       });
       if (res && res.success) {
         setPrograms(res.programs || []);
+        setTotalPrograms(res.total || 0);
+        setActivePrograms(res.activeTotal || 0);
       }
     } catch (err) {
       console.error('Failed to load programs:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, deptFilter, statusFilter, page]);
 
   useEffect(() => {
     fetchPrograms();
-  }, [searchQuery, deptFilter, statusFilter]);
+  }, [fetchPrograms]);
 
   const showToast = (msg, type = 'success') => {
     setToastMessage(msg);
@@ -273,7 +283,7 @@ const SchoolPrograms = () => {
           <div className="sd-stat-content">
             <span className="sd-stat-label">Tổng số chương trình</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">{programs.length}</span>
+              <span className="sd-stat-value">{totalPrograms}</span>
               <span className="sd-stat-badge green">Trong Database</span>
             </div>
           </div>
@@ -283,7 +293,7 @@ const SchoolPrograms = () => {
           <div className="sd-stat-content">
             <span className="sd-stat-label">Đang đào tạo</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">{programs.filter(p=>p.status==='active').length}</span>
+              <span className="sd-stat-value">{activePrograms}</span>
               <span className="sd-stat-badge green">Hoạt động</span>
             </div>
           </div>
@@ -300,16 +310,25 @@ const SchoolPrograms = () => {
                 className="sd-search-input" 
                 placeholder="Tìm kiếm theo tên chương trình, mã chương trình..." 
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
-            <select className="sd-select" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+            <select className="sd-select" value={deptFilter} onChange={(e) => {
+              setDeptFilter(e.target.value);
+              setPage(1);
+            }}>
               <option value="">Tất cả khoa</option>
               <option value="Khoa Công nghệ thông tin">Khoa Công nghệ thông tin</option>
               <option value="Khoa Kinh tế">Khoa Kinh tế</option>
               <option value="Khoa Ngoại ngữ">Khoa Ngoại ngữ</option>
             </select>
-            <select className="sd-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select className="sd-select" value={statusFilter} onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}>
               <option value="">Tất cả trạng thái</option>
               <option value="active">Đang đào tạo</option>
               <option value="paused">Tạm dừng</option>
@@ -374,6 +393,7 @@ const SchoolPrograms = () => {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={totalPrograms} limit={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* ── CREATE MODAL ── */}

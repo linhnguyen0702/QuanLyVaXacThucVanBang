@@ -1,4 +1,28 @@
 const db = require('../config/database');
+const { getPagination } = require('../utils/pagination');
+
+const isValidDateOfBirth = (dateOfBirth) => {
+  if (typeof dateOfBirth !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+    return false;
+  }
+
+  const [year, month, day] = dateOfBirth.split('-').map(Number);
+  const parsedDate = new Date(0);
+  parsedDate.setUTCHours(0, 0, 0, 0);
+  parsedDate.setUTCFullYear(year, month - 1, day);
+
+  return parsedDate.toISOString().slice(0, 10) === dateOfBirth;
+};
+
+const isAtLeastEighteen = (dateOfBirth, today = new Date()) => {
+  const [birthYear, birthMonth, birthDay] = dateOfBirth.split('-').map(Number);
+  let age = today.getFullYear() - birthYear;
+  const birthdayHasPassed = today.getMonth() + 1 > birthMonth
+    || (today.getMonth() + 1 === birthMonth && today.getDate() >= birthDay);
+
+  if (!birthdayHasPassed) age -= 1;
+  return age >= 18;
+};
 
 // @desc    Get all students
 // @route   GET /api/students
@@ -6,6 +30,7 @@ const db = require('../config/database');
 exports.getStudents = async (req, res, next) => {
   try {
     const { search, school_id, status, department } = req.query;
+    const pagination = getPagination(req.query);
 
     let query = `
       SELECT st.*, COALESCE(st.school_name, s.school_name) AS school_name, s.school_code
@@ -38,11 +63,33 @@ exports.getStudents = async (req, res, next) => {
 
     query += ` ORDER BY st.created_at DESC`;
 
+    let total;
+    if (pagination.requested) {
+      const countQuery = `
+        SELECT COUNT(*) AS total
+        FROM students st
+        LEFT JOIN schools s ON st.school_id = s.id
+        WHERE 1=1
+        ${search ? 'AND (st.student_code LIKE ? OR st.full_name LIKE ? OR st.email LIKE ? OR st.id_number LIKE ? OR st.school_name LIKE ?)' : ''}
+        ${school_id ? 'AND st.school_id = ?' : ''}
+        ${status ? 'AND st.graduation_status = ?' : ''}
+        ${department ? 'AND st.department = ?' : ''}
+      `;
+      const [countRows] = await db.query(countQuery, params);
+      total = countRows[0] ? countRows[0].total : 0;
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(pagination.limit, pagination.offset);
+    }
+
     const [students] = await db.query(query, params);
+    if (total === undefined) total = students.length;
 
     res.json({
       success: true,
-      count: students.length,
+      count: total,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
       students
     });
   } catch (error) {
@@ -90,6 +137,14 @@ exports.createStudent = async (req, res, next) => {
 
     if (!student_code || !full_name || !email || !id_number || !date_of_birth) {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đủ thông tin sinh viên bắt buộc (MSSV, Họ tên, Email, Ngày sinh, Số CCCD).' });
+    }
+
+    if (!isValidDateOfBirth(date_of_birth)) {
+      return res.status(400).json({ success: false, message: 'Ngày sinh không hợp lệ.' });
+    }
+
+    if (!isAtLeastEighteen(date_of_birth)) {
+      return res.status(400).json({ success: false, message: 'Sinh viên phải đủ 18 tuổi mới có thể tạo hồ sơ.' });
     }
 
     const trimmedCode = String(student_code).trim();
@@ -187,6 +242,14 @@ exports.createStudent = async (req, res, next) => {
       [result.insertId]
     );
 
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'CREATE_STUDENT', 'students', ?, ?, ?)`,
+        [req.user.id, result.insertId, `Tạo hồ sơ sinh viên ${newStudent[0].student_code} - ${newStudent[0].full_name}`, req.ip]
+      );
+    }
+
     res.status(201).json({
       success: true,
       message: 'Thêm mới sinh viên thành công.',
@@ -216,6 +279,16 @@ exports.updateStudent = async (req, res, next) => {
       school_id, school_name, full_name, email, date_of_birth, gender, id_number,
       place_of_birth, nationality, department, class_name, graduation_status
     } = req.body;
+
+    if (date_of_birth !== undefined && date_of_birth !== null && date_of_birth !== '') {
+      if (!isValidDateOfBirth(date_of_birth)) {
+        return res.status(400).json({ success: false, message: 'Ngày sinh không hợp lệ.' });
+      }
+
+      if (!isAtLeastEighteen(date_of_birth)) {
+        return res.status(400).json({ success: false, message: 'Sinh viên phải đủ 18 tuổi mới có thể cập nhật hồ sơ.' });
+      }
+    }
 
     let resolvedSchoolId = school_id;
     if (school_name && !school_id) {
@@ -251,6 +324,14 @@ exports.updateStudent = async (req, res, next) => {
       [id]
     );
 
+    if (req.user) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'UPDATE_STUDENT', 'students', ?, ?, ?)`,
+        [req.user.id, id, `Cập nhật hồ sơ sinh viên ${updated[0] ? updated[0].student_code : id}`, req.ip]
+      );
+    }
+
     res.json({
       success: true,
       message: 'Cập nhật sinh viên thành công.',
@@ -267,7 +348,15 @@ exports.updateStudent = async (req, res, next) => {
 exports.deleteStudent = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const [students] = await db.query('SELECT student_code, full_name FROM students WHERE id = ?', [id]);
     await db.query('DELETE FROM students WHERE id = ?', [id]);
+    if (req.user && students.length > 0) {
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+         VALUES (?, 'DELETE_STUDENT', 'students', ?, ?, ?)`,
+        [req.user.id, id, `Xóa hồ sơ sinh viên ${students[0].student_code} - ${students[0].full_name}`, req.ip]
+      );
+    }
     res.json({ success: true, message: 'Xóa sinh viên thành công.' });
   } catch (error) {
     next(error);

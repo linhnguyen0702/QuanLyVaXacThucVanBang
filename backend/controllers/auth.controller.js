@@ -166,6 +166,11 @@ exports.login = async (req, res, next) => {
       "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
       [user.id],
     );
+    await db.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+       VALUES (?, 'LOGIN', 'users', ?, ?, ?)`,
+      [user.id, user.id, `Đăng nhập hệ thống thành công (${user.role})`, req.ip]
+    );
 
     const token = generateToken(user.id);
 
@@ -330,6 +335,11 @@ exports.googleLogin = async (req, res, next) => {
     await db.query(
       "UPDATE users SET last_login = CURRENT_TIMESTAMP, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?",
       [payload.picture || null, user.id],
+    );
+    await db.query(
+      `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, ip_address)
+       VALUES (?, 'LOGIN', 'users', ?, ?, ?)`,
+      [user.id, user.id, `Đăng nhập hệ thống bằng Google (${user.role})`, req.ip]
     );
 
     const token = generateToken(user.id);

@@ -1,13 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaQrcode, 
   FaTimes, FaCertificate, FaShieldAlt, FaDownload, FaCheck, FaExclamationTriangle, FaSpinner
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 import { formatDateForInput, formatDateDisplay, getTodayDateInput } from '../../utils/dateUtils';
+import Pagination from '../../components/Pagination/Pagination';
+
+const PAGE_SIZE = 10;
+
+const getClassificationForGpa = (gpa) => {
+  if (gpa >= 3.6) return 'Xuất sắc';
+  if (gpa >= 3.2) return 'Giỏi';
+  if (gpa >= 2.5) return 'Khá';
+  if (gpa >= 2.0) return 'Trung bình';
+  return null;
+};
+
+const normalizeText = (value) => (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+const getGpaValidationMessage = (gpaValue, classification) => {
+  if (!gpaValue) return null;
+
+  const gpa = Number(gpaValue);
+  if (!/^\d+(?:\.\d{1,2})?$/.test(gpaValue) || !Number.isFinite(gpa) || gpa < 2 || gpa > 4) {
+    return 'GPA phải nằm trong khoảng từ 2.00 đến 4.00 và có tối đa 2 chữ số thập phân.';
+  }
+
+  const expectedClassification = getClassificationForGpa(gpa);
+  if (classification !== expectedClassification) {
+    return `GPA ${gpaValue} tương ứng với xếp loại "${expectedClassification}". Vui lòng kiểm tra lại điểm hoặc xếp loại.`;
+  }
+
+  return null;
+};
 
 const SchoolCertificates = () => {
   const [certificates, setCertificates] = useState([]);
+  const [totalCertificates, setTotalCertificates] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [degreeFilter, setDegreeFilter] = useState('');
@@ -54,7 +85,7 @@ const SchoolCertificates = () => {
   };
 
   // Nạp danh sách sinh viên từ trang sinh viên
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       const res = await api.getStudents();
       if (res && res.success) {
@@ -63,31 +94,34 @@ const SchoolCertificates = () => {
     } catch (err) {
       console.error('Error fetching students list:', err);
     }
-  };
+  }, []);
 
   // Fetch certificates from Backend Database
-  const fetchCertificates = async () => {
+  const fetchCertificates = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getCertificates({
         search: searchQuery,
         degree_type: degreeFilter,
-        status: statusFilter
+        status: statusFilter,
+        page,
+        limit: PAGE_SIZE
       });
       if (res && res.success) {
         setCertificates(res.certificates || []);
+        setTotalCertificates(res.total || 0);
       }
     } catch (err) {
       console.error('Error fetching certificates:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, degreeFilter, statusFilter, page]);
 
   useEffect(() => {
     fetchCertificates();
     fetchStudents();
-  }, [searchQuery, degreeFilter, statusFilter]);
+  }, [fetchCertificates, fetchStudents]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -132,6 +166,7 @@ const SchoolCertificates = () => {
     const stName = (formData.studentName || '').trim();
     const major = (formData.major || '').trim();
     const decisionNumber = (formData.decisionNumber || '').trim();
+    const gpaValue = (formData.gpa || '').trim();
 
     if (!certCode) {
       setFormError('Vui lòng nhập Số hiệu văn bằng!');
@@ -151,6 +186,17 @@ const SchoolCertificates = () => {
     }
     if (!decisionNumber) {
       setFormError('Vui lòng nhập Số quyết định công nhận tốt nghiệp!');
+      return;
+    }
+
+    const gpaError = getGpaValidationMessage(gpaValue, formData.classification);
+    if (gpaError) {
+      setAlertModal({
+        open: true,
+        title: gpaError.startsWith('GPA ') && gpaError.includes('tương ứng') ? 'Xếp loại tốt nghiệp không khớp' : 'Điểm GPA không hợp lệ',
+        message: gpaError,
+        type: 'warning'
+      });
       return;
     }
 
@@ -206,6 +252,17 @@ const SchoolCertificates = () => {
         open: true,
         title: 'Họ tên sinh viên không khớp',
         message: `Họ tên nhập vào "${stName}" không khớp với hồ sơ của Mã sinh viên ${stCode}! Họ tên đúng trong hồ sơ sinh viên là: "${registeredName}". Vui lòng sửa lại đúng tên mới cho tạo!`,
+        type: 'warning'
+      });
+      return;
+    }
+
+    const registeredMajor = matchedStudent.department || '';
+    if (normalizeText(major) !== normalizeText(registeredMajor)) {
+      setAlertModal({
+        open: true,
+        title: 'Ngành đào tạo không khớp',
+        message: `Ngành "${major}" không khớp với hồ sơ sinh viên ${stCode}. Ngành đã đăng ký là "${registeredMajor}".`,
         type: 'warning'
       });
       return;
@@ -299,6 +356,7 @@ const SchoolCertificates = () => {
     const stName = (formData.studentName || '').trim();
     const major = (formData.major || '').trim();
     const decisionNumber = (formData.decisionNumber || '').trim();
+    const gpaValue = (formData.gpa || '').trim();
 
     if (!certCode) {
       setFormError('Vui lòng nhập Số hiệu văn bằng!');
@@ -318,6 +376,17 @@ const SchoolCertificates = () => {
     }
     if (!decisionNumber) {
       setFormError('Vui lòng nhập Số quyết định công nhận tốt nghiệp!');
+      return;
+    }
+
+    const gpaError = getGpaValidationMessage(gpaValue, formData.classification);
+    if (gpaError) {
+      setAlertModal({
+        open: true,
+        title: gpaError.includes('tương ứng') ? 'Xếp loại tốt nghiệp không khớp' : 'Điểm GPA không hợp lệ',
+        message: gpaError,
+        type: 'warning'
+      });
       return;
     }
 
@@ -371,6 +440,17 @@ const SchoolCertificates = () => {
         open: true,
         title: 'Thông tin sinh viên không khớp',
         message: `Họ tên sinh viên "${stName}" không khớp với Mã sinh viên "${stCode}" (Hồ sơ gốc: ${officialName}). Vui lòng nhập đúng họ tên sinh viên!`,
+        type: 'warning'
+      });
+      return;
+    }
+
+    const registeredMajor = validStudent.department || '';
+    if (normalizeText(major) !== normalizeText(registeredMajor)) {
+      setAlertModal({
+        open: true,
+        title: 'Ngành đào tạo không khớp',
+        message: `Ngành "${major}" không khớp với hồ sơ sinh viên ${stCode}. Ngành đã đăng ký là "${registeredMajor}".`,
         type: 'warning'
       });
       return;
@@ -516,10 +596,16 @@ const SchoolCertificates = () => {
                 className="sd-search-input" 
                 placeholder="Tìm tên sinh viên, MSSV, số hiệu..." 
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
-            <select className="sd-select" value={degreeFilter} onChange={(e) => setDegreeFilter(e.target.value)}>
+            <select className="sd-select" value={degreeFilter} onChange={(e) => {
+              setDegreeFilter(e.target.value);
+              setPage(1);
+            }}>
               <option value="">Tất cả trình độ</option>
               <option value="Đại học">Đại học</option>
               <option value="Cao đẳng">Cao đẳng</option>
@@ -527,7 +613,10 @@ const SchoolCertificates = () => {
               <option value="Tiến sĩ">Tiến sĩ</option>
               <option value="Chứng chỉ">Chứng chỉ</option>
             </select>
-            <select className="sd-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select className="sd-select" value={statusFilter} onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}>
               <option value="">Tất cả trạng thái</option>
               <option value="issued">Đã xác thực</option>
               <option value="pending">Chờ phê duyệt</option>
@@ -614,6 +703,7 @@ const SchoolCertificates = () => {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={totalCertificates} limit={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* ── CREATE MODAL ── */}
@@ -728,7 +818,7 @@ const SchoolCertificates = () => {
                     <input 
                       type="text" 
                       className="sd-input" 
-                      placeholder="Ví dụ: 3.50 (Thang điểm 4.0)"
+                      placeholder="Từ 2.00 đến 4.00 (thang điểm 4.0)"
                       list="gpaSuggestions"
                       value={formData.gpa} 
                       onChange={(e) => handleGpaChange(e.target.value)} 

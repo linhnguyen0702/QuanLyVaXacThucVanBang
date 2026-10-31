@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaPlus, FaEdit, FaTrash, FaUser, FaSearch, 
   FaTimes, FaCheck, FaSpinner, FaUserGraduate
 } from 'react-icons/fa';
 import { api } from '../../services/api';
+import Pagination from '../../components/Pagination/Pagination';
+
+const PAGE_SIZE = 10;
 
 const SchoolUsers = () => {
   const [users, setUsers] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -37,26 +42,29 @@ const SchoolUsers = () => {
   // Email regex validation
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getUsers({
         search: searchQuery,
-        role: roleFilter
+        role: roleFilter,
+        page,
+        limit: PAGE_SIZE
       });
       if (res && res.success) {
         setUsers(res.users || []);
+        setTotalUsers(res.total || 0);
       }
     } catch (err) {
       console.error('Lỗi khi tải danh sách người dùng:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, roleFilter, page]);
 
   useEffect(() => {
     fetchUsers();
-  }, [searchQuery, roleFilter]);
+  }, [fetchUsers]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -270,10 +278,16 @@ const SchoolUsers = () => {
                 className="sd-search-input" 
                 placeholder="Tìm theo tên người dùng, email..." 
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
-            <select className="sd-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+            <select className="sd-select" value={roleFilter} onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(1);
+            }}>
               <option value="">Tất cả vai trò</option>
               <option value="admin">Quản trị viên</option>
               <option value="officer">Cán bộ nhập liệu</option>
@@ -336,6 +350,7 @@ const SchoolUsers = () => {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={totalUsers} limit={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* ── CREATE USER MODAL ── */}

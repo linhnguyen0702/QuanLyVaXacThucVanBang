@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaPlus, FaUniversity, FaSearch, FaEye, FaEdit, FaTrash, 
   FaCheck, FaTimes, FaShieldAlt, FaSpinner, FaExclamationTriangle
 } from 'react-icons/fa';
 import { api } from '../../services/api';
+import Pagination from '../../components/Pagination/Pagination';
+
+const PAGE_SIZE = 10;
 
 const AdminSchools = () => {
   const [schools, setSchools] = useState([]);
+  const [totalSchools, setTotalSchools] = useState(0);
+  const [verifiedSchools, setVerifiedSchools] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -37,23 +43,30 @@ const AdminSchools = () => {
     isVerified: true
   });
 
-  const fetchSchools = async () => {
+  const fetchSchools = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.getSchools(searchQuery);
+      const res = await api.getSchools({
+        search: searchQuery,
+        school_type: typeFilter,
+        page,
+        limit: PAGE_SIZE
+      });
       if (res && res.success) {
         setSchools(res.schools || []);
+        setTotalSchools(res.total || 0);
+        setVerifiedSchools(res.verifiedTotal || 0);
       }
     } catch (err) {
       console.error('Failed to load schools:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, typeFilter, page]);
 
   useEffect(() => {
     fetchSchools();
-  }, [searchQuery]);
+  }, [fetchSchools]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -289,15 +302,7 @@ const AdminSchools = () => {
     }
   };
 
-  const filteredSchools = schools.filter(s => {
-    const name = s.school_name || s.schoolName || '';
-    const code = s.school_code || s.schoolCode || '';
-    const type = s.school_type || s.schoolType || '';
-    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = !typeFilter || type === typeFilter;
-    return matchesSearch && matchesType;
-  });
+  const filteredSchools = schools;
 
   return (
     <div className="sd-view">
@@ -317,7 +322,7 @@ const AdminSchools = () => {
           <div className="sd-stat-content">
             <span className="sd-stat-label">Tổng số cơ sở đào tạo</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">{schools.length}</span>
+              <span className="sd-stat-value">{totalSchools}</span>
               <span className="sd-stat-badge green">Trong Database</span>
             </div>
           </div>
@@ -327,7 +332,7 @@ const AdminSchools = () => {
           <div className="sd-stat-content">
             <span className="sd-stat-label">Đã xác minh Blockchain</span>
             <div className="sd-stat-val-row">
-              <span className="sd-stat-value">{schools.filter(s=>s.is_verified || s.isVerified).length}</span>
+              <span className="sd-stat-value">{verifiedSchools}</span>
               <span className="sd-stat-badge green">Đã kết nối ví</span>
             </div>
           </div>
@@ -344,10 +349,16 @@ const AdminSchools = () => {
                 className="sd-search-input" 
                 placeholder="Tìm tên trường, mã trường..." 
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
-            <select className="sd-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <select className="sd-select" value={typeFilter} onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setPage(1);
+            }}>
               <option value="">Tất cả loại hình</option>
               <option value="university">Đại học</option>
               <option value="college">Cao đẳng</option>
@@ -411,6 +422,7 @@ const AdminSchools = () => {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={totalSchools} limit={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* ── CREATE SCHOOL MODAL ── */}

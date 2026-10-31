@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FaShieldAlt, FaWallet, FaSpinner, FaExternalLinkAlt,
   FaCopy, FaCheckCircle, FaTimesCircle, FaUnlink
@@ -49,10 +49,8 @@ const ensureSepoliaNetwork = async (ethereum) => {
 /**
  * WalletConnectButton – nút kết nối ví đặt trong sidebar.
  *
- * Quy tắc hiển thị:
- *  - "Đã kết nối" CHỈ khi người dùng ĐÃ bấm kết nối trong phiên này
- *    và MetaMask đã phê duyệt thành công.
- *  - Việc DB có wallet_address KHÔNG tự động hiển thị trạng thái "Đã kết nối".
+ * Khi tải lại dashboard, chỉ tự khôi phục kết nối đã được MetaMask cấp quyền
+ * và có địa chỉ khớp với ví đã liên kết trong tài khoản.
  *
  * Quy trình kết nối:
  *   1. Kiểm tra window.ethereum (MetaMask extension phải được cài)
@@ -64,30 +62,151 @@ const ensureSepoliaNetwork = async (ethereum) => {
  *   5. Nếu user chưa có wallet_address → lưu địa chỉ mới vào DB
  */
 export const WalletConnectButton = ({ user, onWalletConnected }) => {
-  // connectedAddress: địa chỉ ví đã được xác nhận trong phiên hiện tại
-  // null = chưa kết nối trong phiên này
   const [connectedAddress, setConnectedAddress] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const userRef = useRef(user);
+  const onWalletConnectedRef = useRef(onWalletConnected);
+  const autoReconnectPromise = useRef(null);
 
-  // Khi MetaMask đổi tài khoản hoặc ngắt kết nối → reset trạng thái phiên
+  const getConnectionErrorMessage = (error) => {
+    if (error.code === 4001) {
+      return 'Bạn đã từ chối yêu cầu kết nối hoặc chuyển mạng trong MetaMask.';
+    }
+    return error.message || 'Không thể kết nối với MetaMask. Vui lòng thử lại.';
+  };
+
+  useEffect(() => {
+    userRef.current = user;
+    onWalletConnectedRef.current = onWalletConnected;
+  }, [user, onWalletConnected]);
+
+  const connectAccount = async (rawAddress, allowNewWallet) => {
+    const normalizedAddress = getAddress(rawAddress);
+    const currentUser = userRef.current;
+
+    if (currentUser && currentUser.wallet_address) {
+      const savedAddress = getAddress(currentUser.wallet_address);
+      if (normalizedAddress.toLowerCase() !== savedAddress.toLowerCase()) {
+        throw new Error(
+          `Địa chỉ ví MetaMask không khớp với tài khoản đang đăng nhập.\n` +
+          `Ví đang chọn: ${normalizedAddress.slice(0, 10)}...${normalizedAddress.slice(-6)}\n` +
+          `Ví đã đăng ký: ${savedAddress.slice(0, 10)}...${savedAddress.slice(-6)}\n` +
+          'Vui lòng chuyển sang đúng tài khoản MetaMask.'
+        );
+      }
+    } else if (!allowNewWallet) {
+      throw new Error('MetaMask đang có tài khoản nhưng tài khoản này chưa liên kết ví. Nhấn “Kết nối ví MetaMask” để xác nhận liên kết.');
+    }
+
+    await ensureSepoliaNetwork(window.ethereum);
+
+    if (!currentUser || !currentUser.wallet_address) {
+      const response = await api.connectWallet(normalizedAddress);
+      if (!response.success || !response.user) {
+        throw new Error(response.message || 'Không thể lưu địa chỉ ví vào tài khoản. Vui lòng thử lại.');
+      }
+
+      localStorage.setItem('user', JSON.stringify(response.user));
+      window.dispatchEvent(new Event('user_profile_updated'));
+      userRef.current = response.user;
+      setConnectedAddress(normalizedAddress);
+      setSuccessMessage('Kết nối ví thành công!');
+      onWalletConnectedRef.current?.(response.user);
+      return;
+    }
+
+    setConnectedAddress(normalizedAddress);
+    setSuccessMessage('Kết nối ví thành công!');
+    onWalletConnectedRef.current?.({ ...currentUser, wallet_address: normalizedAddress });
+  };
+
   useEffect(() => {
     const ethereum = window.ethereum;
     if (!ethereum) return;
 
-    const handleAccountsChanged = (accounts) => {
+    let active = true;
+    const handleAccountsChanged = async (accounts) => {
       if (!accounts || accounts.length === 0) {
-        // MetaMask đã bị ngắt kết nối
         setConnectedAddress(null);
         setSuccessMessage('');
-        setErrorMessage('MetaMask đã ngắt kết nối.');
+        setErrorMessage('MetaMask đã ngắt kết nối hoặc không còn tài khoản được cấp quyền.');
+        return;
+      }
+
+      setErrorMessage('');
+      setSuccessMessage('');
+      setConnecting(true);
+      try {
+        await connectAccount(accounts[0], false);
+      } catch (error) {
+        setConnectedAddress(null);
+        setErrorMessage(getConnectionErrorMessage(error));
+      } finally {
+        setConnecting(false);
+      }
+    };
+
+    const handleChainChanged = (chainId) => {
+      if (chainId !== SEPOLIA_CHAIN_ID) {
+        setConnectedAddress(null);
+        setSuccessMessage('');
+        setErrorMessage('MetaMask đã chuyển sang mạng khác. Vui lòng chọn Ethereum Sepolia và kết nối lại ví.');
       }
     };
 
     ethereum.on('accountsChanged', handleAccountsChanged);
+    ethereum.on('chainChanged', handleChainChanged);
+
+    if (!autoReconnectPromise.current) {
+      autoReconnectPromise.current = ethereum.request({ method: 'eth_accounts' })
+        .then(async (accounts) => {
+          if (!accounts || accounts.length === 0) return null;
+          if (!userRef.current || !userRef.current.wallet_address) {
+            throw new Error('MetaMask đang có tài khoản nhưng tài khoản này chưa liên kết với hồ sơ. Nhấn “Kết nối ví MetaMask” để xác nhận.');
+          }
+
+          const normalizedAddress = getAddress(accounts[0]);
+          const savedAddress = getAddress(userRef.current.wallet_address);
+          if (normalizedAddress.toLowerCase() !== savedAddress.toLowerCase()) {
+            throw new Error(
+              `Không thể tự động kết nối: địa chỉ ví MetaMask không khớp với tài khoản đang đăng nhập.\n` +
+              `Ví đang chọn: ${normalizedAddress.slice(0, 10)}...${normalizedAddress.slice(-6)}\n` +
+              `Ví đã đăng ký: ${savedAddress.slice(0, 10)}...${savedAddress.slice(-6)}\n` +
+              'Vui lòng chuyển sang đúng tài khoản MetaMask.'
+            );
+          }
+
+          await ensureSepoliaNetwork(ethereum);
+          return normalizedAddress;
+        })
+        .catch((error) => ({ error }));
+    }
+
+    const reconnectAttempt = autoReconnectPromise.current;
+    setConnecting(true);
+    reconnectAttempt.then((result) => {
+      if (!active) return;
+      if (result && result.error) {
+        setConnectedAddress(null);
+        setErrorMessage(getConnectionErrorMessage(result.error));
+      } else if (result) {
+        setConnectedAddress(result);
+        setErrorMessage('');
+        setSuccessMessage('Đã tự động kết nối lại ví MetaMask.');
+      }
+      setConnecting(false);
+    }).finally(() => {
+      if (autoReconnectPromise.current === reconnectAttempt) {
+        autoReconnectPromise.current = null;
+      }
+    });
+
     return () => {
+      active = false;
       ethereum.removeListener('accountsChanged', handleAccountsChanged);
+      ethereum.removeListener('chainChanged', handleChainChanged);
     };
   }, []);
 
@@ -105,67 +224,19 @@ export const WalletConnectButton = ({ user, onWalletConnected }) => {
 
     setConnecting(true);
     try {
-      // Bước 2: Chuyển sang mạng Sepolia
-      await ensureSepoliaNetwork(window.ethereum);
-
-      // Bước 3: Dùng wallet_requestPermissions để LUÔN buộc MetaMask
-      // mở popup chọn tài khoản, dù trước đó đã cấp quyền hay chưa.
-      // eth_requestAccounts chỉ hiện popup lần đầu; những lần sau nó tự
-      // trả về tài khoản hiện tại mà KHÔNG hỏi lại người dùng.
       await window.ethereum.request({
         method: 'wallet_requestPermissions',
         params: [{ eth_accounts: {} }]
       });
 
-      // Sau khi người dùng xác nhận trong popup → lấy tài khoản được chọn
       const accounts = await window.ethereum.request({ method: 'eth_accounts' });
       if (!accounts || accounts.length === 0) {
         throw new Error('MetaMask chưa cung cấp tài khoản. Vui lòng chọn một tài khoản để kết nối.');
       }
 
-      const rawAddress = accounts[0];
-      const normalizedAddress = getAddress(rawAddress); // chuẩn hóa EIP-55 checksum
-
-      // Bước 4: Kiểm tra nếu tài khoản đã có ví đăng ký trong DB
-      if (user && user.wallet_address) {
-        const savedAddress = getAddress(user.wallet_address);
-
-        if (normalizedAddress.toLowerCase() !== savedAddress.toLowerCase()) {
-          // Địa chỉ không khớp → từ chối kết nối
-          throw new Error(
-            `Kết nối thất bại!\n` +
-            `Ví MetaMask bạn đang dùng: ${normalizedAddress.slice(0, 10)}...${normalizedAddress.slice(-6)}\n` +
-            `Ví đã đăng ký trong hệ thống: ${savedAddress.slice(0, 10)}...${savedAddress.slice(-6)}\n` +
-            `Vui lòng chuyển sang đúng tài khoản MetaMask đã đăng ký.`
-          );
-        }
-
-        // Địa chỉ khớp → kết nối thành công (không cần gọi API)
-        setConnectedAddress(normalizedAddress);
-        setSuccessMessage('Kết nối ví thành công!');
-        if (onWalletConnected) onWalletConnected({ ...user, wallet_address: normalizedAddress });
-        return;
-      }
-
-      // Bước 5: User chưa có ví → lưu địa chỉ mới vào DB
-      const response = await api.connectWallet(normalizedAddress);
-      if (!response.success || !response.user) {
-        throw new Error(response.message || 'Không thể lưu địa chỉ ví vào tài khoản. Vui lòng thử lại.');
-      }
-
-      localStorage.setItem('user', JSON.stringify(response.user));
-      window.dispatchEvent(new Event('user_profile_updated'));
-
-      setConnectedAddress(normalizedAddress);
-      setSuccessMessage('Kết nối ví thành công!');
-      if (onWalletConnected) onWalletConnected(response.user);
-
+      await connectAccount(accounts[0], true);
     } catch (error) {
-      if (error.code === 4001) {
-        setErrorMessage('Bạn đã từ chối yêu cầu kết nối ví. Hãy chấp thuận trên MetaMask để tiếp tục.');
-      } else {
-        setErrorMessage(error.message || 'Không thể kết nối ví. Vui lòng thử lại.');
-      }
+      setErrorMessage(getConnectionErrorMessage(error));
     } finally {
       setConnecting(false);
     }

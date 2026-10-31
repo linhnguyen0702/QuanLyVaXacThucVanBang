@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FaShieldAlt, FaBell, FaChevronDown, FaBars, FaTimes,
@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import './SchoolDashboard.css';
 import { WalletConnectButton } from '../../components/WalletConnection/WalletConnection';
+import { api } from '../../services/api';
 
 // Sub-components
 import SchoolOverview from './SchoolOverview';
@@ -63,25 +64,6 @@ const MENU_GROUPS = [
   }
 ];
 
-const INITIAL_SCHOOL_NOTIFICATIONS = [
-  {
-    id: "SN1",
-    title: "Yêu cầu duyệt cấp bằng mới",
-    desc: "Khoa Công nghệ thông tin gửi danh sách 12 sinh viên đủ điều kiện tốt nghiệp để phê duyệt.",
-    time: "2 giờ trước",
-    type: "issue",
-    unread: true
-  },
-  {
-    id: "SN2",
-    title: "Giao dịch Blockchain hoàn tất",
-    desc: "Đã ghi nhận thành công mã băm văn bằng tốt nghiệp cho 45 sinh viên lên Blockchain Sepolia/Polygon.",
-    time: "1 ngày trước",
-    type: "blockchain",
-    unread: true
-  }
-];
-
 const SchoolDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -115,18 +97,65 @@ const SchoolDashboard = () => {
     };
   }, []);
 
-  const [notifications, setNotifications] = useState(INITIAL_SCHOOL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationError, setNotificationError] = useState('');
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await api.getNotifications();
+      if (!response || !response.success) {
+        throw new Error(response?.message || 'Không thể tải thông báo.');
+      }
+      setNotifications(response.notifications || []);
+      setNotificationError('');
+    } catch (error) {
+      console.error('Lỗi khi tải thông báo:', error);
+      setNotificationError(error.message || 'Không thể kết nối máy chủ để tải thông báo.');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const timer = window.setInterval(fetchNotifications, 60000);
+    return () => window.clearInterval(timer);
+  }, [fetchNotifications]);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      const response = await api.markNotificationRead(id);
+      if (!response || !response.success) throw new Error(response?.message || 'Không thể cập nhật thông báo.');
+      setNotificationError('');
+      setNotifications((current) => current.map((notification) => (
+        notification.id === id ? { ...notification, unread: false } : notification
+      )));
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu thông báo đã đọc:', error);
+      setNotificationError(error.message || 'Không thể cập nhật thông báo.');
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  const handleMarkAllAsRead = async () => {
+    try {
+      const response = await api.markAllNotificationsRead();
+      if (!response || !response.success) throw new Error(response?.message || 'Không thể cập nhật thông báo.');
+      setNotificationError('');
+      setNotifications((current) => current.map((notification) => ({ ...notification, unread: false })));
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu tất cả thông báo đã đọc:', error);
+      setNotificationError(error.message || 'Không thể cập nhật thông báo.');
+    }
   };
 
-  const handleClearNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const handleClearNotification = async (id) => {
+    try {
+      const response = await api.dismissNotification(id);
+      if (!response || !response.success) throw new Error(response?.message || 'Không thể ẩn thông báo.');
+      setNotificationError('');
+      setNotifications((current) => current.filter((notification) => notification.id !== id));
+    } catch (error) {
+      console.error('Lỗi khi ẩn thông báo:', error);
+      setNotificationError(error.message || 'Không thể ẩn thông báo.');
+    }
   };
 
   const handleLogout = () => {
@@ -184,6 +213,7 @@ const SchoolDashboard = () => {
         return (
           <SchoolNotifications 
             notifications={notifications}
+            error={notificationError}
             onMarkAsRead={handleMarkAsRead}
             onMarkAllAsRead={handleMarkAllAsRead}
             onClearNotification={handleClearNotification}
@@ -265,6 +295,11 @@ const SchoolDashboard = () => {
                     )}
                   </div>
                   <div className="sd-notif-dropdown-list">
+                    {notificationError && (
+                      <div role="alert" style={{ padding: '10px', color: '#b91c1c', fontSize: '12px' }}>
+                        {notificationError}
+                      </div>
+                    )}
                     {notifications.length > 0 ? (
                       notifications.slice(0, 3).map((notif) => (
                         <div 
@@ -279,7 +314,9 @@ const SchoolDashboard = () => {
                           <div>
                             <div className="sd-notif-dropdown-item-title">{notif.title}</div>
                             <div className="sd-notif-dropdown-item-desc">{notif.desc}</div>
-                            <div className="sd-notif-dropdown-item-time">{notif.time}</div>
+                            <div className="sd-notif-dropdown-item-time">
+                              {notif.time ? new Date(notif.time).toLocaleString('vi-VN') : ''}
+                            </div>
                           </div>
                         </div>
                       ))

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FaShieldAlt, FaBell, FaChevronDown, FaBars, FaTimes,
@@ -14,25 +14,6 @@ import StudentCertificates from './StudentCertificates';
 import StudentNotifications from './StudentNotifications';
 import StudentProfile from './StudentProfile';
 import StudentPassword from './StudentPassword';
-
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: "N1",
-    title: "Văn bằng tốt nghiệp được phê duyệt",
-    desc: "Chúc mừng! Văn bằng Cử nhân Công nghệ thông tin của bạn đã được Trường Đại học Bách Khoa phê duyệt thành công.",
-    time: "15 ngày trước",
-    type: "approve",
-    unread: false
-  },
-  {
-    id: "N2",
-    title: "Ghi nhận Blockchain thành công",
-    desc: "Mã hash văn bằng tốt nghiệp UNI-2026-0012 đã được ghi nhận trên Blockchain Polygon Mainnet thành công.",
-    time: "15 ngày trước",
-    type: "blockchain",
-    unread: false
-  }
-];
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -81,9 +62,30 @@ const StudentDashboard = () => {
 
   const [certificates, setCertificates] = useState([]);
 
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationError, setNotificationError] = useState('');
   const [selectedCert, setSelectedCert] = useState(null);
   const [showCertModal, setShowCertModal] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await api.getNotifications();
+      if (!response || !response.success) {
+        throw new Error(response?.message || 'Không thể tải thông báo.');
+      }
+      setNotifications(response.notifications || []);
+      setNotificationError('');
+    } catch (error) {
+      console.error('Lỗi khi tải thông báo sinh viên:', error);
+      setNotificationError(error.message || 'Không thể kết nối máy chủ để tải thông báo.');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const timer = window.setInterval(fetchNotifications, 60000);
+    return () => window.clearInterval(timer);
+  }, [fetchNotifications]);
 
   // Fetch student certificates from Backend API
   useEffect(() => {
@@ -113,16 +115,42 @@ const StudentDashboard = () => {
     fetchStudentCerts();
   }, []);
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
+  const handleMarkAsRead = async (id) => {
+    try {
+      const response = await api.markNotificationRead(id);
+      if (!response || !response.success) throw new Error(response?.message || 'Không thể cập nhật thông báo.');
+      setNotificationError('');
+      setNotifications((current) => current.map((notification) => (
+        notification.id === id ? { ...notification, unread: false } : notification
+      )));
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu thông báo đã đọc:', error);
+      setNotificationError(error.message || 'Không thể cập nhật thông báo.');
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  const handleMarkAllAsRead = async () => {
+    try {
+      const response = await api.markAllNotificationsRead();
+      if (!response || !response.success) throw new Error(response?.message || 'Không thể cập nhật thông báo.');
+      setNotificationError('');
+      setNotifications((current) => current.map((notification) => ({ ...notification, unread: false })));
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu tất cả thông báo đã đọc:', error);
+      setNotificationError(error.message || 'Không thể cập nhật thông báo.');
+    }
   };
 
-  const handleClearNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const handleClearNotification = async (id) => {
+    try {
+      const response = await api.dismissNotification(id);
+      if (!response || !response.success) throw new Error(response?.message || 'Không thể ẩn thông báo.');
+      setNotificationError('');
+      setNotifications((current) => current.filter((notification) => notification.id !== id));
+    } catch (error) {
+      console.error('Lỗi khi ẩn thông báo:', error);
+      setNotificationError(error.message || 'Không thể ẩn thông báo.');
+    }
   };
 
   const handleUpdateProfile = (updatedFields) => {
@@ -167,6 +195,7 @@ const StudentDashboard = () => {
         return (
           <StudentNotifications 
             notifications={notifications}
+            error={notificationError}
             onMarkAsRead={handleMarkAsRead}
             onMarkAllAsRead={handleMarkAllAsRead}
             onClearNotification={handleClearNotification}
@@ -301,6 +330,11 @@ const StudentDashboard = () => {
                     )}
                   </div>
                   <div className="sd-notif-dropdown-list">
+                    {notificationError && (
+                      <div role="alert" style={{ padding: '10px', color: '#b91c1c', fontSize: '12px' }}>
+                        {notificationError}
+                      </div>
+                    )}
                     {notifications.length > 0 ? (
                       notifications.slice(0, 3).map((notif) => (
                         <div 
@@ -315,7 +349,9 @@ const StudentDashboard = () => {
                           <div>
                             <div className="sd-notif-dropdown-item-title">{notif.title}</div>
                             <div className="sd-notif-dropdown-item-desc">{notif.desc}</div>
-                            <div className="sd-notif-dropdown-item-time">{notif.time}</div>
+                            <div className="sd-notif-dropdown-item-time">
+                              {notif.time ? new Date(notif.time).toLocaleString('vi-VN') : ''}
+                            </div>
                           </div>
                         </div>
                       ))

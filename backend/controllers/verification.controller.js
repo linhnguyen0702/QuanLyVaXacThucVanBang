@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { verifyCertificateOnChain, verifyCertificateByHashOnChain, isBlockchainReady } = require('../config/blockchain');
+const { getPagination } = require('../utils/pagination');
 
 // @desc    Verify certificate by code, hash or QR URL
 // @route   POST /api/verification/verify
@@ -116,8 +117,7 @@ exports.verifyCertificate = async (req, res, next) => {
 // @access  Private / Public
 exports.getVerificationLogs = async (req, res, next) => {
   try {
-    const { page = 1, limit = 50 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { page, limit, offset } = getPagination(req.query);
 
     const [logs] = await db.query(
       `SELECT vl.*, c.student_name, c.major, c.status as cert_status
@@ -125,7 +125,7 @@ exports.getVerificationLogs = async (req, res, next) => {
        LEFT JOIN certificates c ON vl.certificate_id = c.id
        ORDER BY vl.verified_at DESC
        LIMIT ? OFFSET ?`,
-      [parseInt(limit), parseInt(offset)]
+      [limit, offset]
     );
 
     const [count] = await db.query('SELECT COUNT(*) as total FROM verification_logs');
@@ -133,6 +133,8 @@ exports.getVerificationLogs = async (req, res, next) => {
     res.json({
       success: true,
       total: count[0] ? count[0].total : 0,
+      page,
+      limit,
       logs
     });
   } catch (error) {

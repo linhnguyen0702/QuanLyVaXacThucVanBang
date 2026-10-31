@@ -16,6 +16,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS verification_logs;
 DROP TABLE IF EXISTS audit_logs;
 DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS notification_states;
 DROP TABLE IF EXISTS certificates;
 DROP TABLE IF EXISTS students;
 DROP TABLE IF EXISTS programs;
@@ -249,6 +250,16 @@ CREATE TABLE audit_logs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_user_id (user_id),
     INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE notification_states (
+    user_id INT NOT NULL,
+    notification_key VARCHAR(191) NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    is_dismissed BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, notification_key),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================================================

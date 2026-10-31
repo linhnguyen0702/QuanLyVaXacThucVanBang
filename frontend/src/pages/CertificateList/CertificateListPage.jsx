@@ -1,32 +1,38 @@
-import { useState, useEffect } from 'react'
-import { FaSearch, FaFilter, FaCheckCircle, FaUserGraduate, FaUniversity, FaCalendarAlt, FaDownload, FaEye, FaSpinner } from 'react-icons/fa'
+import { useState, useEffect, useCallback } from 'react'
+import { FaSearch, FaCheckCircle, FaUserGraduate, FaUniversity, FaCalendarAlt, FaDownload, FaEye, FaSpinner } from 'react-icons/fa'
 import Footer from '../../components/Footer/Footer'
 import { api } from '../../services/api'
+import Pagination from '../../components/Pagination/Pagination'
 import './CertificateListPage.css'
+
+const PAGE_SIZE = 10;
 
 const CertificateListPage = () => {
   const [certificates, setCertificates] = useState([]);
+  const [totalCertificates, setTotalCertificates] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('')
   const [filterSchool, setFilterSchool] = useState('all')
 
-  const fetchCerts = async () => {
+  const fetchCerts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.getCertificates({ search });
+      const res = await api.getCertificates({ search, page, limit: PAGE_SIZE });
       if (res && res.success) {
         setCertificates(res.certificates || []);
+        setTotalCertificates(res.total || 0);
       }
     } catch (err) {
       console.error('Failed to load certificates:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, page]);
 
   useEffect(() => {
     fetchCerts();
-  }, [search]);
+  }, [fetchCerts]);
 
   return (
     <div className="cert-list-page">
@@ -49,7 +55,10 @@ const CertificateListPage = () => {
                 className="cert-search-input"
                 placeholder="Tìm kiếm theo tên hoặc mã văn bằng..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
             <select
@@ -119,6 +128,9 @@ const CertificateListPage = () => {
                 </div>
               ))}
             </div>
+          )}
+          {!loading && (
+            <Pagination page={page} total={totalCertificates} limit={PAGE_SIZE} onPageChange={setPage} />
           )}
         </div>
       </div>

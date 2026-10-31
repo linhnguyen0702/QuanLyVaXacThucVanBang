@@ -1,6 +1,39 @@
 const db = require('../config/database');
 const crypto = require('crypto');
 const { issueCertificateOnChain, isBlockchainReady } = require('../config/blockchain');
+const { getPagination } = require('../utils/pagination');
+
+const CERTIFICATE_CLASSIFICATIONS = ['Xuất sắc', 'Giỏi', 'Khá', 'Trung bình'];
+
+const normalizeText = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+const getClassificationForGpa = (gpa) => {
+  if (gpa >= 3.6) return 'Xuất sắc';
+  if (gpa >= 3.2) return 'Giỏi';
+  if (gpa >= 2.5) return 'Khá';
+  if (gpa >= 2.0) return 'Trung bình';
+  return null;
+};
+
+const validateGpaAndClassification = (gpa, classification) => {
+  if (!CERTIFICATE_CLASSIFICATIONS.includes(classification)) {
+    return 'Xếp loại tốt nghiệp không hợp lệ.';
+  }
+
+  if (!gpa) return null;
+
+  const parsedGpa = Number(gpa);
+  if (!/^\d+(?:\.\d{1,2})?$/.test(gpa) || !Number.isFinite(parsedGpa) || parsedGpa < 2 || parsedGpa > 4) {
+    return 'GPA phải nằm trong khoảng từ 2.00 đến 4.00 và có tối đa 2 chữ số thập phân.';
+  }
+
+  const expectedClassification = getClassificationForGpa(parsedGpa);
+  if (classification !== expectedClassification) {
+    return `GPA ${gpa} tương ứng với xếp loại "${expectedClassification}". Vui lòng kiểm tra lại điểm hoặc xếp loại.`;
+  }
+
+  return null;
+};
 
 // Helper to generate SHA-256 certificate hash
 const generateCertificateHash = (certData) => {
@@ -13,8 +46,8 @@ const generateCertificateHash = (certData) => {
 // @access  Public / Private
 exports.getCertificates = async (req, res, next) => {
   try {
-    const { search, status, degree_type, school_id, page = 1, limit = 50 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { search, status, degree_type, school_id } = req.query;
+    const { page, limit, offset } = getPagination(req.query);
 
     let query = `
       SELECT c.*, 
@@ -49,20 +82,23 @@ exports.getCertificates = async (req, res, next) => {
     }
 
     // Count total query
-    const countQuery = query.replace('SELECT c.*, \n             s.school_name, s.school_code, s.logo_url as school_logo,\n             p.program_name, p.program_code', 'SELECT COUNT(*) as total');
+    const countQuery = query.replace(
+      /SELECT c\.\*,\s*s\.school_name, s\.school_code, s\.logo_url as school_logo,\s*p\.program_name, p\.program_code/,
+      'SELECT COUNT(*) as total'
+    );
     const [countRows] = await db.query(countQuery, params);
     const total = countRows[0] ? countRows[0].total : 0;
 
     query += ` ORDER BY c.created_at DESC LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit), parseInt(offset));
+    params.push(limit, offset);
 
     const [certificates] = await db.query(query, params);
 
     res.json({
       success: true,
       total,
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page,
+      limit,
       certificates
     });
   } catch (error) {
@@ -137,12 +173,19 @@ exports.createCertificate = async (req, res, next) => {
     const trimmedMajor = major ? String(major).trim() : '';
     const trimmedDecision = decision_number ? String(decision_number).trim() : '';
     const cleanIssueDate = issue_date ? (typeof issue_date === 'string' && issue_date.includes('T') ? issue_date.split('T')[0] : String(issue_date).trim()) : '';
+    const cleanGpa = gpa === undefined || gpa === null ? '' : String(gpa).trim();
+    const finalClassification = classification || 'Giỏi';
 
     if (!trimmedCertCode || !trimmedStudentCode || !trimmedStudentName || !cleanIssueDate || !trimmedDecision) {
       return res.status(400).json({ 
         success: false, 
         message: 'Vui lòng điền đầy đủ số hiệu văn bằng, MSSV, họ tên sinh viên, ngày cấp và số quyết định.' 
       });
+    }
+
+    const academicValidationError = validateGpaAndClassification(cleanGpa, finalClassification);
+    if (academicValidationError) {
+      return res.status(400).json({ success: false, message: academicValidationError });
     }
 
     // 1. Kiểm tra không cho tạo trùng số hiệu văn bằng
@@ -192,6 +235,15 @@ exports.createCertificate = async (req, res, next) => {
       });
     }
 
+    const registeredMajor = validStudent.department || '';
+    const certificateMajor = trimmedMajor || registeredMajor;
+    if (normalizeText(certificateMajor) !== normalizeText(registeredMajor)) {
+      return res.status(400).json({
+        success: false,
+        message: `Ngành đào tạo "${certificateMajor}" không khớp với hồ sơ sinh viên ${trimmedStudentCode} (Ngành đã đăng ký: "${registeredMajor}").`
+      });
+    }
+
     // Mặc định tạo mới chưa đẩy luôn lên Blockchain (status = 'pending')
     const finalStatus = status || 'pending';
 
@@ -200,7 +252,7 @@ exports.createCertificate = async (req, res, next) => {
       certificate_code: trimmedCertCode, 
       student_code: validStudent.student_code, 
       issue_date: cleanIssueDate, 
-      gpa: gpa || '3.50'
+      gpa: cleanGpa || '3.50'
     });
 
     const finalQrCode = qr_code_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(finalHash)}`;
@@ -216,11 +268,11 @@ exports.createCertificate = async (req, res, next) => {
         program_id || null,
         validStudent.student_code,
         validStudent.full_name,
-        trimmedMajor || validStudent.department,
+        certificateMajor,
         degree_type || 'Đại học',
         education_mode || 'Chính quy',
-        gpa || null,
-        classification || 'Giỏi',
+        cleanGpa || null,
+        finalClassification,
         cleanIssueDate,
         trimmedDecision,
         finalHash,
@@ -414,55 +466,65 @@ exports.updateCertificate = async (req, res, next) => {
     const targetStudentCode = student_code !== undefined ? String(student_code).trim() : currentCert.student_code;
     const targetStudentName = student_name !== undefined ? String(student_name).trim() : currentCert.student_name;
 
-    if (targetStudentCode !== currentCert.student_code || targetStudentName !== currentCert.student_name) {
-      // 1. Kiểm tra trùng MSSV với văn bằng khác
-      if (targetStudentCode !== currentCert.student_code) {
-        const [dupStudent] = await db.query(
-          'SELECT id, certificate_code FROM certificates WHERE student_code = ? AND id != ? AND status != "revoked"',
-          [targetStudentCode, id]
-        );
-        if (dupStudent.length > 0) {
-          return res.status(400).json({
-            success: false,
-            message: `Sinh viên có mã số "${targetStudentCode}" đã có văn bằng khác trên hệ thống (Số hiệu: ${dupStudent[0].certificate_code}), không thể cập nhật trùng!`
-          });
-        }
-      }
-
-      // 2. Kiểm tra MSSV phải tồn tại trong bảng students
-      const [studentRows] = await db.query(
-        'SELECT * FROM students WHERE student_code = ?',
-        [targetStudentCode]
+    if (targetStudentCode !== currentCert.student_code) {
+      const [dupStudent] = await db.query(
+        'SELECT id, certificate_code FROM certificates WHERE student_code = ? AND id != ? AND status != "revoked"',
+        [targetStudentCode, id]
       );
-      if (studentRows.length === 0) {
+      if (dupStudent.length > 0) {
         return res.status(400).json({
           success: false,
-          message: `Không tìm thấy sinh viên có mã "${targetStudentCode}" trên hệ thống!`
+          message: `Sinh viên có mã số "${targetStudentCode}" đã có văn bằng khác trên hệ thống (Số hiệu: ${dupStudent[0].certificate_code}), không thể cập nhật trùng!`
         });
       }
-
-      const validStudent = studentRows[0];
-      finalStudentId = validStudent.id;
-      finalStudentCode = validStudent.student_code;
-
-      // 3. Đúng mã đúng tên mới cho cập nhật
-      const normalizeStr = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-      if (targetStudentName && normalizeStr(targetStudentName) !== normalizeStr(validStudent.full_name)) {
-        return res.status(400).json({
-          success: false,
-          message: `Họ tên sinh viên "${targetStudentName}" không khớp với Mã sinh viên "${targetStudentCode}" (Hồ sơ gốc: ${validStudent.full_name}). Vui lòng nhập đúng họ tên sinh viên!`
-        });
-      }
-      finalStudentName = validStudent.full_name;
     }
+
+    const [studentRows] = await db.query(
+      'SELECT * FROM students WHERE student_code = ?',
+      [targetStudentCode]
+    );
+    if (studentRows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Không tìm thấy sinh viên có mã "${targetStudentCode}" trên hệ thống!`
+      });
+    }
+
+    const validStudent = studentRows[0];
+    finalStudentId = validStudent.id;
+    finalStudentCode = validStudent.student_code;
+
+    if (targetStudentName && normalizeText(targetStudentName) !== normalizeText(validStudent.full_name)) {
+      return res.status(400).json({
+        success: false,
+        message: `Họ tên sinh viên "${targetStudentName}" không khớp với Mã sinh viên "${targetStudentCode}" (Hồ sơ gốc: ${validStudent.full_name}). Vui lòng nhập đúng họ tên sinh viên!`
+      });
+    }
+    finalStudentName = validStudent.full_name;
 
     const finalMajor = major !== undefined ? String(major).trim() : currentCert.major;
     const finalDegreeType = degree_type !== undefined ? degree_type : currentCert.degree_type;
     const finalEducationMode = education_mode !== undefined ? education_mode : currentCert.education_mode;
-    const finalGpa = gpa !== undefined ? (gpa ? String(gpa).trim() : null) : currentCert.gpa;
-    const finalClassification = classification !== undefined ? classification : currentCert.classification;
+    const finalGpaValue = gpa !== undefined
+      ? (gpa === null ? '' : String(gpa).trim())
+      : String(currentCert.gpa || '').trim();
+    const finalClassification = classification !== undefined ? classification : (currentCert.classification || 'Giỏi');
     const finalIssueDate = issue_date !== undefined ? (typeof issue_date === 'string' && issue_date.includes('T') ? issue_date.split('T')[0] : String(issue_date).trim()) : currentCert.issue_date;
     const finalDecisionNumber = decision_number !== undefined ? String(decision_number).trim() : currentCert.decision_number;
+
+    if (normalizeText(finalMajor) !== normalizeText(validStudent.department)) {
+      return res.status(400).json({
+        success: false,
+        message: `Ngành đào tạo "${finalMajor}" không khớp với hồ sơ sinh viên ${targetStudentCode} (Ngành đã đăng ký: "${validStudent.department || ''}").`
+      });
+    }
+
+    const academicValidationError = validateGpaAndClassification(finalGpaValue, finalClassification);
+    if (academicValidationError) {
+      return res.status(400).json({ success: false, message: academicValidationError });
+    }
+
+    const finalGpa = finalGpaValue || null;
 
     // Tái tạo lại hash văn bằng và mã QR tương ứng nếu có thông tin cốt lõi thay đổi
     const finalHash = generateCertificateHash({
