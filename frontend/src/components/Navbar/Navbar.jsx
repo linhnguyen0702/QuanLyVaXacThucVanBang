@@ -26,6 +26,9 @@ const Navbar = () => {
     path === "/guide"
       ? location.pathname === "/guide" ||
         location.pathname.startsWith("/guide/")
+      : path === "/verify"
+        ? location.pathname === "/verify" ||
+          location.pathname === "/verification"
       : location.pathname === path;
 
   return (

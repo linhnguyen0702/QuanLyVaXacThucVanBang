@@ -53,16 +53,16 @@ const Footer = () => {
             <h3 className="footer-heading">Hỗ trợ</h3>
             <ul className="footer-links">
               <li>
-                <Link to="/faq">Câu hỏi thường gặp</Link>
+                <Link to="/guide/faq">Câu hỏi thường gặp</Link>
               </li>
               <li>
                 <Link to="/guide">Hướng dẫn sử dụng</Link>
               </li>
               <li>
-                <Link to="/contact">Liên hệ hỗ trợ</Link>
+                <Link to="/guide/support">Liên hệ hỗ trợ</Link>
               </li>
               <li>
-                <Link to="/privacy">Chính sách bảo mật</Link>
+                <Link to="/guide/faq">Chính sách bảo mật</Link>
               </li>
             </ul>
           </div>
@@ -71,7 +71,7 @@ const Footer = () => {
             <h3 className="footer-heading">Kết nối với chúng tôi</h3>
             <div className="social-links">
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/thuylinh.nguyenthi.395891"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-link"
@@ -87,7 +87,7 @@ const Footer = () => {
                 <FaYoutube />
               </a>
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/in/linh-nguy%E1%BB%85n-957b51356/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="social-link"

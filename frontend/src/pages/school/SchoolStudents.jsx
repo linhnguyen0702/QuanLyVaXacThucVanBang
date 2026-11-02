@@ -28,7 +28,10 @@ const isAtLeastEighteen = (dateOfBirth) => {
   return age >= 18;
 };
 
-const SchoolStudents = () => {
+const normalizeSchoolName = (value = '') =>
+  value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi');
+
+const SchoolStudents = ({ onNavigate }) => {
   const todayDate = getTodayDate();
   const [students, setStudents] = useState([]);
   const [totalStudents, setTotalStudents] = useState(0);
@@ -49,6 +52,11 @@ const SchoolStudents = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [formError, setFormError] = useState('');
   const [alertModal, setAlertModal] = useState({ open: false, title: '', message: '', type: 'warning' });
+  const [schools, setSchools] = useState([]);
+  const [schoolsLoading, setSchoolsLoading] = useState(false);
+  const [schoolsError, setSchoolsError] = useState('');
+  const [schoolSyncModalOpen, setSchoolSyncModalOpen] = useState(false);
+  const [schoolSyncMessage, setSchoolSyncMessage] = useState('');
 
   const showAlertModal = (message, title = 'Thông báo hệ thống', type = 'warning') => {
     setAlertModal({ open: true, title, message, type });
@@ -96,6 +104,25 @@ const SchoolStudents = () => {
     }
   }, [searchQuery, statusFilter, deptFilter, page]);
 
+  const fetchSchools = useCallback(async () => {
+    setSchoolsLoading(true);
+    setSchoolsError('');
+    try {
+      const response = await api.getSchools();
+      if (!response?.success || !Array.isArray(response.schools)) {
+        throw new Error(response?.message || 'Không thể tải danh sách trường học.');
+      }
+      setSchools(response.schools);
+      return response.schools;
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách trường học:', error);
+      setSchoolsError(error.message || 'Không thể kết nối máy chủ để tải danh sách trường học.');
+      return null;
+    } finally {
+      setSchoolsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
@@ -107,6 +134,7 @@ const SchoolStudents = () => {
 
   const handleOpenAdd = () => {
     setFormError('');
+    setSchoolSyncMessage('');
     setFormData({
       studentCode: '',
       fullName: '',
@@ -121,6 +149,7 @@ const SchoolStudents = () => {
       graduationStatus: 'eligible'
     });
     setIsAddOpen(true);
+    fetchSchools();
   };
 
   const handleAddSubmit = async (e) => {
@@ -132,9 +161,38 @@ const SchoolStudents = () => {
     const emailStr = (formData.email || '').trim();
     const idNum = (formData.idNumber || '').trim();
     const dobStr = (formData.dob || '').trim();
+    const schoolName = (formData.schoolName || '').trim();
 
     if (!code || !name || !emailStr || !idNum || !dobStr) {
       setFormError('Vui lòng nhập đầy đủ thông tin bắt buộc (MSSV, Họ tên, Email, Ngày sinh, Số CCCD)!');
+      return;
+    }
+
+    if (!schoolName) {
+      setFormError('Vui lòng nhập tên hoặc mã trường có trong danh sách Quản lý trường học.');
+      return;
+    }
+
+    if (schoolsLoading) {
+      setFormError('Đang tải danh sách trường học. Vui lòng đợi rồi thử lại.');
+      return;
+    }
+
+    if (schoolsError) {
+      setSchoolSyncMessage('Chưa thể xác minh trường học do không tải được danh sách. Vui lòng kiểm tra lại kết nối hoặc mở mục Quản lý trường học.');
+      setSchoolSyncModalOpen(true);
+      return;
+    }
+
+    const normalizedSchoolName = normalizeSchoolName(schoolName);
+    const matchingSchool = schools.find((school) =>
+      normalizeSchoolName(school.school_name || '') === normalizedSchoolName
+      || normalizeSchoolName(school.school_code || '') === normalizedSchoolName
+    );
+
+    if (!matchingSchool) {
+      setSchoolSyncMessage(`"${schoolName}" chưa có trong danh sách Quản lý trường học. Hãy thêm trường tại mục Quản lý trường học trước khi tạo sinh viên.`);
+      setSchoolSyncModalOpen(true);
       return;
     }
 
@@ -173,7 +231,8 @@ const SchoolStudents = () => {
       const res = await api.createStudent({
         student_code: code,
         full_name: name,
-        school_name: (formData.schoolName || '').trim(),
+        school_id: matchingSchool.id,
+        school_name: matchingSchool.school_name,
         email: emailStr,
         date_of_birth: dobStr,
         gender: formData.gender,
@@ -190,7 +249,13 @@ const SchoolStudents = () => {
         fetchStudents();
       } else {
         const msg = res.message || 'Lỗi thêm sinh viên.';
-        if (msg.includes('mã số sinh viên') || msg.toLowerCase().includes('mssv')) {
+        if (
+          msg.toLocaleLowerCase('vi').includes('trường học') &&
+          msg.toLocaleLowerCase('vi').includes('danh sách')
+        ) {
+          setSchoolSyncMessage(msg);
+          setSchoolSyncModalOpen(true);
+        } else if (msg.includes('mã số sinh viên') || msg.toLowerCase().includes('mssv')) {
           showAlertModal('kiểm tra lại mã số sinh viên', 'Thông báo trùng mã sinh viên');
         } else if (msg.includes('đủ 18 tuổi') || msg.includes('Ngày sinh không hợp lệ')) {
           showAlertModal(msg, 'Ngày sinh không hợp lệ', 'danger');
@@ -506,14 +571,28 @@ const SchoolStudents = () => {
                     />
                   </div>
                   <div className="sd-form-group">
-                    <label>Trường / Cơ sở đào tạo</label>
+                    <label>Trường / Cơ sở đào tạo *</label>
                     <input 
                       type="text" 
                       className="sd-input" 
-                      placeholder="Ví dụ: Trường Đại học Công nghệ"
+                      list="managed-schools"
+                      required
+                      placeholder={schoolsLoading ? 'Đang tải danh sách trường...' : 'Nhập tên hoặc mã trường trong danh sách'}
                       value={formData.schoolName} 
                       onChange={(e) => setFormData({...formData, schoolName: e.target.value})} 
                     />
+                    <datalist id="managed-schools">
+                      {schools.map((school) => (
+                        <option key={school.id} value={school.school_name}>
+                          {school.school_code}
+                        </option>
+                      ))}
+                    </datalist>
+                    {schoolsError && (
+                      <span style={{ color: '#b45309', fontSize: '12px', marginTop: '4px' }}>
+                        Không thể tải danh sách trường. Hãy đồng bộ trước khi thêm sinh viên.
+                      </span>
+                    )}
                   </div>
                   <div className="sd-form-group">
                     <label>Email sinh viên *</label>
@@ -927,6 +1006,55 @@ const SchoolStudents = () => {
                 onClick={() => setAlertModal({ ...alertModal, open: false })}
               >
                 Đồng ý
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {schoolSyncModalOpen && (
+        <div className="sd-modal-overlay" style={{ zIndex: 4100 }}>
+          <div className="sd-modal" style={{ maxWidth: '480px', padding: '24px', textAlign: 'center' }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: '#fffbeb',
+              color: '#f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '26px',
+              margin: '0 auto 16px'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+              Trường học chưa đúng
+            </h3>
+            <p style={{ fontSize: '15px', color: '#334155', marginBottom: '24px', fontWeight: '600', lineHeight: '1.5' }}>
+              {schoolSyncMessage}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              {onNavigate && (
+                <button
+                  type="button"
+                  className="sd-btn-primary"
+                  onClick={() => {
+                    setSchoolSyncModalOpen(false);
+                    setIsAddOpen(false);
+                    onNavigate('schools');
+                  }}
+                >
+                  Quản lý trường học
+                </button>
+              )}
+              <button
+                type="button"
+                className="sd-btn-secondary"
+                onClick={() => setSchoolSyncModalOpen(false)}
+              >
+                Đóng
               </button>
             </div>
           </div>

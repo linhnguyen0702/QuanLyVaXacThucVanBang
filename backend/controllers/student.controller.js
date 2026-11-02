@@ -24,6 +24,8 @@ const isAtLeastEighteen = (dateOfBirth, today = new Date()) => {
   return age >= 18;
 };
 
+const normalizeSchoolName = (value) => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi');
+
 // @desc    Get all students
 // @route   GET /api/students
 // @access  Private / Public
@@ -139,6 +141,51 @@ exports.createStudent = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đủ thông tin sinh viên bắt buộc (MSSV, Họ tên, Email, Ngày sinh, Số CCCD).' });
     }
 
+    const trimmedSchoolName = typeof school_name === 'string' ? school_name.trim() : '';
+    if (!school_id && !trimmedSchoolName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng chọn trường học có trong danh sách Quản lý trường học.'
+      });
+    }
+
+    let matchedSchool;
+    if (school_id) {
+      const [schoolRows] = await db.query(
+        'SELECT id, school_name, school_code FROM schools WHERE id = ? LIMIT 1',
+        [school_id]
+      );
+      matchedSchool = schoolRows[0];
+      if (
+        matchedSchool &&
+        trimmedSchoolName &&
+        normalizeSchoolName(trimmedSchoolName) !== normalizeSchoolName(matchedSchool.school_name) &&
+        normalizeSchoolName(trimmedSchoolName) !== normalizeSchoolName(matchedSchool.school_code)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: 'Trường học không khớp với danh sách Quản lý trường học. Vui lòng đồng bộ lại danh sách.'
+        });
+      }
+    } else {
+      const [schoolRows] = await db.query(
+        `SELECT id, school_name, school_code
+         FROM schools
+         WHERE LOWER(TRIM(school_name)) = LOWER(TRIM(?))
+            OR LOWER(TRIM(school_code)) = LOWER(TRIM(?))
+         LIMIT 1`,
+        [trimmedSchoolName, trimmedSchoolName]
+      );
+      matchedSchool = schoolRows[0];
+    }
+
+    if (!matchedSchool) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trường học không có trong danh sách Quản lý trường học. Vui lòng đồng bộ hoặc thêm trường trước khi tạo sinh viên.'
+      });
+    }
+
     if (!isValidDateOfBirth(date_of_birth)) {
       return res.status(400).json({ success: false, message: 'Ngày sinh không hợp lệ.' });
     }
@@ -205,24 +252,12 @@ exports.createStudent = async (req, res, next) => {
       });
     }
 
-    // Resolve school_id by school_name if needed
-    let resolvedSchoolId = school_id;
-    if (school_name && !school_id) {
-      const [matchedSchool] = await db.query(
-        'SELECT id FROM schools WHERE school_name LIKE ? OR school_code = ? LIMIT 1',
-        [`%${school_name.trim()}%`, school_name.trim()]
-      );
-      if (matchedSchool.length > 0) {
-        resolvedSchoolId = matchedSchool[0].id;
-      }
-    }
-
     const [result] = await db.query(
       `INSERT INTO students (school_id, school_name, student_code, full_name, email, date_of_birth, gender, id_number, place_of_birth, nationality, department, class_name, graduation_status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        resolvedSchoolId || 1,
-        school_name || 'Trường Đại học Công nghệ',
+        matchedSchool.id,
+        matchedSchool.school_name,
         trimmedCode,
         full_name.trim(),
         trimmedEmail,

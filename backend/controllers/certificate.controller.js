@@ -225,6 +225,12 @@ exports.createCertificate = async (req, res, next) => {
     }
 
     const validStudent = studentRows[0];
+    if (school_id && Number(school_id) !== Number(validStudent.school_id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trường cấp bằng phải khớp với trường trong hồ sơ sinh viên.'
+      });
+    }
 
     // 4. Ràng buộc: Đúng mã đúng tên mới cho tạo (so sánh họ tên nhập vào với họ tên gốc trong hồ sơ)
     const normalizeStr = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -539,6 +545,7 @@ exports.updateCertificate = async (req, res, next) => {
       `UPDATE certificates
        SET certificate_code = ?,
            student_id = ?,
+           school_id = COALESCE(?, school_id),
            student_code = ?,
            student_name = ?,
            major = ?,
@@ -556,6 +563,7 @@ exports.updateCertificate = async (req, res, next) => {
       [
         finalCertCode,
         finalStudentId,
+        validStudent.school_id || null,
         finalStudentCode,
         finalStudentName,
         finalMajor,
@@ -691,24 +699,40 @@ exports.getStatsSummary = async (req, res, next) => {
         COUNT(*) as total_certificates,
         SUM(CASE WHEN status = 'issued' THEN 1 ELSE 0 END) as total_issued,
         SUM(CASE WHEN status = 'revoked' THEN 1 ELSE 0 END) as total_revoked,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as total_pending
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as total_pending,
+        COUNT(DISTINCT CASE
+          WHEN blockchain_tx_hash IS NOT NULL AND blockchain_tx_hash <> ''
+          THEN blockchain_tx_hash
+        END) as total_blockchain_transactions
       FROM certificates
     `);
 
     const [schoolStats] = await db.query('SELECT COUNT(*) as total_schools FROM schools');
     const [studentStats] = await db.query('SELECT COUNT(*) as total_students FROM students');
-    const [verifyStats] = await db.query('SELECT COUNT(*) as total_verifications FROM verification_logs');
+    const [verifyStats] = await db.query(`
+      SELECT
+        COUNT(*) as total_verifications,
+        COALESCE(SUM(CASE WHEN verification_result = TRUE THEN 1 ELSE 0 END), 0) as successful_verifications
+      FROM verification_logs
+    `);
+    const totalVerifications = Number(verifyStats[0].total_verifications) || 0;
+    const successfulVerifications = Number(verifyStats[0].successful_verifications) || 0;
 
     res.json({
       success: true,
       stats: {
-        totalCertificates: certStats[0].total_certificates || 0,
-        totalIssued: certStats[0].total_issued || 0,
-        totalRevoked: certStats[0].total_revoked || 0,
-        totalPending: certStats[0].total_pending || 0,
-        totalSchools: schoolStats[0].total_schools || 0,
-        totalStudents: studentStats[0].total_students || 0,
-        totalVerifications: verifyStats[0].total_verifications || 0
+        totalCertificates: Number(certStats[0].total_certificates) || 0,
+        totalIssued: Number(certStats[0].total_issued) || 0,
+        totalRevoked: Number(certStats[0].total_revoked) || 0,
+        totalPending: Number(certStats[0].total_pending) || 0,
+        totalBlockchainTransactions: Number(certStats[0].total_blockchain_transactions) || 0,
+        totalSchools: Number(schoolStats[0].total_schools) || 0,
+        totalStudents: Number(studentStats[0].total_students) || 0,
+        totalVerifications,
+        successfulVerifications,
+        verificationSuccessRate: totalVerifications
+          ? Number(((successfulVerifications / totalVerifications) * 100).toFixed(2))
+          : 0
       }
     });
   } catch (error) {

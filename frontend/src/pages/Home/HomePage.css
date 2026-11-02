@@ -502,7 +502,7 @@
 
 .hp-stat {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 16px 14px;
   border-right: 1px solid #e5e7eb;
@@ -518,6 +518,7 @@
 .hp-stat-icon {
   width: 44px;
   height: 44px;
+  align-self: center;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -547,6 +548,13 @@
   font-size: 0.68rem;
   color: #16a34a;
   font-weight: 500;
+}
+
+.hp-data-message {
+  margin: 8px 0;
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 /* ============================================================

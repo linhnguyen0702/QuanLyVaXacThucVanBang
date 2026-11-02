@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FaCheckCircle,
   FaUniversity,
@@ -15,36 +15,24 @@ import {
   FaUpload,
   FaChevronRight,
   FaFileAlt,
+  FaSpinner,
 } from "react-icons/fa";
 import Footer from "../../components/Footer/Footer";
+import CertificateVerificationDialog from "../../components/CertificateVerificationDialog/CertificateVerificationDialog";
+import { api } from "../../services/api";
+import { decodeQrCodeFromImage } from "../../utils/qrCodeUtils";
 import "./HomePage.css";
 
-const stats = [
-  {
-    icon: <FaFileAlt />,
-    number: "125.648",
-    label: "Văn bằng đã cấp",
-    subtext: "+1,248 trong tháng này",
-  },
-  {
-    icon: <FaShieldAlt />,
-    number: "98.75%",
-    label: "Xác thực thành công",
-    subtext: "+2.5% so với tháng trước",
-  },
-  {
-    icon: <FaUniversity />,
-    number: "156",
-    label: "Đơn vị tham gia",
-    subtext: "+8 đơn vị mới",
-  },
-  {
-    icon: <FaUsers />,
-    number: "3.2M+",
-    label: "Giao dịch trên Blockchain",
-    subtext: "+145,231 trong tháng này",
-  },
-];
+const formatNumber = (value) => Number(value || 0).toLocaleString("vi-VN");
+
+const getInitials = (name = "") =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 
 const workflow = [
   {
@@ -89,37 +77,156 @@ const guides = [
   },
 ];
 
-const newCerts = [
-  {
-    name: "Nguyễn Thị Minh Châu",
-    degree: "Kỹ sư Công nghệ thông tin",
-    id: "Mã VB: UNI2024/000123",
-    time: "2 giờ trước",
-    initials: "NT",
-  },
-  {
-    name: "Trần Văn Đức",
-    degree: "Cử nhân Quản trị kinh doanh",
-    id: "Mã VB: UNI2024/000124",
-    time: "5 giờ trước",
-    initials: "TV",
-  },
-  {
-    name: "Lê Thị Hải Yến",
-    degree: "Thạc sĩ Kiểm toán",
-    id: "Mã VB: UNI2024/000125",
-    time: "1 ngày trước",
-    initials: "LT",
-  },
-];
-
 const HomePage = () => {
-  const navigate = useNavigate();
   const [verifyTab, setVerifyTab] = useState("qr");
   const [quickCode, setQuickCode] = useState("");
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyResult, setVerifyResult] = useState(null);
+  const [verifyError, setVerifyError] = useState("");
+  const [verifyQuery, setVerifyQuery] = useState("");
+  const [qrProcessing, setQrProcessing] = useState(false);
+  const qrFileInputRef = useRef(null);
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState("");
+  const [recentCerts, setRecentCerts] = useState([]);
+  const [certsLoading, setCertsLoading] = useState(true);
+  const [certsError, setCertsError] = useState("");
 
-  const handleQuickVerify = () => {
-    if (quickCode.trim()) navigate("/verify");
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStats = async () => {
+      try {
+        const response = await api.getStatsSummary();
+        if (!response?.success || !response.stats) {
+          throw new Error(response?.message || "Không thể tải số liệu hệ thống.");
+        }
+        if (isMounted) setStats(response.stats);
+      } catch (error) {
+        console.error("Failed to load homepage statistics:", error);
+        if (isMounted) {
+          setStatsError(error.message || "Không thể tải số liệu hệ thống.");
+        }
+      } finally {
+        if (isMounted) setStatsLoading(false);
+      }
+    };
+
+    const loadRecentCertificates = async () => {
+      try {
+        const response = await api.getCertificates({
+          status: "issued",
+          page: 1,
+          limit: 3,
+        });
+        if (!response?.success || !Array.isArray(response.certificates)) {
+          throw new Error(response?.message || "Không thể tải văn bằng mới cấp.");
+        }
+        if (isMounted) setRecentCerts(response.certificates);
+      } catch (error) {
+        console.error("Failed to load recent certificates:", error);
+        if (isMounted) {
+          setCertsError(error.message || "Không thể tải văn bằng mới cấp.");
+        }
+      } finally {
+        if (isMounted) setCertsLoading(false);
+      }
+    };
+
+    loadStats();
+    loadRecentCertificates();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const statsCards = [
+    {
+      icon: <FaFileAlt />,
+      number: statsLoading ? "..." : stats ? formatNumber(stats.totalIssued) : "—",
+      label: "Văn bằng đã cấp",
+      subtext: "Tổng số văn bằng đã phát hành",
+    },
+    {
+      icon: <FaShieldAlt />,
+      number: statsLoading
+        ? "..."
+        : stats
+          ? `${Number(stats.verificationSuccessRate || 0).toLocaleString("vi-VN")}%`
+          : "—",
+      label: "Xác thực thành công",
+      subtext: stats
+        ? `${formatNumber(stats.successfulVerifications)} / ${formatNumber(stats.totalVerifications)} lượt`
+        : "Số liệu từ nhật ký xác thực",
+    },
+    {
+      icon: <FaUniversity />,
+      number: statsLoading ? "..." : stats ? formatNumber(stats.totalSchools) : "—",
+      label: "Đơn vị tham gia",
+      subtext: "Tổng số đơn vị trên hệ thống",
+    },
+    {
+      icon: <FaUsers />,
+      number: statsLoading
+        ? "..."
+        : stats
+          ? formatNumber(stats.totalBlockchainTransactions)
+          : "—",
+      label: "Giao dịch trên Blockchain",
+      subtext: "Giao dịch có mã xác nhận lưu trữ",
+    },
+  ];
+
+  const handleVerify = async (value) => {
+    const lookupValue = (typeof value === "string" ? value : quickCode).trim();
+    setVerifyModalOpen(true);
+    setVerifyQuery(lookupValue);
+    setVerifyResult(null);
+    setVerifyError("");
+    if (!lookupValue) {
+      setVerifyError("Vui lòng nhập mã văn bằng, mã sinh viên hoặc mã Hash.");
+      return;
+    }
+
+    setVerifyLoading(true);
+    try {
+      const response = await api.verifyCertificate(lookupValue);
+      if (!response?.success) {
+        setVerifyError(response?.message || "Không tìm thấy văn bằng trong hệ thống.");
+        return;
+      }
+      setVerifyResult(response);
+    } catch (error) {
+      console.error("Homepage certificate verification failed:", error);
+      setVerifyError("Không thể kết nối máy chủ để xác thực văn bằng. Vui lòng thử lại.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleQuickVerify = () => handleVerify(quickCode);
+
+  const handleQrImageSelected = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setQrProcessing(true);
+    try {
+      const lookupValue = await decodeQrCodeFromImage(file);
+      setQuickCode(lookupValue);
+      await handleVerify(lookupValue);
+    } catch (error) {
+      setVerifyModalOpen(true);
+      setVerifyQuery("Ảnh QR đã chọn");
+      setVerifyResult(null);
+      setVerifyError(error.message || "Không thể đọc mã QR từ hình ảnh.");
+    } finally {
+      setQrProcessing(false);
+    }
   };
 
   return (
@@ -170,7 +277,7 @@ const HomePage = () => {
               </div>
 
               <div className="hp-stats-row">
-                {stats.map((s, i) => (
+                {statsCards.map((s, i) => (
                   <div key={i} className="hp-stat">
                     <div className="hp-stat-icon">{s.icon}</div>
                     <div className="hp-stat-body">
@@ -181,6 +288,11 @@ const HomePage = () => {
                   </div>
                 ))}
               </div>
+              {statsError && (
+                <p className="hp-data-message" role="alert">
+                  Không thể tải số liệu: {statsError}
+                </p>
+              )}
             </div>
 
             <div className="hp-verify-card">
@@ -210,8 +322,21 @@ const HomePage = () => {
                     <FaQrcode className="hp-qr-icon" />
                   </div>
                   <p className="hp-qr-or">Hoặc tải ảnh mã QR lên</p>
-                  <button className="hp-upload-btn">
-                    <FaUpload /> Tải ảnh lên
+                  <input
+                    ref={qrFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleQrImageSelected}
+                    aria-label="Chọn ảnh mã QR"
+                  />
+                  <button
+                    className="hp-upload-btn"
+                    type="button"
+                    disabled={qrProcessing || verifyLoading}
+                    onClick={() => qrFileInputRef.current?.click()}
+                  >
+                    {qrProcessing ? <><FaSpinner className="fa-spin" /> Đang đọc mã QR...</> : <><FaUpload /> Tải ảnh lên</>}
                   </button>
                 </div>
               ) : (
@@ -222,7 +347,7 @@ const HomePage = () => {
                   <input
                     type="text"
                     className="hp-code-input"
-                    placeholder="VD: UNI2024/000123"
+                    placeholder="Nhập mã văn bằng cần xác thực"
                     value={quickCode}
                     onChange={(e) => setQuickCode(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleQuickVerify()}
@@ -248,20 +373,46 @@ const HomePage = () => {
                 </Link>
               </div>
               <div className="hp-certs">
-                {newCerts.map((cert, i) => (
-                  <div key={i} className="hp-cert-row">
-                    <div className="hp-cert-av">{cert.initials}</div>
-                    <div className="hp-cert-info">
-                      <div className="hp-cert-name">{cert.name}</div>
-                      <div className="hp-cert-deg">{cert.degree}</div>
-                      <div className="hp-cert-id">{cert.id}</div>
+                {certsLoading ? (
+                  <p className="hp-data-message">Đang tải văn bằng...</p>
+                ) : certsError ? (
+                  <p className="hp-data-message" role="alert">
+                    Không thể tải văn bằng: {certsError}
+                  </p>
+                ) : recentCerts.length > 0 ? (
+                  recentCerts.map((cert) => (
+                    <div key={cert.id} className="hp-cert-row">
+                      <div className="hp-cert-av">
+                        {getInitials(cert.student_name)}
+                      </div>
+                      <div className="hp-cert-info">
+                        <div className="hp-cert-name">
+                          {cert.student_name || "Chưa có tên sinh viên"}
+                        </div>
+                        <div className="hp-cert-deg">
+                          {cert.major || cert.degree_type || "Chưa cập nhật ngành học"}
+                        </div>
+                        <div className="hp-cert-id">
+                          Mã VB: {cert.certificate_code}
+                        </div>
+                      </div>
+                      <div className="hp-cert-meta">
+                        <span className="hp-cert-badge">
+                          {cert.blockchain_tx_hash
+                            ? "Đã ghi Blockchain"
+                            : "Đã phát hành"}
+                        </span>
+                        <span className="hp-cert-time">
+                          {cert.issue_date
+                            ? new Date(cert.issue_date).toLocaleDateString("vi-VN")
+                            : "Chưa có ngày cấp"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="hp-cert-meta">
-                      <span className="hp-cert-badge">Đã ghi Blockchain</span>
-                      <span className="hp-cert-time">{cert.time}</span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="hp-data-message">Chưa có văn bằng nào được cấp.</p>
+                )}
               </div>
             </div>
 
@@ -329,6 +480,14 @@ const HomePage = () => {
       {/* end hp-body */}
 
       <Footer />
+      <CertificateVerificationDialog
+        isOpen={verifyModalOpen}
+        loading={verifyLoading}
+        error={verifyError}
+        result={verifyResult}
+        query={verifyQuery}
+        onClose={() => setVerifyModalOpen(false)}
+      />
     </div>
   );
 };

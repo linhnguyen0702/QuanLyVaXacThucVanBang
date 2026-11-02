@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   FaQrcode,
   FaKeyboard,
@@ -12,14 +12,13 @@ import {
   FaBell,
   FaDatabase,
   FaSpinner,
-  FaExclamationTriangle,
   FaTimesCircle,
-  FaUniversity,
-  FaUserGraduate,
-  FaCalendarAlt,
-  FaExternalLinkAlt
+  FaExclamationTriangle,
+  FaExternalLinkAlt,
 } from "react-icons/fa";
 import { api } from "../../services/api";
+import CertificateVerificationDialog from "../../components/CertificateVerificationDialog/CertificateVerificationDialog";
+import { decodeQrCodeFromImage } from "../../utils/qrCodeUtils";
 import "./VerificationPage.css";
 
 const VerificationPage = () => {
@@ -28,29 +27,62 @@ const VerificationPage = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [verifyQuery, setVerifyQuery] = useState("");
+  const [qrProcessing, setQrProcessing] = useState(false);
+  const verificationRequestId = useRef(0);
+  const qrFileInputRef = useRef(null);
 
-  const handleVerify = async () => {
-    if (!certificateCode.trim()) {
+  const handleVerify = async (value = certificateCode) => {
+    const lookupValue = (typeof value === "string" ? value : certificateCode).trim();
+    setVerifyQuery(lookupValue);
+    setDialogOpen(true);
+    setResult(null);
+    setErrorMsg("");
+    if (!lookupValue) {
       setErrorMsg("Vui lòng nhập mã văn bằng, mã sinh viên hoặc chuỗi mã Hash.");
       return;
     }
 
+    const requestId = ++verificationRequestId.current;
     setLoading(true);
-    setResult(null);
-    setErrorMsg("");
 
     try {
-      const data = await api.verifyCertificate(certificateCode.trim());
-      setLoading(false);
-
+      const data = await api.verifyCertificate(lookupValue);
+      if (requestId !== verificationRequestId.current) return;
       if (data && data.success) {
         setResult(data);
       } else {
         setErrorMsg(data.message || "Không tìm thấy văn bằng trong cơ sở dữ liệu.");
       }
     } catch (err) {
-      setLoading(false);
-      setErrorMsg("Không thể kết nối đến máy chủ Backend (http://localhost:5000). Vui lòng đảm bảo Server Backend đang hoạt động.");
+      if (requestId !== verificationRequestId.current) return;
+      console.error("Certificate verification failed:", err);
+      setErrorMsg("Không thể kết nối máy chủ để xác thực văn bằng. Vui lòng thử lại.");
+    } finally {
+      if (requestId === verificationRequestId.current) setLoading(false);
+    }
+  };
+
+  const handleQrImageSelected = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setErrorMsg("");
+    setResult(null);
+    setQrProcessing(true);
+    try {
+      const lookupValue = await decodeQrCodeFromImage(file);
+      setCertificateCode(lookupValue);
+      setActiveTab("code");
+      await handleVerify(lookupValue);
+    } catch (error) {
+      setDialogOpen(true);
+      setVerifyQuery("Ảnh QR đã chọn");
+      setErrorMsg(error.message || "Không thể đọc mã QR từ hình ảnh.");
+    } finally {
+      setQrProcessing(false);
     }
   };
 
@@ -99,7 +131,7 @@ const VerificationPage = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
                   />
                 </div>
-                <button className="verify-btn" onClick={handleVerify} disabled={loading}>
+                <button className="verify-btn" onClick={() => handleVerify()} disabled={loading}>
                   {loading ? <FaSpinner className="fa-spin" /> : <FaSearch className="btn-icon" />}
                   {loading ? ' Đang kiểm tra CSDL...' : ' Xác thực ngay'}
                 </button>
@@ -123,19 +155,34 @@ const VerificationPage = () => {
                     </svg>
                   </div>
                 </div>
-                <h3 className="qr-instruction-title">Đưa mã QR vào khung quét</h3>
+                <h3 className="qr-instruction-title">
+                  {qrProcessing ? "Đang đọc mã QR..." : "Chọn ảnh văn bằng có mã QR"}
+                </h3>
                 <p className="qr-instruction-desc">
                   Hệ thống sẽ tự động nhận diện mã băm Hash và đối soát trực tiếp dữ liệu.
                 </p>
                 <div className="divider"><span>HOẶC</span></div>
-                <button className="upload-btn" onClick={() => alert('Vui lòng nhập mã văn bằng ở tab "Nhập mã xác thực" để tra cứu nhanh.')}>
-                  <FaUpload className="btn-icon" /> Chọn ảnh QR từ thiết bị
+                <input
+                  ref={qrFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleQrImageSelected}
+                />
+                <button
+                  className="upload-btn"
+                  type="button"
+                  onClick={() => qrFileInputRef.current?.click()}
+                  disabled={loading || qrProcessing}
+                >
+                  {qrProcessing || loading
+                    ? <><FaSpinner className="fa-spin" /> Đang xử lý mã QR...</>
+                    : <><FaUpload className="btn-icon" /> Chọn ảnh QR từ thiết bị</>}
                 </button>
               </div>
             )}
 
-            {/* Error Message Alert */}
-            {errorMsg && (
+            {errorMsg && !dialogOpen && (
               <div style={{
                 marginTop: '20px',
                 backgroundColor: '#fef2f2',
@@ -155,7 +202,7 @@ const VerificationPage = () => {
             )}
 
             {/* Verification Result Display */}
-            {result && result.certificate && (
+            {result && result.certificate && !dialogOpen && (
               <div style={{
                 marginTop: '24px',
                 padding: '20px',
@@ -386,6 +433,20 @@ const VerificationPage = () => {
         </div>
 
       </div>
+      <CertificateVerificationDialog
+        isOpen={dialogOpen}
+        loading={loading}
+        error={errorMsg}
+        result={result}
+        query={verifyQuery}
+        onClose={() => {
+          verificationRequestId.current += 1;
+          setDialogOpen(false);
+          setLoading(false);
+          setResult(null);
+          setErrorMsg("");
+        }}
+      />
     </div>
   );
 };

@@ -9,7 +9,7 @@ exports.verifyCertificate = async (req, res, next) => {
   try {
     const { query, method = 'certificate_code' } = req.body;
 
-    if (!query) {
+    if (typeof query !== 'string' || !query.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Vui lòng nhập mã văn bằng, mã sinh viên hoặc chuỗi mã băm Hash để xác thực.'
@@ -17,43 +17,64 @@ exports.verifyCertificate = async (req, res, next) => {
     }
 
     const cleanQuery = query.trim();
+    const recordVerificationLog = async (certificate, verified) => {
+      try {
+        await db.query(
+          `INSERT INTO verification_logs (certificate_id, certificate_code, verifier_ip, verifier_user_agent, verification_method, verification_result)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            certificate ? certificate.id : null,
+            certificate ? certificate.certificate_code : cleanQuery,
+            req.ip || '127.0.0.1',
+            req.headers['user-agent'] || 'Browser',
+            method,
+            verified
+          ]
+        );
+      } catch (logErr) {
+        console.error('Failed to log verification attempt:', logErr.message);
+      }
+    };
 
-    // Query certificate from database
     const [rows] = await db.query(
-      `SELECT c.*, 
+      `SELECT c.*,
               s.school_name, s.school_code, s.website as school_website, s.logo_url as school_logo, s.wallet_address as school_wallet,
               p.program_name, p.program_code, p.education_system,
-              st.date_of_birth, st.id_number, st.gender, st.place_of_birth
+              p.school_id AS program_school_id,
+              st.date_of_birth, st.id_number, st.gender, st.place_of_birth,
+              st.student_code AS registered_student_code,
+              st.full_name AS registered_student_name,
+              st.school_id AS registered_school_id,
+              st.department AS registered_major,
+              CASE
+                WHEN c.certificate_code = ? THEN 'certificate_code'
+                WHEN c.certificate_hash = ? THEN 'certificate_hash'
+                WHEN c.blockchain_tx_hash = ? THEN 'transaction_hash'
+                ELSE 'student_code'
+              END AS match_type
        FROM certificates c
        LEFT JOIN schools s ON c.school_id = s.id
        LEFT JOIN programs p ON c.program_id = p.id
        LEFT JOIN students st ON c.student_id = st.id
-       WHERE c.certificate_code = ? OR c.certificate_hash = ? OR c.student_code = ? OR c.blockchain_tx_hash = ?`,
-      [cleanQuery, cleanQuery, cleanQuery, cleanQuery]
+       WHERE c.certificate_code = ? OR c.certificate_hash = ? OR c.student_code = ? OR c.blockchain_tx_hash = ?
+       ORDER BY CASE
+         WHEN c.certificate_code = ? THEN 0
+         WHEN c.certificate_hash = ? THEN 1
+         WHEN c.blockchain_tx_hash = ? THEN 2
+         ELSE 3
+       END,
+       CASE c.status WHEN 'issued' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
+       c.id DESC
+       LIMIT 2`,
+      [
+        cleanQuery, cleanQuery, cleanQuery,
+        cleanQuery, cleanQuery, cleanQuery, cleanQuery,
+        cleanQuery, cleanQuery, cleanQuery
+      ]
     );
 
-    const isSuccess = rows.length > 0;
-    const certificate = isSuccess ? rows[0] : null;
-
-    // Log verification attempt to database
-    try {
-      await db.query(
-        `INSERT INTO verification_logs (certificate_id, certificate_code, verifier_ip, verifier_user_agent, verification_method, verification_result)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          certificate ? certificate.id : null,
-          certificate ? certificate.certificate_code : cleanQuery,
-          req.ip || '127.0.0.1',
-          req.headers['user-agent'] || 'Browser',
-          method,
-          isSuccess
-        ]
-      );
-    } catch (logErr) {
-      console.error('Failed to log verification attempt:', logErr.message);
-    }
-
-    if (!isSuccess) {
+    if (rows.length === 0) {
+      await recordVerificationLog(null, false);
       return res.status(404).json({
         success: false,
         verified: false,
@@ -61,10 +82,51 @@ exports.verifyCertificate = async (req, res, next) => {
       });
     }
 
+    if (
+      rows[0].match_type === 'student_code' &&
+      rows.length > 1 &&
+      rows[1].match_type === 'student_code'
+    ) {
+      await recordVerificationLog(null, false);
+      return res.status(409).json({
+        success: false,
+        verified: false,
+        ambiguous: true,
+        message: 'Mã sinh viên có nhiều văn bằng. Vui lòng nhập chính xác mã văn bằng để tránh hiển thị nhầm hồ sơ.'
+      });
+    }
+
+    const { match_type: matchType, ...certificate } = rows[0];
+    const normalize = (value) => String(value || '').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' ');
+    const integrityIssues = [];
+
+    if (!certificate.registered_student_code || certificate.student_code !== certificate.registered_student_code) {
+      integrityIssues.push('Mã sinh viên trên văn bằng không khớp hồ sơ sinh viên.');
+    }
+    if (!certificate.registered_student_name || normalize(certificate.student_name) !== normalize(certificate.registered_student_name)) {
+      integrityIssues.push('Họ tên trên văn bằng không khớp hồ sơ sinh viên.');
+    }
+    if (
+      certificate.registered_school_id === null ||
+      Number(certificate.school_id) !== Number(certificate.registered_school_id)
+    ) {
+      integrityIssues.push('Trường cấp trên văn bằng không khớp trường trong hồ sơ sinh viên.');
+    }
+    if (!certificate.registered_major || normalize(certificate.major) !== normalize(certificate.registered_major)) {
+      integrityIssues.push('Ngành đào tạo trên văn bằng không khớp hồ sơ sinh viên.');
+    }
+    if (
+      certificate.program_id &&
+      Number(certificate.school_id) !== Number(certificate.program_school_id)
+    ) {
+      integrityIssues.push('Chương trình đào tạo không thuộc trường cấp văn bằng.');
+    }
+
     const isRevoked = certificate.status === 'revoked';
+    const isPending = certificate.status === 'pending';
+    const verified = certificate.status === 'issued' && !isRevoked && integrityIssues.length === 0;
     const txHash = certificate.blockchain_tx_hash;
 
-    // ── Xác thực on-chain từ Blockchain Sepolia (nếu blockchain khả dụng) ──
     let onChainResult = null;
     let onChainVerified = false;
     if (isBlockchainReady() && certificate.status === 'issued') {
@@ -86,13 +148,24 @@ exports.verifyCertificate = async (req, res, next) => {
       }
     }
 
+    await recordVerificationLog(certificate, verified);
+
     res.json({
       success: true,
-      verified: !isRevoked,
+      verified,
       isRevoked,
+      isPending,
+      matchType,
+      integrityIssues,
       message: isRevoked
-        ? 'Van bang da bi THU HOI!'
-        : 'Van bang HOP LE & da duoc xac thuc thanh cong!',
+        ? 'Văn bằng đã bị thu hồi.'
+        : integrityIssues.length > 0
+          ? 'Thông tin văn bằng không khớp hồ sơ gốc. Chưa thể xác nhận hợp lệ.'
+          : isPending
+            ? 'Văn bằng đang chờ duyệt, chưa thể xác thực.'
+            : verified
+              ? 'Văn bằng hợp lệ, thông tin đã khớp hồ sơ.'
+              : 'Văn bằng chưa đủ điều kiện xác thực.',
       certificate,
       blockchainVerification: {
         network: 'Ethereum Sepolia Testnet',
