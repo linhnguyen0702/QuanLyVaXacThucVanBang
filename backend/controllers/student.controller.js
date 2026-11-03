@@ -35,7 +35,7 @@ exports.getStudents = async (req, res, next) => {
     const pagination = getPagination(req.query);
 
     let query = `
-      SELECT st.*, COALESCE(st.school_name, s.school_name) AS school_name, s.school_code
+      SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code
       FROM students st
       LEFT JOIN schools s ON st.school_id = s.id
       WHERE 1=1
@@ -43,7 +43,7 @@ exports.getStudents = async (req, res, next) => {
     const params = [];
 
     if (search) {
-      query += ` AND (st.student_code LIKE ? OR st.full_name LIKE ? OR st.email LIKE ? OR st.id_number LIKE ? OR st.school_name LIKE ?)`;
+      query += ` AND (st.student_code LIKE ? OR st.full_name LIKE ? OR st.email LIKE ? OR st.id_number LIKE ? OR COALESCE(s.school_name, st.school_name) LIKE ?)`;
       const searchPattern = `%${search}%`;
       params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
     }
@@ -72,7 +72,7 @@ exports.getStudents = async (req, res, next) => {
         FROM students st
         LEFT JOIN schools s ON st.school_id = s.id
         WHERE 1=1
-        ${search ? 'AND (st.student_code LIKE ? OR st.full_name LIKE ? OR st.email LIKE ? OR st.id_number LIKE ? OR st.school_name LIKE ?)' : ''}
+        ${search ? 'AND (st.student_code LIKE ? OR st.full_name LIKE ? OR st.email LIKE ? OR st.id_number LIKE ? OR COALESCE(s.school_name, st.school_name) LIKE ?)' : ''}
         ${school_id ? 'AND st.school_id = ?' : ''}
         ${status ? 'AND st.graduation_status = ?' : ''}
         ${department ? 'AND st.department = ?' : ''}
@@ -107,7 +107,7 @@ exports.getStudentById = async (req, res, next) => {
     const { id } = req.params;
 
     const [rows] = await db.query(
-      `SELECT st.*, COALESCE(st.school_name, s.school_name) AS school_name, s.school_code
+      `SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code
        FROM students st
        LEFT JOIN schools s ON st.school_id = s.id
        WHERE st.id = ? OR st.student_code = ? OR st.email = ?`,
@@ -273,7 +273,7 @@ exports.createStudent = async (req, res, next) => {
     );
 
     const [newStudent] = await db.query(
-      `SELECT st.*, COALESCE(st.school_name, s.school_name) AS school_name, s.school_code FROM students st LEFT JOIN schools s ON st.school_id = s.id WHERE st.id = ?`,
+      `SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code FROM students st LEFT JOIN schools s ON st.school_id = s.id WHERE st.id = ?`,
       [result.insertId]
     );
 
@@ -325,15 +325,43 @@ exports.updateStudent = async (req, res, next) => {
       }
     }
 
-    let resolvedSchoolId = school_id;
-    if (school_name && !school_id) {
-      const [matchedSchool] = await db.query(
-        'SELECT id FROM schools WHERE school_name LIKE ? OR school_code = ? LIMIT 1',
-        [`%${school_name.trim()}%`, school_name.trim()]
-      );
-      if (matchedSchool.length > 0) {
-        resolvedSchoolId = matchedSchool[0].id;
+    let resolvedSchoolId = null;
+    let resolvedSchoolName = null;
+    const trimmedSchoolName = typeof school_name === 'string' ? school_name.trim() : '';
+    const hasSchoolId = school_id !== undefined && school_id !== null && school_id !== '';
+    if (hasSchoolId || trimmedSchoolName) {
+      const [schoolRows] = hasSchoolId
+        ? await db.query(
+          'SELECT id, school_name, school_code FROM schools WHERE id = ? LIMIT 1',
+          [school_id]
+        )
+        : await db.query(
+          `SELECT id, school_name, school_code
+           FROM schools
+           WHERE LOWER(TRIM(school_name)) = LOWER(TRIM(?))
+              OR LOWER(TRIM(school_code)) = LOWER(TRIM(?))
+           LIMIT 1`,
+          [trimmedSchoolName, trimmedSchoolName]
+        );
+      const matchedSchool = schoolRows[0];
+      if (!matchedSchool) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không tìm thấy trường học trong danh sách Quản lý trường học.'
+        });
       }
+      if (
+        trimmedSchoolName &&
+        normalizeSchoolName(trimmedSchoolName) !== normalizeSchoolName(matchedSchool.school_name) &&
+        normalizeSchoolName(trimmedSchoolName) !== normalizeSchoolName(matchedSchool.school_code)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: 'Trường học không khớp với danh sách Quản lý trường học. Vui lòng đồng bộ lại danh sách.'
+        });
+      }
+      resolvedSchoolId = matchedSchool.id;
+      resolvedSchoolName = matchedSchool.school_name;
     }
 
     await db.query(
@@ -351,11 +379,11 @@ exports.updateStudent = async (req, res, next) => {
            class_name = COALESCE(?, class_name),
            graduation_status = COALESCE(?, graduation_status)
        WHERE id = ?`,
-      [resolvedSchoolId, school_name, full_name, email, date_of_birth, gender, id_number, place_of_birth, nationality, department, class_name, graduation_status, id]
+      [resolvedSchoolId, resolvedSchoolName, full_name, email, date_of_birth, gender, id_number, place_of_birth, nationality, department, class_name, graduation_status, id]
     );
 
     const [updated] = await db.query(
-      `SELECT st.*, COALESCE(st.school_name, s.school_name) AS school_name, s.school_code FROM students st LEFT JOIN schools s ON st.school_id = s.id WHERE st.id = ?`,
+      `SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code FROM students st LEFT JOIN schools s ON st.school_id = s.id WHERE st.id = ?`,
       [id]
     );
 

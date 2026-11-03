@@ -38,7 +38,8 @@ exports.verifyCertificate = async (req, res, next) => {
 
     const [rows] = await db.query(
       `SELECT c.*,
-              s.school_name, s.school_code, s.website as school_website, s.logo_url as school_logo, s.wallet_address as school_wallet,
+              s.school_name AS certificate_school_name, s.school_code AS certificate_school_code,
+              s.website as school_website, s.logo_url as school_logo, s.wallet_address as school_wallet,
               p.program_name, p.program_code, p.education_system,
               p.school_id AS program_school_id,
               st.date_of_birth, st.id_number, st.gender, st.place_of_birth,
@@ -46,6 +47,32 @@ exports.verifyCertificate = async (req, res, next) => {
               st.full_name AS registered_student_name,
               st.school_id AS registered_school_id,
               st.department AS registered_major,
+              (
+                SELECT profile_school.id
+                FROM schools profile_school
+                WHERE LOWER(TRIM(profile_school.school_name)) = LOWER(TRIM(st.school_name))
+                   OR LOWER(TRIM(profile_school.school_code)) = LOWER(TRIM(st.school_name))
+                ORDER BY profile_school.id
+                LIMIT 1
+              ) AS profile_school_id,
+              (
+                SELECT profile_school.school_name
+                FROM schools profile_school
+                WHERE LOWER(TRIM(profile_school.school_name)) = LOWER(TRIM(st.school_name))
+                   OR LOWER(TRIM(profile_school.school_code)) = LOWER(TRIM(st.school_name))
+                ORDER BY profile_school.id
+                LIMIT 1
+              ) AS profile_school_name,
+              (
+                SELECT profile_school.school_code
+                FROM schools profile_school
+                WHERE LOWER(TRIM(profile_school.school_name)) = LOWER(TRIM(st.school_name))
+                   OR LOWER(TRIM(profile_school.school_code)) = LOWER(TRIM(st.school_name))
+                ORDER BY profile_school.id
+                LIMIT 1
+              ) AS profile_school_code,
+              registered_school.school_name AS registered_school_name,
+              registered_school.school_code AS registered_school_code,
               CASE
                 WHEN c.certificate_code = ? THEN 'certificate_code'
                 WHEN c.certificate_hash = ? THEN 'certificate_hash'
@@ -56,6 +83,7 @@ exports.verifyCertificate = async (req, res, next) => {
        LEFT JOIN schools s ON c.school_id = s.id
        LEFT JOIN programs p ON c.program_id = p.id
        LEFT JOIN students st ON c.student_id = st.id
+       LEFT JOIN schools registered_school ON st.school_id = registered_school.id
        WHERE c.certificate_code = ? OR c.certificate_hash = ? OR c.student_code = ? OR c.blockchain_tx_hash = ?
        ORDER BY CASE
          WHEN c.certificate_code = ? THEN 0
@@ -96,28 +124,66 @@ exports.verifyCertificate = async (req, res, next) => {
       });
     }
 
-    const { match_type: matchType, ...certificate } = rows[0];
+    const {
+      match_type: matchType,
+      certificate_school_name: certificateSchoolName,
+      certificate_school_code: certificateSchoolCode,
+      registered_school_name: registeredSchoolName,
+      registered_school_code: registeredSchoolCode,
+      registered_student_code: registeredStudentCode,
+      registered_student_name: registeredStudentName,
+      registered_school_id: registeredSchoolId,
+      registered_major: registeredMajor,
+      profile_school_id: profileSchoolId,
+      profile_school_name: profileSchoolName,
+      profile_school_code: profileSchoolCode,
+      program_school_id: programSchoolId,
+      ...certificate
+    } = rows[0];
+    const certificateStudentCode = certificate.student_code;
+    const certificateStudentName = certificate.student_name;
+    const certificateMajor = certificate.major;
     const normalize = (value) => String(value || '').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' ');
     const integrityIssues = [];
+    const studentSchoolId = profileSchoolId || registeredSchoolId;
+    const studentSchoolName = profileSchoolName || registeredSchoolName;
+    const studentSchoolCode = profileSchoolCode || registeredSchoolCode;
+    const sameSchool = Number(certificate.school_id) === Number(studentSchoolId)
+      || (
+        certificateSchoolCode &&
+        studentSchoolCode &&
+        normalize(certificateSchoolCode) === normalize(studentSchoolCode)
+      )
+      || (
+        certificateSchoolName &&
+        studentSchoolName &&
+        normalize(certificateSchoolName) === normalize(studentSchoolName)
+      );
+    certificate.student_code = registeredStudentCode || certificate.student_code;
+    certificate.student_name = registeredStudentName || certificate.student_name;
+    certificate.major = registeredMajor || certificate.major;
+    certificate.school_name = studentSchoolName || certificateSchoolName || null;
+    certificate.school_code = studentSchoolCode || certificateSchoolCode || null;
 
-    if (!certificate.registered_student_code || certificate.student_code !== certificate.registered_student_code) {
+    if (!registeredStudentCode || certificateStudentCode !== registeredStudentCode) {
       integrityIssues.push('Mã sinh viên trên văn bằng không khớp hồ sơ sinh viên.');
     }
-    if (!certificate.registered_student_name || normalize(certificate.student_name) !== normalize(certificate.registered_student_name)) {
+    if (!registeredStudentName || normalize(certificateStudentName) !== normalize(registeredStudentName)) {
       integrityIssues.push('Họ tên trên văn bằng không khớp hồ sơ sinh viên.');
     }
     if (
-      certificate.registered_school_id === null ||
-      Number(certificate.school_id) !== Number(certificate.registered_school_id)
+      registeredSchoolId === null ||
+      !sameSchool ||
+      (profileSchoolId !== null && Number(profileSchoolId) !== Number(registeredSchoolId))
     ) {
       integrityIssues.push('Trường cấp trên văn bằng không khớp trường trong hồ sơ sinh viên.');
     }
-    if (!certificate.registered_major || normalize(certificate.major) !== normalize(certificate.registered_major)) {
+    if (!registeredMajor || normalize(certificateMajor) !== normalize(registeredMajor)) {
       integrityIssues.push('Ngành đào tạo trên văn bằng không khớp hồ sơ sinh viên.');
     }
     if (
       certificate.program_id &&
-      Number(certificate.school_id) !== Number(certificate.program_school_id)
+      Number(certificate.school_id) !== Number(programSchoolId)
     ) {
       integrityIssues.push('Chương trình đào tạo không thuộc trường cấp văn bằng.');
     }

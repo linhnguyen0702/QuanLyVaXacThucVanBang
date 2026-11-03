@@ -177,7 +177,7 @@ const SchoolReports = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý Báo cáo động</h2>
-          <p>Trích xuất báo cáo theo tiêu chí bộ lọc & Quản lý lịch sử từ CSDL MySQL</p>
+          <p>Trích xuất báo cáo theo tiêu chí bộ lọc & Quản lý lịch sử </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="sd-btn-secondary" onClick={() => setIsUploadOpen(true)}>

@@ -261,7 +261,7 @@ const SchoolUsers = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý người dùng</h2>
-          <p>Danh sách các cán bộ, nhân viên và sinh viên được cấp quyền truy cập hệ thống từ CSDL MySQL</p>
+          <p>Danh sách các cán bộ, nhân viên và sinh viên được cấp quyền truy cập hệ thống </p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Thêm người dùng

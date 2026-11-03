@@ -482,6 +482,126 @@ exports.sendSupportRequest = async (req, res, next) => {
   }
 };
 
+// @desc    Send a general support request to the configured support mailbox
+// @route   POST /api/auth/contact-support
+// @access  Public
+exports.sendContactSupportRequest = async (req, res) => {
+  const { name, email, phone, role, subject, message } = req.body || {};
+  const normalizedName = typeof name === "string" ? name.trim() : "";
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedPhone = typeof phone === "string" ? phone.trim() : "";
+  const normalizedSubject = typeof subject === "string" ? subject.trim() : "";
+  const normalizedMessage = typeof message === "string" ? message.trim() : "";
+  const roleLabels = {
+    student: "Sinh viên",
+    school: "Nhà trường / Tổ chức",
+    employer: "Nhà tuyển dụng",
+    other: "Khác",
+  };
+
+  if (
+    !normalizedName ||
+    normalizedName.length > 150 ||
+    normalizedEmail.length > 255 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
+    normalizedPhone.length > 40 ||
+    !Object.prototype.hasOwnProperty.call(roleLabels, role) ||
+    !normalizedSubject ||
+    normalizedSubject.length > 200 ||
+    /[\r\n]/.test(normalizedSubject) ||
+    !normalizedMessage ||
+    normalizedMessage.length > 5000
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Vui lòng kiểm tra lại thông tin trong biểu mẫu.",
+    });
+  }
+
+  const emailUser = process.env.EMAIL_USER;
+  const emailPassword = process.env.EMAIL_APP_PASSWORD;
+  if (!emailUser || !emailPassword) {
+    console.error("Support request email is not configured.");
+    return res.status(503).json({
+      success: false,
+      message:
+        "Dịch vụ gửi email chưa được cấu hình. Vui lòng liên hệ quản trị viên.",
+    });
+  }
+
+  const supportEmail = process.env.SUPPORT_NOTIFICATION_EMAIL || emailUser;
+  const escapeHtml = (value) =>
+    value.replace(/[&<>"']/g, (character) => {
+      const entities = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      };
+      return entities[character];
+    });
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+      auth: {
+        user: emailUser,
+        pass: emailPassword,
+      },
+    });
+    const safeName = escapeHtml(normalizedName);
+    const safeEmail = escapeHtml(normalizedEmail);
+    const safePhone = escapeHtml(normalizedPhone || "Không cung cấp");
+    const safeRole = escapeHtml(roleLabels[role]);
+    const safeSubject = escapeHtml(normalizedSubject);
+    const safeMessage = escapeHtml(normalizedMessage);
+
+    await transporter.sendMail({
+      from: `"Hệ thống Văn bằng số" <${emailUser}>`,
+      to: supportEmail,
+      replyTo: normalizedEmail,
+      subject: `[Yêu cầu hỗ trợ] ${normalizedSubject}`,
+      text: [
+        `Họ tên: ${normalizedName}`,
+        `Email liên hệ: ${normalizedEmail}`,
+        `Số điện thoại: ${normalizedPhone || "Không cung cấp"}`,
+        `Vai trò: ${roleLabels[role]}`,
+        `Tiêu đề: ${normalizedSubject}`,
+        "",
+        "Nội dung:",
+        normalizedMessage,
+      ].join("\n"),
+      html: `
+        <h2>Yêu cầu hỗ trợ</h2>
+        <p><strong>Họ tên:</strong> ${safeName}</p>
+        <p><strong>Email liên hệ:</strong> ${safeEmail}</p>
+        <p><strong>Số điện thoại:</strong> ${safePhone}</p>
+        <p><strong>Vai trò:</strong> ${safeRole}</p>
+        <p><strong>Tiêu đề:</strong> ${safeSubject}</p>
+        <p><strong>Nội dung:</strong></p>
+        <p style="white-space: pre-wrap">${safeMessage}</p>
+      `,
+    });
+
+    return res.json({
+      success: true,
+      message: `Đã gửi yêu cầu hỗ trợ tới ${supportEmail}.`,
+    });
+  } catch (error) {
+    console.error("Failed to send contact support email:", error.message);
+    return res.status(502).json({
+      success: false,
+      message:
+        "Không gửi được email yêu cầu. Vui lòng thử lại sau hoặc liên hệ quản trị viên.",
+    });
+  }
+};
+
 // @desc    Get current user profile
 // @route   GET /api/auth/me
 // @access  Private

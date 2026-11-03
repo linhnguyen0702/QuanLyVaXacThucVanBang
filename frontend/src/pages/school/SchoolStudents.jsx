@@ -414,7 +414,7 @@ const SchoolStudents = ({ onNavigate }) => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý sinh viên</h2>
-          <p>Danh sách sinh viên và trạng thái xét duyệt cấp văn bằng từ CSDL MySQL</p>
+          <p>Danh sách sinh viên và trạng thái xét duyệt cấp văn bằng </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="sd-btn-secondary" onClick={() => setIsImportOpen(true)}>
@@ -489,7 +489,7 @@ const SchoolStudents = ({ onNavigate }) => {
                   <tr key={student.id}>
                     <td className="sd-td-bold">{student.student_code || student.studentCode}</td>
                     <td className="sd-td-bold">{student.full_name || student.fullName}</td>
-                    <td>{student.school_name || student.schoolName || 'Trường Đại học Công nghệ'}</td>
+                    <td>{student.school_name || student.schoolName || '—'}</td>
                     <td>{student.email}</td>
                     <td>{student.department}</td>
                     <td>{student.class_name || student.className}</td>
@@ -910,7 +910,7 @@ const SchoolStudents = ({ onNavigate }) => {
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Trường học:</span>
-                    <span className="sd-detail-value">{selectedStudent.school_name || selectedStudent.schoolName || 'Trường Đại học Công nghệ'}</span>
+                    <span className="sd-detail-value">{selectedStudent.school_name || selectedStudent.schoolName || '—'}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Email:</span>

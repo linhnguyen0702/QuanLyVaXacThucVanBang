@@ -104,7 +104,7 @@ const CertificateListPage = () => {
                     <div className="cert-card-row">
                       <FaUniversity className="cert-card-icon" />
                       <span className="cert-card-label">Cơ sở:</span>
-                      <span className="cert-card-value">{cert.school_name || 'Trường Đại học Công nghệ'}</span>
+                      <span className="cert-card-value">{cert.school_name || '—'}</span>
                     </div>
                     <div className="cert-card-row">
                       <FaCalendarAlt className="cert-card-icon" />

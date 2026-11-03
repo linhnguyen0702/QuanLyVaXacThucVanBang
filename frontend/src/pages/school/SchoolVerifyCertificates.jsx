@@ -230,7 +230,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Phê duyệt & Xác thực văn bằng</h2>
-          <p>Ký số và đẩy văn bằng lên CSDL MySQL & Blockchain Sepolia để kích hoạt tra cứu công khai</p>
+          <p>Kiểm duyệt và xác thực văn bằng điện tử, đảm bảo an toàn thông tin và ngăn ngừa giả mạo.</p>
         </div>
         <button 
           className="sd-btn-primary" 

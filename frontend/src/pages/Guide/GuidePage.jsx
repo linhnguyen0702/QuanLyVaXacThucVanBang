@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { api } from "../../services/api";
 import {
   FaSearch,
   FaChevronRight,
@@ -355,9 +356,11 @@ export default function GuidePage() {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormError("");
+    setFormSuccess(false);
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (
       !formData.name ||
@@ -369,10 +372,18 @@ export default function GuidePage() {
       return;
     }
     setFormError("");
+    setFormSuccess(false);
     setFormLoading(true);
 
-    setTimeout(() => {
-      setFormLoading(false);
+    try {
+      const response = await api.sendContactSupportRequest(formData);
+      if (!response.success) {
+        setFormError(
+          response.message || "Không gửi được yêu cầu. Vui lòng thử lại sau.",
+        );
+        return;
+      }
+
       setFormSuccess(true);
       setFormData({
         name: "",
@@ -385,10 +396,16 @@ export default function GuidePage() {
 
       setToastMsg({
         type: "success",
-        text: "Yêu cầu hỗ trợ của bạn đã được gửi đi thành công!",
+        text: response.message || "Yêu cầu hỗ trợ đã được gửi thành công!",
       });
       setTimeout(() => setToastMsg(null), 4000);
-    }, 1500);
+    } catch {
+      setFormError(
+        "Không thể kết nối dịch vụ gửi yêu cầu. Vui lòng thử lại sau.",
+      );
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   const handleSearchSubmit = (e) => {

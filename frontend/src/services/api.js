@@ -37,6 +37,15 @@ export const api = {
     return res.json();
   },
 
+  sendContactSupportRequest: async (request) => {
+    const res = await fetch(`${API_BASE_URL}/auth/contact-support`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
+    return res.json();
+  },
+
   register: async (userData) => {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
@@ -116,6 +125,20 @@ export const api = {
 
   getStatsSummary: async () => {
     const res = await fetch(`${API_BASE_URL}/certificates/stats/summary`);
+    return res.json();
+  },
+
+  getIssuanceTrend: async () => {
+    const res = await fetch(`${API_BASE_URL}/certificates/stats/issuance-trend`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  getDashboardStats: async () => {
+    const res = await fetch(`${API_BASE_URL}/certificates/stats/dashboard`, {
+      headers: getHeaders()
+    });
     return res.json();
   },
 
@@ -303,6 +326,22 @@ export const api = {
     const query = new URLSearchParams(params).toString();
     const res = await fetch(`${API_BASE_URL}/logs/audit?${query}`, {
       headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  getSystemSettings: async () => {
+    const res = await fetch(`${API_BASE_URL}/settings`, {
+      headers: getHeaders()
+    });
+    return res.json();
+  },
+
+  updateSystemSettings: async (settings) => {
+    const res = await fetch(`${API_BASE_URL}/settings`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(settings)
     });
     return res.json();
   },

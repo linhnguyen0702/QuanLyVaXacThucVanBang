@@ -915,6 +915,137 @@
   margin-top: 16px;
 }
 
+.sd-dashboard-activity-card {
+  height: 300px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sd-dashboard-activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sd-dashboard-activity-header h4 {
+  margin: 0;
+}
+
+.sd-dashboard-activity-list {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+}
+
+.sd-dashboard-activity-list.is-short {
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+}
+
+.sd-dashboard-activity-list .sd-activity-item {
+  min-height: 0;
+  padding: 8px 0;
+  overflow: hidden;
+}
+
+.sd-dashboard-activity-list .sd-act-info {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sd-dashboard-activity-list .sd-act-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.sd-dashboard-activity-list .sd-act-time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sd-dashboard-activity-list.is-short > :only-child {
+  grid-row: 1 / -1;
+  align-self: center;
+  justify-self: center;
+}
+
+.sd-stats-degree-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sd-stats-degree-item {
+  min-width: 0;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.sd-stats-degree-heading,
+.sd-stats-degree-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sd-stats-degree-name {
+  min-width: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.sd-stats-degree-count {
+  flex: 0 0 auto;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sd-stats-degree-summary {
+  margin-top: 10px;
+}
+
+.sd-stats-degree-track {
+  flex: 1;
+  height: 7px;
+  overflow: hidden;
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.sd-stats-degree-fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+.sd-stats-degree-percent {
+  flex: 0 0 auto;
+  min-width: 48px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
 /* Profile Section Styles */
 .sd-profile-header {
   display: flex;

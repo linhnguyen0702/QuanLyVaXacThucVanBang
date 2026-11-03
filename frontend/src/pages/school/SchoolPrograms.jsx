@@ -270,7 +270,7 @@ const SchoolPrograms = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Chương trình đào tạo</h2>
-          <p>Quản lý các chương trình đào tạo & cấp bằng của nhà trường từ CSDL MySQL</p>
+          <p>Quản lý các chương trình đào tạo & cấp bằng của nhà trường </p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Thêm chương trình
@@ -284,7 +284,7 @@ const SchoolPrograms = () => {
             <span className="sd-stat-label">Tổng số chương trình</span>
             <div className="sd-stat-val-row">
               <span className="sd-stat-value">{totalPrograms}</span>
-              <span className="sd-stat-badge green">Trong Database</span>
+              <span className="sd-stat-badge green">Chương trình</span>
             </div>
           </div>
         </div>

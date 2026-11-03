@@ -97,7 +97,7 @@ const StudentDashboard = () => {
             id: c.certificate_code,
             type: `Bằng Tốt Nghiệp ${c.degree_type || 'Đại học'}`,
             title: `Cử nhân ${c.major}`,
-            school: c.school_name || "Trường Đại học Công nghệ",
+            school: c.school_name || "—",
             gpa: `${c.gpa || '3.65'} (${c.classification || 'Xuất sắc'})`,
             issueDate: c.issue_date ? new Date(c.issue_date).toLocaleDateString('vi-VN') : '25/07/2026',
             status: c.status === 'issued' ? 'blockchain' : 'approve',

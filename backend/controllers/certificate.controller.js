@@ -51,10 +51,14 @@ exports.getCertificates = async (req, res, next) => {
 
     let query = `
       SELECT c.*, 
-             s.school_name, s.school_code, s.logo_url as school_logo,
+             COALESCE(registered_school.school_name, s.school_name) AS school_name,
+             COALESCE(registered_school.school_code, s.school_code) AS school_code,
+             s.logo_url as school_logo,
              p.program_name, p.program_code
       FROM certificates c
       LEFT JOIN schools s ON c.school_id = s.id
+      LEFT JOIN students st ON c.student_id = st.id
+      LEFT JOIN schools registered_school ON st.school_id = registered_school.id
       LEFT JOIN programs p ON c.program_id = p.id
       WHERE 1=1
     `;
@@ -83,7 +87,7 @@ exports.getCertificates = async (req, res, next) => {
 
     // Count total query
     const countQuery = query.replace(
-      /SELECT c\.\*,\s*s\.school_name, s\.school_code, s\.logo_url as school_logo,\s*p\.program_name, p\.program_code/,
+      /SELECT c\.\*,\s*COALESCE\(registered_school\.school_name, s\.school_name\) AS school_name,\s*COALESCE\(registered_school\.school_code, s\.school_code\) AS school_code,\s*s\.logo_url as school_logo,\s*p\.program_name, p\.program_code/,
       'SELECT COUNT(*) as total'
     );
     const [countRows] = await db.query(countQuery, params);
@@ -115,13 +119,16 @@ exports.getCertificateById = async (req, res, next) => {
 
     const [rows] = await db.query(
       `SELECT c.*, 
-              s.school_name, s.school_code, s.website, s.logo_url as school_logo, s.wallet_address as school_wallet,
+              COALESCE(registered_school.school_name, s.school_name) AS school_name,
+              COALESCE(registered_school.school_code, s.school_code) AS school_code,
+              s.website, s.logo_url as school_logo, s.wallet_address as school_wallet,
               p.program_name, p.program_code, p.education_system,
               st.date_of_birth, st.id_number, st.gender, st.place_of_birth
        FROM certificates c
        LEFT JOIN schools s ON c.school_id = s.id
        LEFT JOIN programs p ON c.program_id = p.id
        LEFT JOIN students st ON c.student_id = st.id
+       LEFT JOIN schools registered_school ON st.school_id = registered_school.id
        WHERE c.id = ? OR c.certificate_code = ? OR c.certificate_hash = ?`,
       [id, id, id]
     );
@@ -734,6 +741,126 @@ exports.getStatsSummary = async (req, res, next) => {
           ? Number(((successfulVerifications / totalVerifications) * 100).toFixed(2))
           : 0
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get monthly certificate issuance counts for the dashboard
+// @route   GET /api/certificates/stats/issuance-trend
+// @access  Private (Admin, School, Officer)
+exports.getIssuanceTrend = async (req, res, next) => {
+  try {
+    const schoolScope = req.user.role === 'school'
+      ? 'AND c.school_id IN (SELECT id FROM schools WHERE user_id = ?)'
+      : '';
+    const params = req.user.role === 'school' ? [req.user.id] : [];
+    const [rows] = await db.query(
+      `SELECT DATE_FORMAT(c.issue_date, '%Y-%m') AS month,
+              COUNT(*) AS count
+       FROM certificates c
+       WHERE c.status = 'issued'
+         AND c.issue_date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 5 MONTH), '%Y-%m-01')
+         AND c.issue_date < DATE_FORMAT(DATE_ADD(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01')
+         ${schoolScope}
+       GROUP BY DATE_FORMAT(c.issue_date, '%Y-%m')
+       ORDER BY month ASC`,
+      params
+    );
+
+    res.json({
+      success: true,
+      months: rows.map((row) => ({
+        month: row.month,
+        count: Number(row.count) || 0
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get school dashboard statistics and certificate distributions
+// @route   GET /api/certificates/stats/dashboard
+// @access  Private (Admin, School, Officer)
+exports.getDashboardStats = async (req, res, next) => {
+  try {
+    const schoolScope = req.user.role === 'school'
+      ? 'AND c.school_id IN (SELECT id FROM schools WHERE user_id = ?)'
+      : '';
+    const certificateParams = req.user.role === 'school' ? [req.user.id] : [];
+    const verificationScope = req.user.role === 'school'
+      ? 'AND c.school_id IN (SELECT id FROM schools WHERE user_id = ?)'
+      : '';
+    const verificationParams = req.user.role === 'school' ? [req.user.id] : [];
+
+    const [[summaryRows], [verificationRows], [majorRows], [degreeRows]] = await Promise.all([
+      db.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN c.status = 'issued' THEN 1 ELSE 0 END), 0) AS total_issued,
+           COUNT(DISTINCT CASE
+             WHEN c.status = 'issued' AND c.blockchain_tx_hash IS NOT NULL AND c.blockchain_tx_hash <> ''
+             THEN c.blockchain_tx_hash
+           END) AS blockchain_transactions,
+           COUNT(DISTINCT CASE WHEN c.status = 'issued' THEN c.student_id END) AS students_with_issued
+         FROM certificates c
+         WHERE 1=1 ${schoolScope}`,
+        certificateParams
+      ),
+      db.query(
+        `SELECT
+           COUNT(vl.id) AS total_verifications,
+           COALESCE(SUM(CASE WHEN vl.verification_result = TRUE THEN 1 ELSE 0 END), 0) AS successful_verifications
+         FROM verification_logs vl
+         INNER JOIN certificates c ON c.id = vl.certificate_id
+         WHERE 1=1 ${verificationScope}`,
+        verificationParams
+      ),
+      db.query(
+        `SELECT c.major, COUNT(*) AS count
+         FROM certificates c
+         WHERE c.status = 'issued' ${schoolScope}
+         GROUP BY c.major
+         ORDER BY count DESC, c.major ASC`,
+        certificateParams
+      ),
+      db.query(
+        `SELECT c.degree_type, COUNT(*) AS count
+         FROM certificates c
+         WHERE c.status = 'issued' ${schoolScope}
+         GROUP BY c.degree_type
+         ORDER BY count DESC, c.degree_type ASC`,
+        certificateParams
+      )
+    ]);
+
+    const summary = summaryRows[0] || {};
+    const verification = verificationRows[0] || {};
+    const totalIssued = Number(summary.total_issued) || 0;
+    const totalVerifications = Number(verification.total_verifications) || 0;
+    const successfulVerifications = Number(verification.successful_verifications) || 0;
+
+    res.json({
+      success: true,
+      stats: {
+        totalIssued,
+        blockchainTransactions: Number(summary.blockchain_transactions) || 0,
+        studentsWithIssued: Number(summary.students_with_issued) || 0,
+        totalVerifications,
+        successfulVerifications,
+        verificationSuccessRate: totalVerifications
+          ? Number(((successfulVerifications / totalVerifications) * 100).toFixed(2))
+          : 0
+      },
+      majors: majorRows.map((row) => ({
+        name: row.major || 'Chưa phân loại',
+        count: Number(row.count) || 0
+      })),
+      degreeTypes: degreeRows.map((row) => ({
+        name: row.degree_type || 'Chưa phân loại',
+        count: Number(row.count) || 0
+      }))
     });
   } catch (error) {
     next(error);

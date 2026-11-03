@@ -579,7 +579,7 @@ const SchoolCertificates = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý văn bằng</h2>
-          <p>Danh sách văn bằng, chứng chỉ được đồng bộ từ Cơ sở dữ liệu và Blockchain</p>
+          <p>Danh sách văn bằng, chứng chỉ và tình trạng cấp phát trong hệ thống.</p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Cấp văn bằng mới

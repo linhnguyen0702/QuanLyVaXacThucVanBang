@@ -42,6 +42,7 @@ const userRoutes = require('./routes/user.routes');
 const reportRoutes = require('./routes/report.routes');
 const logRoutes = require('./routes/log.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const settingsRoutes = require('./routes/settings.routes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -54,6 +55,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

@@ -75,7 +75,7 @@ const SchoolLogs = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Nhật ký hệ thống & Audit Logs</h2>
-          <p>Ghi nhận hoạt động tra cứu, xác thực và các sự kiện từ CSDL MySQL</p>
+          <p>Ghi nhận hoạt động tra cứu, xác thực và các sự kiện </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="sd-btn-secondary" onClick={() => showToast('Đã xuất file log hệ thống!')}>

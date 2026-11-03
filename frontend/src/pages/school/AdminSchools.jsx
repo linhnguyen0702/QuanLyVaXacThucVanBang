@@ -309,7 +309,7 @@ const AdminSchools = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý Trường học &amp; Đơn vị cấp bằng</h2>
-          <p>Danh sách các cơ sở giáo dục đã được lưu trên CSDL &amp; xác minh địa chỉ ví Blockchain</p>
+          <p>Danh sách các cơ sở giáo dục và xác minh thông tin đơn vị cấp văn bằng trong hệ thống.</p>
         </div>
         <button className="sd-btn-primary" onClick={handleOpenAdd}>
           <FaPlus /> Thêm trường mới
@@ -323,7 +323,7 @@ const AdminSchools = () => {
             <span className="sd-stat-label">Tổng số cơ sở đào tạo</span>
             <div className="sd-stat-val-row">
               <span className="sd-stat-value">{totalSchools}</span>
-              <span className="sd-stat-badge green">Trong Database</span>
+              <span className="sd-stat-badge green">Cơ sở đào tạo</span>
             </div>
           </div>
         </div>
