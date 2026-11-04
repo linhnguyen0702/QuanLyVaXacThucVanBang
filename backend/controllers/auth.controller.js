@@ -61,7 +61,7 @@ exports.register = async (req, res, next) => {
         full_name,
         userRole,
         phone || null,
-        department || "Phòng Đào tạo",
+        department || (userRole === "student" ? null : "Phòng Đào tạo"),
         position || getDefaultPosition(userRole),
         null,
       ],

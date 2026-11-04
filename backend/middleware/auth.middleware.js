@@ -42,6 +42,13 @@ const protect = async (req, res, next) => {
   }
 };
 
+const optionalProtect = (req, res, next) => {
+  if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer')) {
+    return next();
+  }
+  return protect(req, res, next);
+};
+
 // Middleware to grant access to specific roles
 const authorize = (...roles) => {
   return (req, res, next) => {
@@ -55,4 +62,4 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+module.exports = { protect, optionalProtect, authorize };

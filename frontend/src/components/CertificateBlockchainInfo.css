@@ -1,0 +1,99 @@
+.certificate-blockchain-info {
+  padding: 16px 20px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.certificate-blockchain-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.certificate-blockchain-title svg {
+  color: #4f46e5;
+}
+
+.certificate-blockchain-grid {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(0, 2fr);
+  gap: 8px 16px;
+  font-size: 13px;
+}
+
+.certificate-blockchain-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.certificate-blockchain-value {
+  min-width: 0;
+  color: #334155;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.certificate-blockchain-value.status {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.certificate-blockchain-value.status.confirmed {
+  color: #059669;
+}
+
+.certificate-blockchain-value.status.pending {
+  color: #c2410c;
+}
+
+.certificate-blockchain-value.status svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.certificate-blockchain-value.transaction {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.certificate-blockchain-value.transaction code {
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.certificate-blockchain-value.transaction a {
+  flex: 0 0 auto;
+  color: #4f46e5;
+}
+
+.certificate-blockchain-value.mono {
+  font-family: monospace;
+}
+
+@media (max-width: 560px) {
+  .certificate-blockchain-info {
+    padding: 14px;
+  }
+
+  .certificate-blockchain-grid {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .certificate-blockchain-label:not(:first-child) {
+    margin-top: 8px;
+  }
+}

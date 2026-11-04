@@ -1475,6 +1475,12 @@
   min-height: 0;
 }
 
+.sd-cert-view-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .sd-modal-footer {
   padding: 16px 24px;
   border-top: 1px solid #e2e8f0;

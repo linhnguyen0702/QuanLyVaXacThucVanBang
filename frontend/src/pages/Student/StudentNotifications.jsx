@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaCheck, FaTrash, FaCheckCircle, FaLink, FaUniversity, FaExclamationTriangle } from 'react-icons/fa';
+import { QRCodeSVG } from 'qrcode.react';
 
 const StudentNotifications = ({ 
   notifications = [], 
@@ -58,6 +59,11 @@ const StudentNotifications = ({
               <div className="std-notif-content">
                 <div className="std-notif-title">{notif.title}</div>
                 <div className="std-notif-desc">{notif.desc}</div>
+                {notif.certificateHash && (
+                  <div style={{ marginTop: '12px', padding: '8px', backgroundColor: '#fff', display: 'inline-block' }}>
+                    <QRCodeSVG value={notif.certificateHash} size={120} level="H" title={`Mã QR ${notif.title}`} />
+                  </div>
+                )}
                 
                 <div className="std-notif-footer">
                   <span className="std-notif-time">

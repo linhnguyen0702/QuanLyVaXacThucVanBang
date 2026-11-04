@@ -1,14 +1,72 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getAddress, hexlify, toUtf8Bytes } from 'ethers';
 import { 
-  FaShieldAlt, FaClock, FaCheckCircle, FaTimes, FaSpinner,
+  FaClock, FaCheckCircle, FaTimes, FaSpinner,
   FaFileSignature, FaDatabase, FaKey, FaLink, FaExternalLinkAlt, 
   FaCheck, FaInfoCircle
 } from 'react-icons/fa';
 import { api } from '../../services/api';
+import CertificateDiplomaPreview from '../../components/CertificateDiplomaPreview';
 import './SchoolVerifyCertificates.css';
 import Pagination from '../../components/Pagination/Pagination';
+import { formatDateDisplay } from '../../utils/dateUtils';
 
 const PAGE_SIZE = 10;
+const SEPOLIA_CHAIN_ID = '0xaa36a7';
+
+const ensureSepoliaNetwork = async (ethereum) => {
+  const chainId = await ethereum.request({ method: 'eth_chainId' });
+  if (chainId === SEPOLIA_CHAIN_ID) return;
+
+  try {
+    await ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: SEPOLIA_CHAIN_ID }]
+    });
+  } catch (error) {
+    if (error.code !== 4902) throw error;
+
+    await ethereum.request({
+      method: 'wallet_addEthereumChain',
+      params: [{
+        chainId: SEPOLIA_CHAIN_ID,
+        chainName: 'Sepolia',
+        nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+        rpcUrls: ['https://rpc.sepolia.org'],
+        blockExplorerUrls: ['https://sepolia.etherscan.io']
+      }]
+    });
+    await ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: SEPOLIA_CHAIN_ID }]
+    });
+  }
+
+  const activeChainId = await ethereum.request({ method: 'eth_chainId' });
+  if (activeChainId !== SEPOLIA_CHAIN_ID) {
+    throw new Error('Vui lòng chuyển MetaMask sang mạng Ethereum Sepolia để tiếp tục.');
+  }
+};
+
+const createApprovalChallenge = (certificate, account) => {
+  const approvalNonce = Array.from(
+    window.crypto.getRandomValues(new Uint8Array(16)),
+    (byte) => byte.toString(16).padStart(2, '0')
+  ).join('');
+  const approvalMessage = [
+    'Xác nhận phê duyệt văn bằng điện tử',
+    `Mã văn bằng: ${certificate.code}`,
+    `ID văn bằng: ${certificate.id}`,
+    `Ví phê duyệt: ${account}`,
+    `Nonce: ${approvalNonce}`,
+    'Network: Ethereum Sepolia'
+  ].join('\n');
+
+  return {
+    approvalNonce,
+    approvalMessage: hexlify(toUtf8Bytes(approvalMessage))
+  };
+};
 
 const SchoolVerifyCertificates = ({ walletAddress }) => {
   const [pendingList, setPendingList] = useState([]);
@@ -19,11 +77,12 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
   const [historyPage, setHistoryPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedCert, setSelectedCert] = useState(null);
+  const [selectedCertLoading, setSelectedCertLoading] = useState(false);
+  const [selectedCertError, setSelectedCertError] = useState('');
   
   // Modals state
-  const [showMetaMask, setShowMetaMask] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processStep, setProcessStep] = useState(0); // 0: hash, 1: send, 2: wait, 3: done
+  const [processStep, setProcessStep] = useState(0); // 0: wallet signature, 1: submit, 2: wait, 3: done
   const [successResult, setSuccessResult] = useState(null);
   const [approvedToday, setApprovedToday] = useState(12);
   const [gasSpent, setGasSpent] = useState(1015295);
@@ -58,10 +117,13 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
           code: c.certificate_code,
           studentName: c.student_name,
           studentId: c.student_code,
+          dob: formatDateDisplay(c.student_date_of_birth),
           program: c.major,
           rank: c.classification || 'Giỏi',
-          dob: c.issue_date ? new Date(c.issue_date).toLocaleDateString('vi-VN') : '14/05/2004',
-          system: c.education_mode || 'Chính quy'
+          system: c.education_mode || 'Chính quy',
+          degreeType: c.degree_type || 'Đại học',
+          issueDate: c.issue_date || '',
+          schoolName: c.school_name || ''
         }));
         setPendingList(pending);
         setPendingTotal(pendingRes.total || 0);
@@ -77,67 +139,115 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
     loadData();
   }, [loadData]);
 
-  const handleOpenApprove = (cert) => {
+  const handleOpenApprove = async (cert) => {
     setSelectedCert(cert);
+    setSelectedCertError('');
+    setSelectedCertLoading(true);
+    try {
+      const response = await api.getCertificateById(cert.id);
+      if (!response?.success || !response.certificate) {
+        throw new Error(response?.message || 'Không thể tải thông tin văn bằng.');
+      }
+
+      const detail = response.certificate;
+      setSelectedCert({
+        ...cert,
+        studentName: detail.student_name || '',
+        studentId: detail.student_code || '',
+        program: detail.major || '',
+        rank: detail.classification || '',
+        dob: formatDateDisplay(detail.date_of_birth),
+        system: detail.education_mode || '',
+        degreeType: detail.degree_type || '',
+        issueDate: formatDateDisplay(detail.issue_date),
+        schoolName: detail.issuing_school_name || detail.school_name || ''
+      });
+    } catch (error) {
+      console.error('Failed to load certificate details for approval:', error);
+      setSelectedCertError(error.message || 'Không thể tải thông tin văn bằng.');
+    } finally {
+      setSelectedCertLoading(false);
+    }
   };
 
   const handleCloseModal = () => {
     setSelectedCert(null);
     setSuccessResult(null);
+    setSelectedCertLoading(false);
+    setSelectedCertError('');
   };
 
-  const handleTriggerMetaMask = () => {
-    setShowMetaMask(true);
+  const getMetaMaskAccount = async () => {
+    if (!window.ethereum) {
+      throw new Error('Chưa phát hiện MetaMask. Vui lòng cài đặt hoặc mở tiện ích MetaMask.');
+    }
+    if (!walletAddress) {
+      throw new Error('Tài khoản chưa liên kết ví. Vui lòng kết nối ví MetaMask trong thanh bên trước.');
+    }
+
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts?.length) {
+      throw new Error('Không có tài khoản MetaMask nào được chọn.');
+    }
+    const account = getAddress(accounts[0]);
+    if (account.toLowerCase() !== getAddress(walletAddress).toLowerCase()) {
+      throw new Error('Ví MetaMask đang chọn không khớp với ví đã liên kết tài khoản. Vui lòng chuyển sang đúng ví.');
+    }
+
+    await ensureSepoliaNetwork(window.ethereum);
+    return { ethereum: window.ethereum, account };
   };
 
-  const handleRejectSignature = () => {
-    setShowMetaMask(false);
+  const requestApprovalSignature = async (certificate, ethereum, account) => {
+    const challenge = createApprovalChallenge(certificate, account);
+    const signature = await ethereum.request({
+      method: 'personal_sign',
+      params: [challenge.approvalMessage, account]
+    });
+    return {
+      approvalNonce: challenge.approvalNonce,
+      approvalSignature: signature
+    };
   };
 
-  const handleConfirmSignature = async () => {
-    setShowMetaMask(false);
+  const handleApproveWithMetaMask = async () => {
     setIsProcessing(true);
     setProcessStep(0);
 
-    // Step 1: Tính hash
-    await new Promise(r => setTimeout(r, 800));
-    setProcessStep(1);
-
-    // Step 2: Gửi lên Backend → Blockchain Sepolia
-    await new Promise(r => setTimeout(r, 600));
-    setProcessStep(2);
-
     try {
+      if (!selectedCert?.id) {
+        throw new Error('Không tìm thấy mã văn bằng để phê duyệt.');
+      }
+
+      const { ethereum, account } = await getMetaMaskAccount();
+      const approval = await requestApprovalSignature(selectedCert, ethereum, account);
+      setProcessStep(1);
+
       let txHash = null;
       let blockNum = null;
       let explorerUrl = null;
-      let blockchainCertId = null;
+      setProcessStep(2);
 
-      if (selectedCert.id) {
-        // Gọi API backend — backend sẽ gọi Smart Contract Sepolia thật
-        const apiResult = await api.updateCertificate(selectedCert.id, {
-          status: 'issued'
-          // Không gửi blockchain_tx_hash giả nữa — backend tự lấy từ chain
-        });
-
-        if (apiResult && apiResult.blockchain) {
-          // Lấy dữ liệu thật từ Sepolia
-          txHash = apiResult.blockchain.txHash;
-          blockNum = apiResult.blockchain.blockNumber;
-          explorerUrl = apiResult.blockchain.explorerUrl;
-          blockchainCertId = apiResult.blockchain.blockchainCertificateId;
-        } else if (apiResult && apiResult.certificate && apiResult.certificate.blockchain_tx_hash) {
-          // Fallback: lấy từ certificate object
-          txHash = apiResult.certificate.blockchain_tx_hash;
-          explorerUrl = txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : null;
-        }
+      const apiResult = await api.updateCertificate(selectedCert.id, {
+        status: 'issued',
+        ...approval
+      });
+      if (!apiResult?.success) {
+        throw new Error(apiResult?.message || 'Không thể phê duyệt văn bằng.');
       }
 
-      // Nếu không có txHash thật (blockchain lỗi hoặc chưa cấu hình) → vẫn cập nhật UI
+      if (apiResult.blockchain) {
+        txHash = apiResult.blockchain.txHash;
+        blockNum = apiResult.blockchain.blockNumber;
+        explorerUrl = apiResult.blockchain.explorerUrl;
+      } else if (apiResult.certificate?.blockchain_tx_hash) {
+        txHash = apiResult.certificate.blockchain_tx_hash;
+        explorerUrl = `https://sepolia.etherscan.io/tx/${txHash}`;
+      }
+
       const timestampStr = new Date().toLocaleDateString('vi-VN');
 
       setProcessStep(3);
-      await new Promise(r => setTimeout(r, 800));
 
       const updatedCert = {
         ...selectedCert,
@@ -166,62 +276,92 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
       setApprovedToday(prev => prev + 1);
       setGasSpent(prev => prev + 84150);
       setSuccessResult(updatedCert);
+      if (!apiResult.emailNotificationSent) {
+        alert('Văn bằng đã được phê duyệt nhưng email thông báo chưa gửi được. Vui lòng kiểm tra cấu hình email.');
+      }
     } catch (e) {
       console.error('Failed to approve cert on blockchain:', e);
-      alert('Lỗi khi phê duyệt văn bằng: ' + e.message);
+      alert(e.code === 4001
+        ? 'Bạn đã từ chối yêu cầu ký trong MetaMask.'
+        : 'Lỗi khi phê duyệt văn bằng: ' + e.message);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleBatchApprove = () => {
+  const handleBatchApprove = async () => {
     if (pendingList.length === 0) return;
     setIsProcessing(true);
     setProcessStep(0);
-    setTimeout(() => {
-      setProcessStep(1);
-      setTimeout(() => {
-        setProcessStep(2);
-        setTimeout(async () => {
-          setProcessStep(3);
-          const timestampStr = new Date().toLocaleDateString('vi-VN');
-          
-          const newHistoryItems = [];
-          for (let i = 0; i < pendingList.length; i++) {
-            const cert = pendingList[i];
-            const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-            if (cert.id) {
-              try {
-                await api.updateCertificate(cert.id, {
-                  status: 'issued',
-                  blockchain_tx_hash: txHash
-                });
-              } catch (err) {
-                console.error('Error updating cert:', err);
-              }
-            }
-            newHistoryItems.push({
-              code: cert.code,
-              studentName: cert.studentName,
-              program: cert.program,
-              txHash,
-              block: 42901100 + i,
-              timestamp: timestampStr
-            });
-          }
+    try {
+      const { ethereum, account } = await getMetaMaskAccount();
+      const timestampStr = new Date().toLocaleDateString('vi-VN');
+      const newHistoryItems = [];
+      const approvedIds = new Set();
+      const failedCertificates = [];
+      let failedEmailNotifications = 0;
+      let wasSignatureRejected = false;
 
-          setHistoryList(prev => [...newHistoryItems, ...prev]);
-          setHistoryTotal(prev => prev + newHistoryItems.length);
-          setApprovedToday(prev => prev + pendingList.length);
-          setGasSpent(prev => prev + (pendingList.length * 79500));
-          setPendingList([]);
-          setPendingTotal(prev => Math.max(0, prev - pendingList.length));
-          setPendingPage(1);
-          setHistoryPage(1);
-          setIsProcessing(false);
-        }, 1200);
-      }, 1000);
-    }, 800);
+      for (const cert of pendingList) {
+        try {
+          if (!cert.id) {
+            throw new Error('Không tìm thấy mã văn bằng để phê duyệt.');
+          }
+          const approval = await requestApprovalSignature(cert, ethereum, account);
+          setProcessStep(1);
+          const apiResult = await api.updateCertificate(cert.id, {
+            status: 'issued',
+            ...approval
+          });
+          if (!apiResult?.success) {
+            throw new Error(apiResult?.message || 'Không thể phê duyệt văn bằng.');
+          }
+          if (!apiResult.emailNotificationSent) failedEmailNotifications += 1;
+          approvedIds.add(cert.id);
+          newHistoryItems.push({
+            code: cert.code,
+            studentName: cert.studentName,
+            program: cert.program,
+            txHash: apiResult.blockchain?.txHash || apiResult.certificate?.blockchain_tx_hash || null,
+            block: apiResult.blockchain?.blockNumber || null,
+            timestamp: timestampStr
+          });
+          setProcessStep(2);
+        } catch (err) {
+          console.error(`Error updating certificate ${cert.code}:`, err);
+          failedCertificates.push(cert);
+          if (err.code === 4001) {
+            wasSignatureRejected = true;
+            break;
+          }
+        }
+      }
+
+      setProcessStep(3);
+      setHistoryList(prev => [...newHistoryItems, ...prev]);
+      setHistoryTotal(prev => prev + newHistoryItems.length);
+      setApprovedToday(prev => prev + newHistoryItems.length);
+      setGasSpent(prev => prev + (newHistoryItems.length * 79500));
+      setPendingList(prev => prev.filter(cert => !approvedIds.has(cert.id)));
+      setPendingTotal(prev => Math.max(0, prev - approvedIds.size));
+      setPendingPage(1);
+      setHistoryPage(1);
+      if (failedCertificates.length > 0) {
+        alert(wasSignatureRejected
+          ? 'Bạn đã từ chối yêu cầu ký trong MetaMask. Các văn bằng chưa ký vẫn ở trạng thái chờ duyệt.'
+          : `${failedCertificates.length} văn bằng chưa được phê duyệt. Vui lòng kiểm tra trạng thái sinh viên và thử lại.`);
+      }
+      if (failedEmailNotifications > 0) {
+        alert(`${failedEmailNotifications} email thông báo chưa gửi được. Vui lòng kiểm tra cấu hình email.`);
+      }
+    } catch (err) {
+      console.error('Failed to start batch certificate approval:', err);
+      alert(err.code === 4001
+        ? 'Bạn đã từ chối yêu cầu trong MetaMask.'
+        : 'Không thể bắt đầu phê duyệt: ' + err.message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -284,7 +424,16 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
         </div>
 
         <div className="sd-table-container">
-          <table className="sd-table">
+          <table className="sd-table svc-pending-table">
+            <colgroup>
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '19%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '11%' }} />
+              <col style={{ width: '11%' }} />
+            </colgroup>
             <thead>
               <tr>
                 <th>Mã số hiệu</th>
@@ -317,7 +466,8 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                     <td className="sd-td-bold">{row.code}</td>
                     <td>
                       <div className="sd-td-bold">{row.studentName}</div>
-                      <div className="sd-td-subtext">MSSV: {row.studentId} • Ngày sinh: {row.dob}</div>
+                      <div className="sd-td-subtext svc-student-meta">MSSV: {row.studentId || '—'}</div>
+                      <div className="sd-td-subtext svc-student-meta">Ngày sinh: {row.dob || '—'}</div>
                     </td>
                     <td>{row.program}</td>
                     <td>
@@ -327,7 +477,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                     </td>
                     <td>{row.system}</td>
                     <td>
-                      <span className="svc-badge-pending">
+                      <span className="svc-badge-pending svc-table-status">
                         <span className="sd-bc-dot" style={{ backgroundColor: '#d97706', boxShadow: '0 0 8px #d97706' }}></span>
                         Chờ duyệt
                       </span>
@@ -336,7 +486,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                       <button 
                         className="sd-btn-primary" 
                         onClick={() => handleOpenApprove(row)}
-                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        style={{ padding: '8px 10px', fontSize: '12px' }}
                         disabled={isProcessing}
                       >
                         Duyệt ký số
@@ -425,38 +575,38 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                     Dưới đây là phôi bản dịch văn bằng nội bộ. Việc phê duyệt sẽ băm mật mã và lưu trữ dữ liệu lên CSDL MySQL & Blockchain.
                   </div>
 
-                  <div className="svc-diploma-preview">
-                    <div className="svc-diploma-watermark">
-                      <FaShieldAlt size={160} />
-                    </div>
+                  {selectedCertLoading ? (
+                    <div className="svc-preview-message"><FaSpinner className="svc-spin" /> Đang tải thông tin văn bằng...</div>
+                  ) : selectedCertError ? (
+                    <div className="svc-preview-error" role="alert">{selectedCertError}</div>
+                  ) : (
+                    <>
+                      <CertificateDiplomaPreview certificate={{
+                        code: selectedCert.code,
+                        schoolName: selectedCert.schoolName,
+                        degreeType: selectedCert.degreeType,
+                        major: selectedCert.program,
+                        studentName: selectedCert.studentName,
+                        studentCode: selectedCert.studentId,
+                        dateOfBirth: selectedCert.dob,
+                        classification: selectedCert.rank,
+                        educationMode: selectedCert.system,
+                        issueDate: selectedCert.issueDate,
+                        status: 'pending'
+                      }} />
 
-                    <div className="svc-diploma-header">
-                      <div className="svc-diploma-nation">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                      <div className="svc-diploma-motto">Độc lập - Tự do - Hạnh phúc</div>
-                    </div>
-
-                    <div className="svc-diploma-title">BẰNG CỬ NHÂN</div>
-
-                    <div className="svc-diploma-body">
-                      Hiệu trưởng **TRƯỜNG ĐẠI HỌC CÔNG NGHỆ** <br />
-                      Cấp cho sinh viên: **{selectedCert.studentName}** <br />
-                      Sinh ngày: **{selectedCert.dob}** • Hệ đào tạo: **{selectedCert.system}** <br />
-                      Đã hoàn thành chương trình đào tạo ngành: **{selectedCert.program}** <br />
-                      Xếp loại tốt nghiệp: **{selectedCert.rank}** <br />
-                      Mã số hiệu lưu trữ: **{selectedCert.code}**
-                    </div>
-                  </div>
-
-                  <div className="svc-blockchain-data">
-                    <div className="svc-bc-row">
-                      <span className="svc-bc-label"><FaKey /> Ví ký phát hành đại diện:</span>
-                      <span className="svc-bc-value">{walletAddress || 'Chưa kết nối ví'}</span>
-                    </div>
-                    <div className="svc-bc-row">
-                      <span className="svc-bc-label"><FaDatabase /> Mạng lưới phát hành:</span>
-                      <span className="sd-badge green" style={{ fontSize: '10.5px' }}>Ethereum Sepolia Testnet</span>
-                    </div>
-                  </div>
+                      <div className="svc-blockchain-data">
+                        <div className="svc-bc-row">
+                          <span className="svc-bc-label"><FaKey /> Ví ký phát hành đại diện:</span>
+                          <span className="svc-bc-value">{walletAddress || 'Chưa kết nối ví'}</span>
+                        </div>
+                        <div className="svc-bc-row">
+                          <span className="svc-bc-label"><FaDatabase /> Mạng lưới phát hành:</span>
+                          <span className="sd-badge green" style={{ fontSize: '10.5px' }}>Ethereum Sepolia Testnet</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="svc-success-container">
@@ -549,8 +699,8 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                   <button 
                     className="sd-btn-primary" 
                     style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }} 
-                    onClick={handleTriggerMetaMask}
-                    disabled={isProcessing}
+                    onClick={handleApproveWithMetaMask}
+                    disabled={isProcessing || selectedCertLoading || Boolean(selectedCertError)}
                   >
                     <FaFileSignature /> Phê duyệt & Ký số
                   </button>
@@ -565,39 +715,15 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
         </div>
       )}
 
-      {/* ── METAMASK SIGNATURE SIMULATOR POPUP ── */}
-      {showMetaMask && (
-        <div className="svc-metamask-overlay">
-          <div className="svc-metamask-card">
-            <div className="svc-mm-header">
-              <div className="svc-mm-logo-area">
-                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e293b' }}>MetaMask Wallet</span>
-              </div>
-              <div className="svc-mm-net-badge">Ethereum Sepolia</div>
-            </div>
-            
-            <div className="svc-mm-body">
-              <div className="svc-mm-account">Ví quản trị: {walletAddress ? `${walletAddress.slice(0, 10)}...` : 'Chưa kết nối ví'}</div>
-              <FaShieldAlt style={{ fontSize: '40px', color: '#f97316' }} />
-              <div className="svc-mm-title">Yêu cầu ký chữ ký số</div>
-              <div className="svc-mm-desc">Xác nhận ký số phôi bằng {selectedCert?.code} và đẩy lên CSDL hệ thống.</div>
-            </div>
-
-            <div className="svc-mm-footer">
-              <button className="svc-mm-btn reject" onClick={handleRejectSignature}>Từ chối</button>
-              <button className="svc-mm-btn confirm" onClick={handleConfirmSignature}>Ký số (Sign)</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── BLOCKCHAIN TRANSACTION PIPELINE OVERLAY ── */}
       {isProcessing && (
         <div className="svc-modal-overlay">
           <div className="svc-modal" style={{ maxWidth: '480px', padding: '30px' }}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <FaSpinner className="fa-spin" style={{ fontSize: '40px', color: '#0f4cf5', marginBottom: '12px' }} />
-              <h4 className="svc-modal-title">Đang lưu CSDL & Blockchain</h4>
+              <h4 className="svc-modal-title">
+                {processStep === 0 ? 'Đang chờ MetaMask xác nhận' : 'Đang lưu CSDL & Blockchain'}
+              </h4>
               <p className="sd-td-subtext">Vui lòng chờ trong giây lát...</p>
             </div>
 
@@ -607,7 +733,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                   {processStep > 0 ? <FaCheck /> : '1'}
                 </div>
                 <span className={`svc-step-text ${processStep === 0 ? 'active' : 'done'}`}>
-                  Băm thông tin văn bằng số (SHA-256)
+                  Xác nhận chữ ký phê duyệt qua MetaMask
                 </span>
               </div>
               
@@ -616,7 +742,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                   {processStep > 1 ? <FaCheck /> : '2'}
                 </div>
                 <span className={`svc-step-text ${processStep < 1 ? 'pending' : processStep === 1 ? 'active' : 'done'}`}>
-                  Gửi dữ liệu ghi vào CSDL MySQL & Smart Contract
+                  Gửi phê duyệt và ghi dữ liệu
                 </span>
               </div>
 
@@ -625,7 +751,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
                   {processStep > 2 ? <FaCheck /> : '3'}
                 </div>
                 <span className={`svc-step-text ${processStep < 2 ? 'pending' : processStep === 2 ? 'active' : 'done'}`}>
-                  Đã ghi nhận khối thành công
+                  Chờ Blockchain xác nhận giao dịch
                 </span>
               </div>
             </div>

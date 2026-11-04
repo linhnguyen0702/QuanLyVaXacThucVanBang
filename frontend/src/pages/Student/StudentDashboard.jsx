@@ -6,7 +6,7 @@ import {
 } from 'react-icons/fa';
 import { api } from '../../services/api';
 import './StudentDashboard.css';
-import { WalletConnectButton } from '../../components/WalletConnection/WalletConnection';
+import { formatDateDisplay } from '../../utils/dateUtils';
 
 // Sub-components
 import StudentOverview from './StudentOverview';
@@ -95,16 +95,30 @@ const StudentDashboard = () => {
         if (res && res.success && res.certificates) {
           const mapped = res.certificates.map(c => ({
             id: c.certificate_code,
+            certificateCode: c.certificate_code,
             type: `Bằng Tốt Nghiệp ${c.degree_type || 'Đại học'}`,
             title: `Cử nhân ${c.major}`,
             school: c.school_name || "—",
+            degreeType: c.degree_type || 'Đại học',
+            major: c.major || '',
+            studentName: c.student_name || '',
+            studentCode: c.student_code || '',
+            dateOfBirth: formatDateDisplay(c.student_date_of_birth),
+            classification: c.classification || '',
+            educationMode: c.education_mode || '',
             gpa: `${c.gpa || '3.65'} (${c.classification || 'Xuất sắc'})`,
-            issueDate: c.issue_date ? new Date(c.issue_date).toLocaleDateString('vi-VN') : '25/07/2026',
-            status: c.status === 'issued' ? 'blockchain' : 'approve',
-            txHash: c.blockchain_tx_hash || '0x7f23a8c2d5e9b7eC81452D819280dEAc429ef993cc65319e75c8d0e5124b892a',
-            blockNumber: '14890251',
-            blockchainTime: c.issue_date ? new Date(c.issue_date).toLocaleString('vi-VN') : '25/07/2026',
-            qrCode: c.certificate_code
+            issueDate: formatDateDisplay(c.issue_date),
+            status: c.blockchain_confirmed ? 'blockchain' : 'approve',
+            certificateStatus: c.status,
+            txHash: c.blockchain_tx_hash || '',
+            blockchainConfirmed: Boolean(c.blockchain_confirmed),
+            blockchainNetwork: c.blockchain_network,
+            blockchainBlockNumber: c.blockchain_block_number,
+            blockchainTimestamp: c.blockchain_timestamp,
+            blockchainExplorerUrl: c.blockchain_explorer_url,
+            certificateHash: c.certificate_hash,
+            qrCodeUrl: c.qr_code_url,
+            qrCode: c.certificate_hash || c.certificate_code
           }));
           setCertificates(mapped);
         }
@@ -299,7 +313,6 @@ const StudentDashboard = () => {
             </div>
           </div>
         </div>
-        <WalletConnectButton user={currentUser} onWalletConnected={setCurrentUser} />
       </aside>
 
       {/* ── MAIN CONTENT ── */}

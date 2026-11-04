@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const certController = require('../controllers/certificate.controller');
-const { protect, authorize } = require('../middleware/auth.middleware');
+const { protect, optionalProtect, authorize } = require('../middleware/auth.middleware');
 
-router.get('/', certController.getCertificates);
+router.get('/', optionalProtect, certController.getCertificates);
 router.get('/stats/summary', certController.getStatsSummary);
 router.get('/stats/issuance-trend', protect, authorize('admin', 'school', 'officer'), certController.getIssuanceTrend);
 router.get('/stats/dashboard', protect, authorize('admin', 'school', 'officer'), certController.getDashboardStats);

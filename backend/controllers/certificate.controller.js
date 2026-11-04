@@ -1,7 +1,9 @@
 const db = require('../config/database');
 const crypto = require('crypto');
-const { issueCertificateOnChain, isBlockchainReady } = require('../config/blockchain');
+const { getAddress, verifyMessage } = require('ethers');
+const { getProvider, issueCertificateOnChain, isBlockchainReady } = require('../config/blockchain');
 const { getPagination } = require('../utils/pagination');
+const { sendCertificateEmail } = require('../utils/certificate-email');
 
 const CERTIFICATE_CLASSIFICATIONS = ['Xuất sắc', 'Giỏi', 'Khá', 'Trung bình'];
 
@@ -41,6 +43,66 @@ const generateCertificateHash = (certData) => {
   return '0x' + crypto.createHash('sha256').update(content).digest('hex');
 };
 
+const addBlockchainDetails = async (certificates) => {
+  const provider = getProvider();
+  if (!provider) {
+    return certificates.map((certificate) => ({
+      ...certificate,
+      blockchain_confirmed: false,
+      blockchain_network: null,
+      blockchain_block_number: null,
+      blockchain_timestamp: null,
+      blockchain_explorer_url: null
+    }));
+  }
+
+  let networkName = null;
+  let explorerBaseUrl = null;
+  try {
+    const network = await provider.getNetwork();
+    const chainId = network.chainId.toString();
+    networkName = chainId === '11155111' ? 'Ethereum Sepolia Testnet' : network.name;
+    explorerBaseUrl = chainId === '11155111' ? 'https://sepolia.etherscan.io' : null;
+  } catch (error) {
+    console.warn('Could not read blockchain network details:', error.message);
+  }
+
+  return Promise.all(certificates.map(async (certificate) => {
+    const details = {
+      ...certificate,
+      blockchain_confirmed: false,
+      blockchain_network: networkName,
+      blockchain_block_number: null,
+      blockchain_timestamp: null,
+      blockchain_explorer_url: certificate.blockchain_tx_hash && explorerBaseUrl
+        ? `${explorerBaseUrl}/tx/${certificate.blockchain_tx_hash}`
+        : null
+    };
+
+    if (!certificate.blockchain_tx_hash || !['issued', 'revoked'].includes(certificate.status)) {
+      return details;
+    }
+
+    try {
+      const receipt = await provider.getTransactionReceipt(certificate.blockchain_tx_hash);
+      if (!receipt || Number(receipt.status) !== 1) return details;
+
+      const block = await provider.getBlock(receipt.blockNumber);
+      if (!block) return details;
+
+      return {
+        ...details,
+        blockchain_confirmed: true,
+        blockchain_block_number: receipt.blockNumber,
+        blockchain_timestamp: new Date(Number(block.timestamp) * 1000).toISOString()
+      };
+    } catch (error) {
+      console.warn(`Could not read blockchain receipt for certificate ${certificate.id}:`, error.message);
+      return details;
+    }
+  }));
+};
+
 // @desc    Get all certificates with filtering, searching & pagination
 // @route   GET /api/certificates
 // @access  Public / Private
@@ -54,7 +116,8 @@ exports.getCertificates = async (req, res, next) => {
              COALESCE(registered_school.school_name, s.school_name) AS school_name,
              COALESCE(registered_school.school_code, s.school_code) AS school_code,
              s.logo_url as school_logo,
-             p.program_name, p.program_code
+             p.program_name, p.program_code,
+             st.date_of_birth AS student_date_of_birth
       FROM certificates c
       LEFT JOIN schools s ON c.school_id = s.id
       LEFT JOIN students st ON c.student_id = st.id
@@ -85,9 +148,14 @@ exports.getCertificates = async (req, res, next) => {
       params.push(school_id);
     }
 
+    if (req.user && req.user.role === 'student') {
+      query += ` AND (st.user_id = ? OR st.email = ?)`;
+      params.push(req.user.id, req.user.email);
+    }
+
     // Count total query
     const countQuery = query.replace(
-      /SELECT c\.\*,\s*COALESCE\(registered_school\.school_name, s\.school_name\) AS school_name,\s*COALESCE\(registered_school\.school_code, s\.school_code\) AS school_code,\s*s\.logo_url as school_logo,\s*p\.program_name, p\.program_code/,
+      /SELECT c\.\*,\s*COALESCE\(registered_school\.school_name, s\.school_name\) AS school_name,\s*COALESCE\(registered_school\.school_code, s\.school_code\) AS school_code,\s*s\.logo_url as school_logo,\s*p\.program_name, p\.program_code,\s*st\.date_of_birth AS student_date_of_birth/,
       'SELECT COUNT(*) as total'
     );
     const [countRows] = await db.query(countQuery, params);
@@ -96,7 +164,8 @@ exports.getCertificates = async (req, res, next) => {
     query += ` ORDER BY c.created_at DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
-    const [certificates] = await db.query(query, params);
+    const [certificateRows] = await db.query(query, params);
+    const certificates = await addBlockchainDetails(certificateRows);
 
     res.json({
       success: true,
@@ -121,6 +190,7 @@ exports.getCertificateById = async (req, res, next) => {
       `SELECT c.*, 
               COALESCE(registered_school.school_name, s.school_name) AS school_name,
               COALESCE(registered_school.school_code, s.school_code) AS school_code,
+              s.school_name AS issuing_school_name,
               s.website, s.logo_url as school_logo, s.wallet_address as school_wallet,
               p.program_name, p.program_code, p.education_system,
               st.date_of_birth, st.id_number, st.gender, st.place_of_birth
@@ -169,7 +239,6 @@ exports.createCertificate = async (req, res, next) => {
       blockchain_tx_hash,
       blockchain_certificate_id,
       ipfs_hash,
-      qr_code_url,
       pdf_url,
       status
     } = req.body;
@@ -232,6 +301,13 @@ exports.createCertificate = async (req, res, next) => {
     }
 
     const validStudent = studentRows[0];
+    if (validStudent.graduation_status === 'suspended') {
+      return res.status(400).json({
+        success: false,
+        message: 'Sinh viên đang tạm dừng học tập nên không đủ điều kiện cấp văn bằng.'
+      });
+    }
+
     if (school_id && Number(school_id) !== Number(validStudent.school_id)) {
       return res.status(400).json({
         success: false,
@@ -268,7 +344,7 @@ exports.createCertificate = async (req, res, next) => {
       gpa: cleanGpa || '3.50'
     });
 
-    const finalQrCode = qr_code_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(finalHash)}`;
+    const finalQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(finalHash)}`;
 
     const [result] = await db.query(
       `INSERT INTO certificates 
@@ -316,11 +392,18 @@ exports.createCertificate = async (req, res, next) => {
     }
 
     const [newCert] = await db.query('SELECT * FROM certificates WHERE id = ?', [result.insertId]);
+    const emailNotificationSent = await sendCertificateEmail({
+      email: validStudent.email,
+      studentName: validStudent.full_name,
+      certificate: newCert[0],
+      status: 'pending'
+    });
 
     res.status(201).json({
       success: true,
       message: 'Tạo văn bằng thành công! Văn bằng ở trạng thái Chờ xác thực tại trang Xác thực.',
-      certificate: newCert[0]
+      certificate: newCert[0],
+      emailNotificationSent
     });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
@@ -349,7 +432,9 @@ exports.updateCertificate = async (req, res, next) => {
       decision_number,
       blockchain_tx_hash,
       status,
-      revoke_reason
+      revoke_reason,
+      approvalNonce,
+      approvalSignature
     } = req.body;
 
     const [existing] = await db.query('SELECT * FROM certificates WHERE id = ?', [id]);
@@ -373,6 +458,88 @@ exports.updateCertificate = async (req, res, next) => {
 
     // Nếu đây là luồng phê duyệt từ SchoolVerifyCertificates (pending -> issued)
     if (isApprovingFlow) {
+      if (!req.user?.wallet_address || !/^[0-9a-f]{32}$/i.test(approvalNonce || '') || !approvalSignature) {
+        return res.status(400).json({
+          success: false,
+          message: 'Thiếu chữ ký xác nhận phê duyệt từ ví MetaMask đã liên kết.'
+        });
+      }
+
+      let linkedWallet;
+      try {
+        linkedWallet = getAddress(req.user.wallet_address);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Địa chỉ ví liên kết với tài khoản không hợp lệ.'
+        });
+      }
+
+      const approvalMessage = [
+        'Xác nhận phê duyệt văn bằng điện tử',
+        `Mã văn bằng: ${currentCert.certificate_code}`,
+        `ID văn bằng: ${currentCert.id}`,
+        `Ví phê duyệt: ${linkedWallet}`,
+        `Nonce: ${approvalNonce}`,
+        'Network: Ethereum Sepolia'
+      ].join('\n');
+
+      let recoveredWallet;
+      try {
+        recoveredWallet = verifyMessage(approvalMessage, approvalSignature);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Chữ ký MetaMask không hợp lệ hoặc không thể xác minh.'
+        });
+      }
+      if (recoveredWallet.toLowerCase() !== linkedWallet.toLowerCase()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Chữ ký không thuộc ví đã liên kết với tài khoản đang đăng nhập.'
+        });
+      }
+
+      const [studentRows] = await db.query(
+        `SELECT student_code, full_name, email, department, school_id, graduation_status
+         FROM students
+         WHERE id = ?`,
+        [currentCert.student_id]
+      );
+      if (studentRows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không tìm thấy hồ sơ sinh viên của văn bằng này.'
+        });
+      }
+      if (studentRows[0].graduation_status === 'suspended') {
+        return res.status(400).json({
+          success: false,
+          message: 'Sinh viên đang tạm dừng học tập nên không đủ điều kiện cấp văn bằng.'
+        });
+      }
+
+      const student = studentRows[0];
+      const mismatchedFields = [];
+      if (normalizeText(currentCert.student_code) !== normalizeText(student.student_code)) {
+        mismatchedFields.push('MSSV');
+      }
+      if (normalizeText(currentCert.student_name) !== normalizeText(student.full_name)) {
+        mismatchedFields.push('họ tên');
+      }
+      if (normalizeText(currentCert.major) !== normalizeText(student.department)) {
+        mismatchedFields.push('ngành đào tạo');
+      }
+      if (Number(currentCert.school_id) !== Number(student.school_id)) {
+        mismatchedFields.push('trường đào tạo');
+      }
+      if (mismatchedFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Thông tin văn bằng không khớp với hồ sơ sinh viên ở mục ${mismatchedFields.join(', ')}. Vui lòng sửa văn bằng cho khớp trước khi phê duyệt.`
+        });
+      }
+
       let finalTxHash = blockchain_tx_hash || null;
       let finalBlockNumber = null;
       let finalBlockchainCertId = currentCert.blockchain_certificate_id || null;
@@ -413,9 +580,15 @@ exports.updateCertificate = async (req, res, next) => {
         `UPDATE certificates 
          SET status = 'issued',
              blockchain_tx_hash = COALESCE(?, blockchain_tx_hash),
-             blockchain_certificate_id = COALESCE(?, blockchain_certificate_id)
+             blockchain_certificate_id = COALESCE(?, blockchain_certificate_id),
+             qr_code_url = ?
          WHERE id = ?`,
-        [finalTxHash, finalBlockchainCertId, id]
+        [
+          finalTxHash,
+          finalBlockchainCertId,
+          `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentCert.certificate_hash)}`,
+          id
+        ]
       );
 
       // Ghi audit log cho sự kiện phê duyệt blockchain
@@ -435,12 +608,19 @@ exports.updateCertificate = async (req, res, next) => {
       }
 
       const [updated] = await db.query('SELECT * FROM certificates WHERE id = ?', [id]);
+      const emailNotificationSent = await sendCertificateEmail({
+        email: student.email,
+        studentName: student.full_name,
+        certificate: updated[0],
+        status: 'issued'
+      });
       return res.json({
         success: true,
         message: finalTxHash
           ? 'Xac thuc van bang len Blockchain Sepolia thanh cong! TxHash: ' + finalTxHash
           : 'Da phe duyet van bang (luu DB). Blockchain tam thoi khong kha dung.',
         certificate: updated[0],
+        emailNotificationSent,
         blockchain: finalTxHash ? {
           txHash: finalTxHash,
           blockNumber: finalBlockNumber,
@@ -504,6 +684,13 @@ exports.updateCertificate = async (req, res, next) => {
     }
 
     const validStudent = studentRows[0];
+    if (validStudent.graduation_status === 'suspended') {
+      return res.status(400).json({
+        success: false,
+        message: 'Sinh viên đang tạm dừng học tập nên không đủ điều kiện cấp văn bằng.'
+      });
+    }
+
     finalStudentId = validStudent.id;
     finalStudentCode = validStudent.student_code;
 

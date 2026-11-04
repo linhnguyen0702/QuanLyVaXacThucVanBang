@@ -4,16 +4,16 @@ const getRoleNotifications = async (user) => {
   if (user.role === 'student') {
     const [rows] = await db.query(
       `SELECT c.id, c.certificate_code, c.student_name, c.major, c.status,
-              c.updated_at, c.revoke_reason, s.school_name
+              c.certificate_hash, c.qr_code_url, c.updated_at, c.revoke_reason, s.school_name
        FROM certificates c
        INNER JOIN students st ON st.id = c.student_id
        LEFT JOIN schools s ON s.id = c.school_id
-       WHERE st.email = ?
+       WHERE (st.user_id = ? OR st.email = ?)
          AND c.status IN ('pending', 'issued', 'revoked')
          AND c.updated_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
        ORDER BY c.updated_at DESC
        LIMIT 100`,
-      [user.email]
+      [user.id, user.email]
     );
     return rows;
   }
@@ -48,7 +48,7 @@ const toNotification = (certificate) => {
       type: 'issue'
     },
     issued: {
-      title: 'Văn bằng đã được xác thực',
+      title: 'Văn bằng đã được phê duyệt',
       type: 'blockchain'
     },
     revoked: {
@@ -61,13 +61,18 @@ const toNotification = (certificate) => {
   const reason = certificate.status === 'revoked' && certificate.revoke_reason
     ? ` Lý do: ${certificate.revoke_reason}`
     : '';
+  const hash = certificate.status !== 'revoked' && certificate.certificate_hash
+    ? ` Mã SHA-256: ${certificate.certificate_hash}.`
+    : '';
 
   return {
     id: `certificate-${certificate.id}-${certificate.status}-${new Date(certificate.updated_at).getTime()}`,
     title: status.title,
-    desc: `${certificate.certificate_code} - ${certificate.student_name}, ngành ${certificate.major}${school}.${reason}`,
+    desc: `${certificate.certificate_code} - ${certificate.student_name}, ngành ${certificate.major}${school}.${reason}${hash}`,
     time: certificate.updated_at,
     type: status.type,
+    certificateHash: certificate.status !== 'revoked' ? certificate.certificate_hash : null,
+    qrCodeUrl: certificate.status !== 'revoked' ? certificate.qr_code_url : null,
     unread: true
   };
 };

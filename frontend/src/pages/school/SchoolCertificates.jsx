@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaPlus, FaSearch, FaEye, FaEdit, FaTrash, FaQrcode, 
-  FaTimes, FaCertificate, FaShieldAlt, FaDownload, FaCheck, FaExclamationTriangle, FaSpinner
+  FaTimes, FaCertificate, FaDownload, FaCheck, FaExclamationTriangle, FaSpinner
 } from 'react-icons/fa';
 import { api } from '../../services/api';
+import CertificateDiplomaPreview from '../../components/CertificateDiplomaPreview';
+import CertificateBlockchainInfo from '../../components/CertificateBlockchainInfo';
 import { formatDateForInput, formatDateDisplay, getTodayDateInput } from '../../utils/dateUtils';
 import Pagination from '../../components/Pagination/Pagination';
 
@@ -245,6 +247,16 @@ const SchoolCertificates = () => {
       return;
     }
 
+    if (matchedStudent.graduation_status === 'suspended') {
+      setAlertModal({
+        open: true,
+        title: 'Sinh viên chưa đủ điều kiện cấp bằng',
+        message: 'Sinh viên đang tạm dừng học tập nên không thể tạo văn bằng.',
+        type: 'warning'
+      });
+      return;
+    }
+
     // 4. Ràng buộc: Đúng mã đúng tên mới cho tạo (so sánh chính xác họ tên nhập vào với họ tên gốc trong hồ sơ)
     const registeredName = matchedStudent.full_name || matchedStudent.fullName || '';
     if (normalizeStr(registeredName) !== normalizeStr(stName)) {
@@ -287,7 +299,9 @@ const SchoolCertificates = () => {
 
       if (res && res.success) {
         setIsAddOpen(false);
-        showToast('Tạo văn bằng mới thành công! Văn bằng ở trạng thái Chờ duyệt tại trang Xác thực.');
+        showToast(res.emailNotificationSent
+          ? 'Tạo văn bằng thành công, email đã gửi đến sinh viên.'
+          : 'Tạo văn bằng thành công, nhưng chưa gửi được email cho sinh viên.');
         fetchCertificates();
       } else {
         const msg = res.message || 'Lỗi tạo văn bằng.';
@@ -427,6 +441,16 @@ const SchoolCertificates = () => {
         open: true,
         title: 'Mã sinh viên không hợp lệ',
         message: `Không tìm thấy sinh viên có mã "${stCode}" trên hệ thống, vui lòng kiểm tra lại!`,
+        type: 'warning'
+      });
+      return;
+    }
+
+    if (validStudent.graduation_status === 'suspended') {
+      setAlertModal({
+        open: true,
+        title: 'Sinh viên chưa đủ điều kiện cấp bằng',
+        message: 'Sinh viên đang tạm dừng học tập nên không thể cập nhật văn bằng.',
         type: 'warning'
       });
       return;
@@ -1042,45 +1066,22 @@ const SchoolCertificates = () => {
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsViewOpen(false)}><FaTimes /></button>
             </div>
-            <div className="sd-modal-body">
-              <div className="sd-cert-preview-box">
-                <div className="sd-cert-preview-watermark"><FaShieldAlt /></div>
-                <h4 style={{ color: '#0f4cf5', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px' }}>BẰNG TỐT NGHIỆP</h4>
-                <div className="sd-cert-title">{(selectedCert.degree_type || selectedCert.degreeType || 'ĐẠI HỌC').toUpperCase()}</div>
-                <div className="sd-cert-sub">Chuyên ngành: <strong>{selectedCert.major}</strong> ({selectedCert.education_mode || selectedCert.educationMode || 'Chính quy'})</div>
-                
-                <div className="sd-detail-grid" style={{ textAlign: 'left', marginTop: '20px' }}>
-                  <div className="sd-detail-item">
-                    <span className="sd-detail-label">Người được cấp:</span>
-                    <span className="sd-detail-value">{selectedCert.student_name || selectedCert.studentName} (MSSV: {selectedCert.student_code || selectedCert.studentCode})</span>
-                  </div>
-                  <div className="sd-detail-item">
-                    <span className="sd-detail-label">Số hiệu văn bằng:</span>
-                    <span className="sd-detail-value">{selectedCert.certificate_code || selectedCert.code}</span>
-                  </div>
-                  <div className="sd-detail-item">
-                    <span className="sd-detail-label">Xếp loại:</span>
-                    <span className="sd-detail-value">{selectedCert.classification} (GPA: {selectedCert.gpa})</span>
-                  </div>
-                  <div className="sd-detail-item">
-                    <span className="sd-detail-label">Số quyết định:</span>
-                    <span className="sd-detail-value">{selectedCert.decision_number || selectedCert.decisionNumber}</span>
-                  </div>
-                  <div className="sd-detail-item">
-                    <span className="sd-detail-label">Ngày cấp:</span>
-                    <span className="sd-detail-value">{formatDateDisplay(selectedCert.issue_date || selectedCert.issueDate)}</span>
-                  </div>
-                  <div className="sd-detail-item">
-                    <span className="sd-detail-label">Trạng thái:</span>
-                    <span className="sd-detail-value">{getStatusBadge(selectedCert.status)}</span>
-                  </div>
-                </div>
-
-                <div className="sd-cert-hash-box">
-                  <strong>Mã băm SHA-256 Blockchain:</strong><br />
-                  {selectedCert.certificate_hash || selectedCert.hash || '0x8f2a91b4c3d7e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0'}
-                </div>
-              </div>
+            <div className="sd-modal-body sd-cert-view-body">
+              <CertificateDiplomaPreview certificate={{
+                code: selectedCert.certificate_code || selectedCert.code,
+                schoolName: selectedCert.school_name || selectedCert.issuing_school_name,
+                degreeType: selectedCert.degree_type || selectedCert.degreeType,
+                major: selectedCert.major,
+                studentName: selectedCert.student_name || selectedCert.studentName,
+                studentCode: selectedCert.student_code || selectedCert.studentCode,
+                dateOfBirth: formatDateDisplay(selectedCert.student_date_of_birth || selectedCert.date_of_birth),
+                classification: selectedCert.classification,
+                educationMode: selectedCert.education_mode || selectedCert.educationMode,
+                issueDate: formatDateDisplay(selectedCert.issue_date || selectedCert.issueDate),
+                status: selectedCert.status,
+                certificateHash: selectedCert.certificate_hash || selectedCert.hash
+              }} />
+              <CertificateBlockchainInfo certificate={selectedCert} />
             </div>
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsViewOpen(false)}>Đóng</button>

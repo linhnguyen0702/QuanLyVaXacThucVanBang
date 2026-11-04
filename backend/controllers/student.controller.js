@@ -35,7 +35,11 @@ exports.getStudents = async (req, res, next) => {
     const pagination = getPagination(req.query);
 
     let query = `
-      SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code
+      SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code,
+             EXISTS (
+               SELECT 1 FROM certificates c
+               WHERE c.student_id = st.id AND c.status = 'issued'
+             ) AS has_issued_certificate
       FROM students st
       LEFT JOIN schools s ON st.school_id = s.id
       WHERE 1=1
@@ -107,7 +111,11 @@ exports.getStudentById = async (req, res, next) => {
     const { id } = req.params;
 
     const [rows] = await db.query(
-      `SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code
+      `SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code,
+              EXISTS (
+                SELECT 1 FROM certificates c
+                WHERE c.student_id = st.id AND c.status = 'issued'
+              ) AS has_issued_certificate
        FROM students st
        LEFT JOIN schools s ON st.school_id = s.id
        WHERE st.id = ? OR st.student_code = ? OR st.email = ?`,
@@ -310,10 +318,68 @@ exports.createStudent = async (req, res, next) => {
 exports.updateStudent = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const [existingStudents] = await db.query(
+      `SELECT st.id,
+              EXISTS (
+                SELECT 1 FROM certificates c
+                WHERE c.student_id = st.id AND c.status = 'issued'
+              ) AS has_issued_certificate
+       FROM students st
+       WHERE st.id = ?`,
+      [id]
+    );
+    if (existingStudents.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin sinh viên.' });
+    }
+
+    const isCertificateIssued = Number(existingStudents[0].has_issued_certificate) === 1;
+    if (isCertificateIssued) {
+      const editableFields = new Set(['email', 'id_number']);
+      const hasLockedField = Object.keys(req.body).some((field) => !editableFields.has(field));
+      if (hasLockedField) {
+        return res.status(400).json({
+          success: false,
+          message: 'Sinh viên đã được cấp văn bằng, chỉ có thể chỉnh sửa email và CCCD.'
+        });
+      }
+    }
+
     const {
       school_id, school_name, full_name, email, date_of_birth, gender, id_number,
       place_of_birth, nationality, department, class_name, graduation_status
     } = req.body;
+
+    const trimmedEmail = typeof email === 'string' ? email.trim() : email;
+    const trimmedIdNumber = typeof id_number === 'string' ? id_number.trim() : id_number;
+
+    if (trimmedEmail !== undefined && trimmedEmail !== null) {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ success: false, message: 'Email không đúng định dạng email thường hoặc email edu.' });
+      }
+
+      const [existingEmail] = await db.query(
+        'SELECT id FROM students WHERE email = ? AND id <> ?',
+        [trimmedEmail, id]
+      );
+      if (existingEmail.length > 0) {
+        return res.status(400).json({ success: false, message: 'Email này đã tồn tại trong hệ thống.' });
+      }
+    }
+
+    if (trimmedIdNumber !== undefined && trimmedIdNumber !== null) {
+      if (!/^\d{12}$/.test(trimmedIdNumber)) {
+        return res.status(400).json({ success: false, message: 'Số CCCD không đủ 12 chữ số hoặc không đúng định dạng CCCD.' });
+      }
+
+      const [existingCccd] = await db.query(
+        'SELECT id FROM students WHERE id_number = ? AND id <> ?',
+        [trimmedIdNumber, id]
+      );
+      if (existingCccd.length > 0) {
+        return res.status(400).json({ success: false, message: 'Số CCCD này đã tồn tại trong hệ thống.' });
+      }
+    }
 
     if (date_of_birth !== undefined && date_of_birth !== null && date_of_birth !== '') {
       if (!isValidDateOfBirth(date_of_birth)) {
@@ -364,7 +430,8 @@ exports.updateStudent = async (req, res, next) => {
       resolvedSchoolName = matchedSchool.school_name;
     }
 
-    await db.query(
+    const canEditIssuedStudent = Object.keys(req.body).every((field) => ['email', 'id_number'].includes(field));
+    const [updateResult] = await db.query(
       `UPDATE students
        SET school_id = COALESCE(?, school_id),
            school_name = COALESCE(?, school_name),
@@ -378,9 +445,29 @@ exports.updateStudent = async (req, res, next) => {
            department = COALESCE(?, department),
            class_name = COALESCE(?, class_name),
            graduation_status = COALESCE(?, graduation_status)
-       WHERE id = ?`,
-      [resolvedSchoolId, resolvedSchoolName, full_name, email, date_of_birth, gender, id_number, place_of_birth, nationality, department, class_name, graduation_status, id]
+       WHERE id = ?
+         AND (? = 1 OR NOT EXISTS (
+           SELECT 1 FROM certificates c
+           WHERE c.student_id = students.id AND c.status = 'issued'
+         ))`,
+      [resolvedSchoolId, resolvedSchoolName, full_name, trimmedEmail, date_of_birth, gender, trimmedIdNumber, place_of_birth, nationality, department, class_name, graduation_status, id, canEditIssuedStudent ? 1 : 0]
     );
+
+    if (updateResult.affectedRows === 0 && !canEditIssuedStudent) {
+      const [issuedCertificates] = await db.query(
+        `SELECT EXISTS (
+           SELECT 1 FROM certificates c
+           WHERE c.student_id = ? AND c.status = 'issued'
+         ) AS has_issued_certificate`,
+        [id]
+      );
+      if (issuedCertificates[0] && Number(issuedCertificates[0].has_issued_certificate) === 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Sinh viên đã được cấp văn bằng, chỉ có thể chỉnh sửa email và CCCD.'
+        });
+      }
+    }
 
     const [updated] = await db.query(
       `SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name, s.school_code FROM students st LEFT JOIN schools s ON st.school_id = s.id WHERE st.id = ?`,
@@ -401,6 +488,14 @@ exports.updateStudent = async (req, res, next) => {
       student: updated[0]
     });
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      if (error.sqlMessage && error.sqlMessage.includes('id_number')) {
+        return res.status(400).json({ success: false, message: 'Số CCCD này đã tồn tại trong hệ thống.' });
+      }
+      if (error.sqlMessage && error.sqlMessage.includes('email')) {
+        return res.status(400).json({ success: false, message: 'Email này đã tồn tại trong hệ thống.' });
+      }
+    }
     next(error);
   }
 };

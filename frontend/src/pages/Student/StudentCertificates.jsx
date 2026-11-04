@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { 
   FaSearch, FaEye, FaDownload, FaQrcode, FaPrint, 
-  FaCheckCircle, FaClock, FaTimes, FaLink, FaCopy 
+  FaCheckCircle, FaClock, FaTimes
 } from 'react-icons/fa';
+import CertificateDiplomaPreview from '../../components/CertificateDiplomaPreview';
+import CertificateBlockchainInfo from '../../components/CertificateBlockchainInfo';
 
 const StudentCertificates = ({ 
   certificates = [], 
@@ -36,11 +38,6 @@ const StudentCertificates = ({
     setLocalCert(null);
   };
 
-  const handleCopyTx = (txHash) => {
-    navigator.clipboard.writeText(txHash);
-    showToast('Đã sao chép mã giao dịch Blockchain!');
-  };
-
   const showToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3000);
@@ -50,8 +47,27 @@ const StudentCertificates = ({
     window.print();
   };
 
-  const handleDownloadQR = (certId) => {
-    showToast(`Đã tải xuống mã QR cho văn bằng ${certId} thành công!`);
+  const handleDownloadQR = (cert) => {
+    if (!cert?.certificateHash) {
+      showToast('Văn bằng chưa có mã QR.');
+      return;
+    }
+
+    const qrSvg = document.querySelector('.certificate-diploma-qr svg');
+    if (!qrSvg) {
+      showToast('Không thể tạo mã QR.');
+      return;
+    }
+
+    const svgContent = new XMLSerializer().serializeToString(qrSvg);
+    const objectUrl = URL.createObjectURL(new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = `${cert.id}-QR.svg`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
   };
 
   const handleDownloadMockPDF = (certTitle) => {
@@ -124,9 +140,17 @@ const StudentCertificates = ({
                   <span className="std-badge green">
                     <FaCheckCircle /> Đã ghi Blockchain
                   </span>
+                ) : activeCert.certificateStatus === 'issued' ? (
+                  <span className="std-badge amber">
+                    <FaClock /> Đã duyệt, chưa xác nhận Blockchain
+                  </span>
+                ) : activeCert.certificateStatus === 'revoked' ? (
+                  <span className="std-badge amber">
+                    <FaClock /> Đã thu hồi
+                  </span>
                 ) : (
                   <span className="std-badge amber">
-                    <FaClock /> Đã phê duyệt, chờ ghi
+                    <FaClock /> Chờ phê duyệt
                   </span>
                 )}
                 
@@ -140,8 +164,8 @@ const StudentCertificates = ({
                   </button>
                   <button 
                     className="std-icon-btn" 
-                    title="Tải QR Code"
-                    onClick={() => handleDownloadQR(cert.id)}
+                    title="Xem mã QR"
+                    onClick={() => handleOpenModal(cert)}
                   >
                     <FaQrcode />
                   </button>
@@ -174,119 +198,34 @@ const StudentCertificates = ({
               </button>
             </div>
 
-            <div className="std-modal-body">
+            <div className="std-modal-body std-cert-view-body">
               {/* Premium Certificate View */}
-              <div className="std-cert-view-container" id="printable-certificate">
-                {/* Decorative background vectors or watermarks */}
-                <div className="std-cert-view-watermark">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5">
-                    <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z"/>
-                  </svg>
-                </div>
-
-                <div className="std-cert-view-header">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '15px', color: '#475569' }}>
-                  Độc lập - Tự do - Hạnh phúc
-                </div>
-                
-                <div className="std-cert-view-title">BẰNG TỐT NGHIỆP</div>
-                <div className="std-cert-view-subtitle">HIỆU TRƯỞNG TRƯỜNG ĐẠI HỌC QUYẾT ĐỊNH CẤP</div>
-
-                <div className="std-cert-view-recipient-lbl">Cho sinh viên:</div>
-                <div className="std-cert-view-recipient-name">NGUYỄN VĂN AN</div>
-                
-                <div className="std-cert-view-desc">
-                  Đã hoàn thành chương trình đào tạo ngành <strong>{activeCert.title.replace('Cử nhân ', '')}</strong> tại <strong>{activeCert.school}</strong><br/>
-                  Quyết định công nhận tốt nghiệp số: <strong>{activeCert.id.replace('UNI-', 'QD-')}</strong><br/>
-                  Xếp loại tốt nghiệp: <strong>{activeCert.gpa || 'Khá'}</strong>
-                </div>
-
-                <div className="std-cert-view-meta-row">
-                  <div className="std-cert-view-sign">
-                    <span className="std-cert-view-sign-lbl">Số hiệu: {activeCert.id}</span>
-                    <span className="std-cert-view-sign-lbl" style={{ marginTop: '4px' }}>Ngày cấp: {activeCert.issueDate}</span>
-                  </div>
-
-                  <div className="std-cert-view-goldseal">
-                    {/* Golden seal SVG */}
-                    <svg viewBox="0 0 100 100" width="80" height="80">
-                      <circle cx="50" cy="50" r="45" fill="#f59e0b" stroke="#d97706" strokeWidth="3" />
-                      <circle cx="50" cy="50" r="38" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="3 2" />
-                      <path d="M50 20 L55 35 L70 35 L58 45 L62 60 L50 50 L38 60 L42 45 L30 35 L45 35 Z" fill="#ffffff" />
-                      <text x="50" y="80" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="bold" fontFamily="sans-serif">VERIFIED</text>
-                    </svg>
-                  </div>
-
-                  <div className="std-cert-view-sign">
-                    {/* Simulated signature image or typography */}
-                    <span style={{ fontFamily: 'Dancing Script, cursive', fontSize: '20px', color: '#1e3a8a', fontStyle: 'italic', fontWeight: 'bold' }}>
-                      Nguyen Van B
-                    </span>
-                    <span className="std-cert-view-sign-name">PGS.TS Nguyễn Văn B</span>
-                    <span className="std-cert-view-sign-lbl">Hiệu trưởng nhà trường</span>
-                  </div>
-                </div>
-
-                {/* QR Section */}
-                <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div className="std-cert-view-qrcode">
-                    {/* Standard SVG QR Code mock */}
-                    <svg width="72" height="72" viewBox="0 0 29 29" shapeRendering="crispEdges">
-                      <path fill="#ffffff" d="M0 0h29v29H0z"/>
-                      <path fill="#000000" d="M0 0h7v7H0zm22 0h7v7h-7zM0 22h7v7H0zm9 0h2v2H9zm2 2h2v3h-2zm4-2h1v1h-1zm1 1h2v2h-2zm2-1h1v2h-1zm2 1h1v1h-1zm-2 2h3v1h-3zm-6 2h2v1h-2zm-3-5h2v1H9zm1 1h2v1h-2zm5-1h1v2h-1zm-2-3h1v2h-1zm3 1h2v1h-2zm-1 2h1v1h-1zm3-3h2v1h-2zm-2-2h1v1h-1zm-2 1h2v1h-2zm-3-1h1v1h-1zm1 1h2v1h-2zm-3-1h1v1H9zm-7 8h5v5H2z"/>
-                    </svg>
-                  </div>
-                  <span className="std-cert-view-qrcode-lbl">Quét QR hoặc truy cập đường dẫn để xác thực</span>
-                </div>
+              <div id="printable-certificate">
+                <CertificateDiplomaPreview certificate={{
+                  code: activeCert.certificateCode || activeCert.id,
+                  schoolName: activeCert.school,
+                  degreeType: activeCert.degreeType,
+                  major: activeCert.major || activeCert.title?.replace(/^Cử nhân\s+/i, ''),
+                  studentName: activeCert.studentName,
+                  studentCode: activeCert.studentCode,
+                  dateOfBirth: activeCert.dateOfBirth,
+                  classification: activeCert.classification,
+                  educationMode: activeCert.educationMode,
+                  issueDate: activeCert.issueDate,
+                  status: activeCert.certificateStatus || (activeCert.status === 'blockchain' ? 'issued' : 'pending'),
+                  certificateHash: activeCert.certificateHash
+                }} />
               </div>
 
-              {/* Blockchain info panel */}
-              <div className="std-cert-bc-box">
-                <h4 className="std-cert-bc-title">
-                  <FaLink style={{ color: '#4f46e5' }} /> Thông tin lưu trữ Blockchain
-                </h4>
-                
-                {activeCert.status === 'blockchain' ? (
-                  <div className="std-cert-bc-grid">
-                    <span className="std-cert-bc-lbl">Trạng thái:</span>
-                    <span className="std-cert-bc-val status">
-                      <FaCheckCircle /> Đã chứng thực thành công trên Blockchain
-                    </span>
-
-                    <span className="std-cert-bc-lbl">Mạng lưới:</span>
-                    <span className="std-cert-bc-val">Polygon Mainnet (Public Layer 2)</span>
-
-                    <span className="std-cert-bc-lbl">Transaction Hash:</span>
-                    <span className="std-cert-bc-val mono" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeCert.txHash}</span>
-                      <button 
-                        onClick={() => handleCopyTx(activeCert.txHash)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-                        title="Sao chép Hash"
-                      >
-                        <FaCopy />
-                      </button>
-                    </span>
-
-                    <span className="std-cert-bc-lbl">Block ghi nhận:</span>
-                    <span className="std-cert-bc-val mono">{activeCert.blockNumber}</span>
-
-                    <span className="std-cert-bc-lbl">Thời gian ghi nhận:</span>
-                    <span className="std-cert-bc-val">{activeCert.blockchainTime}</span>
-                  </div>
-                ) : (
-                  <div className="std-cert-bc-grid">
-                    <span className="std-cert-bc-lbl">Trạng thái:</span>
-                    <span className="std-cert-bc-val status" style={{ color: '#ea580c' }}>
-                      <FaClock /> Đã phê duyệt ký số - Đang chờ ghi lên Blockchain
-                    </span>
-                    <span className="std-cert-bc-lbl">Chi tiết:</span>
-                    <span className="std-cert-bc-val">
-                      Văn bằng đã được Nhà trường phê duyệt thành công. Giao dịch đẩy dữ liệu lên Smart Contract đang được xếp hàng thực hiện.
-                    </span>
-                  </div>
-                )}
-              </div>
+              <CertificateBlockchainInfo certificate={{
+                status: activeCert.certificateStatus || 'pending',
+                blockchain_confirmed: activeCert.blockchainConfirmed,
+                blockchain_network: activeCert.blockchainNetwork,
+                blockchain_tx_hash: activeCert.txHash,
+                blockchain_block_number: activeCert.blockchainBlockNumber,
+                blockchain_timestamp: activeCert.blockchainTimestamp,
+                blockchain_explorer_url: activeCert.blockchainExplorerUrl
+              }} />
             </div>
 
             <div className="std-modal-footer">
@@ -295,7 +234,7 @@ const StudentCertificates = ({
               </button>
               <button 
                 className="std-btn-secondary" 
-                onClick={() => handleDownloadQR(activeCert.id)}
+                onClick={() => handleDownloadQR(activeCert)}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <FaQrcode /> Tải QR Code

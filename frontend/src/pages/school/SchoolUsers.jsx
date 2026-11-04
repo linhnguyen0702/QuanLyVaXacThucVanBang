@@ -35,8 +35,7 @@ const SchoolUsers = () => {
     email: '',
     password: '',
     department: '',
-    role: 'officer',
-    status: 'active'
+    role: ''
   });
 
   // Email regex validation
@@ -94,8 +93,7 @@ const SchoolUsers = () => {
       email: '',
       password: '',
       department: '',
-      role: 'officer',
-      status: 'active'
+      role: ''
     });
     setFormError('');
     setIsAddOpen(true);
@@ -110,6 +108,10 @@ const SchoolUsers = () => {
 
     if (!name || !email) {
       setFormError('Vui lòng nhập đầy đủ Họ tên và Email!');
+      return;
+    }
+    if (!formData.password || !formData.role) {
+      setFormError('Vui lòng nhập mật khẩu khởi tạo và chọn vai trò!');
       return;
     }
 
@@ -134,10 +136,10 @@ const SchoolUsers = () => {
     try {
       const res = await api.register({
         email: email,
-        password: formData.password || '123456',
+        password: formData.password,
         full_name: name,
         role: formData.role,
-        department: formData.department
+        department: formData.role === 'student' ? '' : formData.department
       });
 
       if (res && res.success) {
@@ -166,7 +168,7 @@ const SchoolUsers = () => {
       fullName: user.full_name || user.fullName || '',
       email: user.email || '',
       password: '',
-      department: user.department || 'Phòng Đào tạo',
+      department: user.role === 'student' ? '' : user.department || 'Phòng Đào tạo',
       role: user.role || 'viewer',
       status: user.is_active ? 'active' : 'inactive'
     });
@@ -210,7 +212,7 @@ const SchoolUsers = () => {
       const res = await api.updateUser(selectedUser.id, {
         full_name: name,
         email: email,
-        department: formData.department,
+        department: formData.role === 'student' ? '' : formData.department,
         role: formData.role
       });
       if (res && res.success) {
@@ -321,7 +323,7 @@ const SchoolUsers = () => {
                   <tr key={user.id}>
                     <td className="sd-td-bold">{user.full_name || user.fullName}</td>
                     <td>{user.email}</td>
-                    <td>{user.department || 'Phòng Đào tạo'}</td>
+                    <td>{user.role === 'student' ? '—' : user.department || '—'}</td>
                     <td>{getRoleBadge(user.role)}</td>
                     <td>
                       {user.is_active || user.status === 'active' ? (
@@ -364,7 +366,7 @@ const SchoolUsers = () => {
               </div>
               <button className="sd-modal-close-btn" onClick={() => setIsAddOpen(false)}><FaTimes /></button>
             </div>
-            <form onSubmit={handleAddSubmit}>
+            <form onSubmit={handleAddSubmit} autoComplete="off">
               <div className="sd-modal-body">
                 {formError && (
                   <div style={{
@@ -383,11 +385,12 @@ const SchoolUsers = () => {
                 <div className="sd-form-grid">
                   <div className="sd-form-group">
                     <label>Họ và tên *</label>
-                    <input 
-                      type="text" 
-                      className="sd-input" 
+                    <input
+                      type="text"
+                      className="sd-input"
                       required 
-                      placeholder="Nguyễn Văn A"
+                      autoComplete="off"
+                      placeholder="Nhập họ và tên"
                       value={formData.fullName} 
                       onChange={(e) => setFormData({...formData, fullName: e.target.value})} 
                     />
@@ -398,7 +401,8 @@ const SchoolUsers = () => {
                       type="email" 
                       className="sd-input" 
                       required 
-                      placeholder="an@school.edu.vn"
+                      autoComplete="off"
+                      placeholder="Nhập email"
                       value={formData.email} 
                       onChange={(e) => setFormData({...formData, email: e.target.value})} 
                     />
@@ -408,24 +412,34 @@ const SchoolUsers = () => {
                     <input 
                       type="password" 
                       className="sd-input" 
-                      placeholder="Nhập mật khẩu"
+                      required
+                      autoComplete="new-password"
+                      placeholder="Nhập mật khẩu khởi tạo"
                       value={formData.password} 
                       onChange={(e) => setFormData({...formData, password: e.target.value})} 
                     />
                   </div>
-                  <div className="sd-form-group">
-                    <label>Bộ phận / Phòng ban</label>
-                    <input 
-                      type="text" 
-                      className="sd-input" 
-                      placeholder="Ví dụ: Phòng Đào tạo"
-                      value={formData.department} 
-                      onChange={(e) => setFormData({...formData, department: e.target.value})} 
-                    />
-                  </div>
+                  {formData.role !== 'student' && (
+                    <div className="sd-form-group">
+                      <label>Bộ phận / Phòng ban</label>
+                      <input
+                        type="text"
+                        className="sd-input"
+                        autoComplete="off"
+                        placeholder="Nhập bộ phận / phòng ban"
+                        value={formData.department}
+                        onChange={(e) => setFormData({...formData, department: e.target.value})}
+                      />
+                    </div>
+                  )}
                   <div className="sd-form-group full-width">
                     <label>Vai trò</label>
-                    <select className="sd-input" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
+                    <select className="sd-input" required value={formData.role} onChange={(e) => setFormData({
+                      ...formData,
+                      role: e.target.value,
+                      ...(e.target.value === 'student' ? { department: '' } : {})
+                    })}>
+                      <option value="" disabled>Chọn vai trò</option>
                       <option value="admin">Quản trị viên (Admin)</option>
                       <option value="officer">Cán bộ nhập liệu</option>
                       <option value="viewer">Nhân viên tra cứu</option>
@@ -491,18 +505,24 @@ const SchoolUsers = () => {
                       onChange={(e) => setFormData({...formData, email: e.target.value})} 
                     />
                   </div>
-                  <div className="sd-form-group">
-                    <label>Bộ phận / Phòng ban</label>
-                    <input 
-                      type="text" 
-                      className="sd-input" 
-                      value={formData.department} 
-                      onChange={(e) => setFormData({...formData, department: e.target.value})} 
-                    />
-                  </div>
+                  {formData.role !== 'student' && (
+                    <div className="sd-form-group">
+                      <label>Bộ phận / Phòng ban</label>
+                      <input
+                        type="text"
+                        className="sd-input"
+                        value={formData.department}
+                        onChange={(e) => setFormData({...formData, department: e.target.value})}
+                      />
+                    </div>
+                  )}
                   <div className="sd-form-group">
                     <label>Vai trò</label>
-                    <select className="sd-input" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
+                    <select className="sd-input" value={formData.role} onChange={(e) => setFormData({
+                      ...formData,
+                      role: e.target.value,
+                      ...(e.target.value === 'student' ? { department: '' } : {})
+                    })}>
                       <option value="admin">Quản trị viên (Admin)</option>
                       <option value="officer">Cán bộ nhập liệu</option>
                       <option value="viewer">Nhân viên tra cứu</option>

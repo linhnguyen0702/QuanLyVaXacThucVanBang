@@ -42,13 +42,18 @@ const initBlockchain = () => {
     const rpcUrl = process.env.SEPOLIA_RPC_URL
       || (process.env.INFURA_PROJECT_ID ? `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}` : null);
 
-    if (!rpcUrl || !privateKey || !contractAddress) {
-      console.warn('⚠️  Blockchain env vars missing (SEPOLIA_RPC_URL, PRIVATE_KEY, CONTRACT_ADDRESS). Blockchain features disabled.');
+    if (!rpcUrl) {
+      console.warn('⚠️  Blockchain RPC URL missing (SEPOLIA_RPC_URL or INFURA_PROJECT_ID). Blockchain features disabled.');
       return false;
     }
 
     // Kết nối tới Sepolia
     provider = new ethers.JsonRpcProvider(rpcUrl);
+
+    if (!privateKey || !contractAddress) {
+      console.warn('⚠️  PRIVATE_KEY or CONTRACT_ADDRESS missing. Blockchain is available in read-only mode.');
+      return false;
+    }
 
     // Tạo signer từ private key
     signer = new ethers.Wallet(privateKey, provider);

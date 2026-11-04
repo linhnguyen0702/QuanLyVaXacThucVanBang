@@ -1,0 +1,172 @@
+.certificate-diploma {
+  width: 100%;
+  max-width: 520px;
+  min-height: 570px;
+  margin: 0 auto;
+  border: 7px double #d6a829;
+  padding: 34px 38px 28px;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 247, 215, 0.9), rgba(255, 255, 255, 0.98) 70%),
+    #fffdf5;
+  border-radius: 5px;
+  position: relative;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.certificate-diploma::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(214, 168, 41, 0.45);
+  pointer-events: none;
+}
+
+.certificate-diploma-watermark {
+  position: absolute;
+  top: 54%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.07;
+  color: #d97706;
+  pointer-events: none;
+}
+
+.certificate-diploma-header {
+  text-align: center;
+  font-family: 'Times New Roman', serif;
+  margin-bottom: 22px;
+  position: relative;
+}
+
+.certificate-diploma-nation {
+  font-weight: bold;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+}
+
+.certificate-diploma-motto {
+  font-size: 12px;
+  margin: 4px auto 0;
+  border-bottom: 1px solid #d97706;
+  width: fit-content;
+  padding-bottom: 4px;
+}
+
+.certificate-diploma-school {
+  margin-top: 22px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.certificate-diploma-issue-label {
+  text-align: center;
+  font-family: 'Times New Roman', serif;
+  font-size: 15px;
+  color: #451a03;
+}
+
+.certificate-diploma-title {
+  text-align: center;
+  color: #c62828;
+  font-size: 25px;
+  font-weight: 800;
+  margin: 6px 0 20px;
+  font-family: 'Times New Roman', serif;
+}
+
+.certificate-diploma-major {
+  text-align: center;
+  font-size: 19px;
+  font-weight: 700;
+  color: #451a03;
+  margin: -10px 0 24px;
+  overflow-wrap: anywhere;
+  font-family: 'Times New Roman', serif;
+}
+
+.certificate-diploma-body {
+  font-family: 'Times New Roman', serif;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #451a03;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-diploma-detail {
+  margin-top: 5px;
+}
+
+.certificate-diploma-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 22px;
+  font-family: 'Times New Roman', serif;
+  font-size: 13px;
+  color: #451a03;
+  position: relative;
+  z-index: 1;
+}
+
+.certificate-diploma-meta div {
+  display: flex;
+  gap: 8px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.certificate-diploma-meta span {
+  min-width: 70px;
+}
+
+.certificate-diploma-qr {
+  flex: 0 0 auto;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  background: #fff;
+  border: 1px solid #d6a829;
+}
+
+.certificate-diploma-qr svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 600px) {
+  .certificate-diploma {
+    min-height: 520px;
+    padding: 28px 22px 24px;
+    border-width: 5px;
+  }
+
+  .certificate-diploma-nation {
+    font-size: 11px;
+  }
+
+  .certificate-diploma-title {
+    font-size: 21px;
+  }
+
+  .certificate-diploma-footer {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .certificate-diploma-qr {
+    width: 68px;
+    height: 68px;
+  }
+}

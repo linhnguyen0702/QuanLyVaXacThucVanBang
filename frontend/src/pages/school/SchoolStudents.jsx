@@ -82,6 +82,7 @@ const SchoolStudents = ({ onNavigate }) => {
 
   const isEmailInvalid = formData.email.trim().length > 0 && !emailRegex.test(formData.email.trim());
   const isCccdInvalid = formData.idNumber.trim().length > 0 && !cccdRegex.test(formData.idNumber.trim());
+  const isCertificateIssued = Boolean(selectedStudent?.has_issued_certificate);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -292,23 +293,27 @@ const SchoolStudents = ({ onNavigate }) => {
     if (!selectedStudent) return;
     setFormError('');
 
-    const code = (formData.studentCode || '').trim();
-    const name = (formData.fullName || '').trim();
     const emailStr = (formData.email || '').trim();
     const idNum = (formData.idNumber || '').trim();
-    const dobStr = (formData.dob || '').trim();
 
-    if (!code || !name || !emailStr || !idNum || !dobStr) {
+    if (!emailStr || !idNum) {
+      setFormError('Vui lòng nhập đầy đủ email và số CCCD!');
+      return;
+    }
+
+    const code = (formData.studentCode || '').trim();
+    const dobStr = (formData.dob || '').trim();
+    if (!isCertificateIssued && (!code || !formData.fullName.trim() || !dobStr)) {
       setFormError('Vui lòng nhập đầy đủ MSSV, Họ tên, Email, Ngày sinh và Số CCCD!');
       return;
     }
 
-    if (dobStr > todayDate) {
+    if (!isCertificateIssued && dobStr > todayDate) {
       showAlertModal('Ngày sinh không thể lớn hơn ngày hiện tại.', 'Ngày sinh không hợp lệ', 'danger');
       return;
     }
 
-    if (!isAtLeastEighteen(dobStr)) {
+    if (!isCertificateIssued && !isAtLeastEighteen(dobStr)) {
       showAlertModal('Sinh viên phải đủ 18 tuổi mới có thể cập nhật hồ sơ.', 'Không đủ điều kiện cập nhật sinh viên', 'danger');
       return;
     }
@@ -326,7 +331,7 @@ const SchoolStudents = ({ onNavigate }) => {
     }
 
     // 3. Kiểm tra trùng MSSV với sinh viên khác -> Hiển thị thông báo trên màn hình
-    const isDuplicateCode = students.some(
+    const isDuplicateCode = !isCertificateIssued && students.some(
       s => s.id !== selectedStudent.id && (s.student_code || s.studentCode || '').toString().trim().toLowerCase() === code.toLowerCase()
     );
     if (isDuplicateCode) {
@@ -335,19 +340,22 @@ const SchoolStudents = ({ onNavigate }) => {
     }
 
     try {
-      const res = await api.updateStudent(selectedStudent.id, {
-        student_code: code,
-        full_name: name,
-        school_name: (formData.schoolName || '').trim(),
-        email: emailStr,
-        date_of_birth: dobStr,
-        gender: formData.gender,
-        id_number: idNum,
-        place_of_birth: formData.placeOfBirth,
-        department: formData.department,
-        class_name: formData.className,
-        graduation_status: formData.graduationStatus
-      });
+      const updateData = isCertificateIssued
+        ? { email: emailStr, id_number: idNum }
+        : {
+          student_code: code,
+          full_name: formData.fullName.trim(),
+          school_name: (formData.schoolName || '').trim(),
+          email: emailStr,
+          date_of_birth: dobStr,
+          gender: formData.gender,
+          id_number: idNum,
+          place_of_birth: formData.placeOfBirth,
+          department: formData.department,
+          class_name: formData.className,
+          graduation_status: formData.graduationStatus
+        };
+      const res = await api.updateStudent(selectedStudent.id, updateData);
 
       if (res && res.success) {
         setIsEditOpen(false);
@@ -761,6 +769,7 @@ const SchoolStudents = ({ onNavigate }) => {
                       type="text" 
                       className="sd-input" 
                       required 
+                      disabled={isCertificateIssued}
                       value={formData.studentCode} 
                       onChange={(e) => setFormData({...formData, studentCode: e.target.value})} 
                     />
@@ -771,6 +780,7 @@ const SchoolStudents = ({ onNavigate }) => {
                       type="text" 
                       className="sd-input" 
                       required 
+                      disabled={isCertificateIssued}
                       value={formData.fullName} 
                       onChange={(e) => setFormData({...formData, fullName: e.target.value})} 
                     />
@@ -781,6 +791,7 @@ const SchoolStudents = ({ onNavigate }) => {
                       type="text" 
                       className="sd-input" 
                       placeholder="Ví dụ: Trường Đại học Công nghệ"
+                      disabled={isCertificateIssued}
                       value={formData.schoolName} 
                       onChange={(e) => setFormData({...formData, schoolName: e.target.value})} 
                     />
@@ -806,13 +817,14 @@ const SchoolStudents = ({ onNavigate }) => {
                     <input 
                       type="date" 
                       className="sd-input" 
+                      disabled={isCertificateIssued}
                       value={formData.dob} 
                       onChange={(e) => setFormData({...formData, dob: e.target.value})} 
                     />
                   </div>
                   <div className="sd-form-group">
                     <label>Giới tính</label>
-                    <select className="sd-input" value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})}>
+                    <select className="sd-input" disabled={isCertificateIssued} value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})}>
                       <option value="Nam">Nam</option>
                       <option value="Nữ">Nữ</option>
                       <option value="Khác">Khác</option>
@@ -823,6 +835,7 @@ const SchoolStudents = ({ onNavigate }) => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      disabled={isCertificateIssued}
                       value={formData.placeOfBirth} 
                       onChange={(e) => setFormData({...formData, placeOfBirth: e.target.value})} 
                     />
@@ -852,6 +865,7 @@ const SchoolStudents = ({ onNavigate }) => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      disabled={isCertificateIssued}
                       placeholder="Ví dụ: Công nghệ thông tin, An toàn thông tin,..."
                       value={formData.department} 
                       onChange={(e) => setFormData({...formData, department: e.target.value})} 
@@ -862,13 +876,14 @@ const SchoolStudents = ({ onNavigate }) => {
                     <input 
                       type="text" 
                       className="sd-input" 
+                      disabled={isCertificateIssued}
                       value={formData.className} 
                       onChange={(e) => setFormData({...formData, className: e.target.value})} 
                     />
                   </div>
                   <div className="sd-form-group full-width">
                     <label>Trạng thái xét tốt nghiệp</label>
-                    <select className="sd-input" value={formData.graduationStatus} onChange={(e) => setFormData({...formData, graduationStatus: e.target.value})}>
+                    <select className="sd-input" disabled={isCertificateIssued} value={formData.graduationStatus} onChange={(e) => setFormData({...formData, graduationStatus: e.target.value})}>
                       <option value="eligible">Đủ điều kiện cấp bằng</option>
                       <option value="issued">Đã được cấp bằng</option>
                       <option value="studying">Đang theo học</option>

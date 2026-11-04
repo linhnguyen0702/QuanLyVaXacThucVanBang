@@ -62,6 +62,36 @@
   gap: 6px;
 }
 
+.svc-pending-table {
+  table-layout: fixed;
+}
+
+.svc-pending-table th,
+.svc-pending-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.svc-pending-table td:nth-child(6),
+.svc-pending-table td:nth-child(7) {
+  white-space: nowrap;
+}
+
+.svc-student-meta {
+  display: block;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.svc-table-status {
+  padding: 5px 8px;
+}
+
+.svc-pending-table td .sd-btn-primary {
+  min-width: 104px;
+  white-space: nowrap;
+}
+
 /* Details and Approval Modal */
 .svc-modal-overlay {
   position: fixed;
@@ -153,241 +183,22 @@
   border-bottom-right-radius: 16px;
 }
 
-/* Diploma Preview template */
-.svc-diploma-preview {
-  border: 8px double #d97706;
-  padding: 30px;
-  background-color: #fffbeb;
+.svc-preview-message,
+.svc-preview-error {
+  padding: 18px;
   border-radius: 8px;
-  position: relative;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-}
-
-.svc-diploma-watermark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0.04;
-  color: #d97706;
-  pointer-events: none;
-}
-
-.svc-diploma-header {
-  text-align: center;
-  font-family: 'Times New Roman', serif;
-  margin-bottom: 24px;
-}
-
-.svc-diploma-nation {
-  font-weight: bold;
-  font-size: 14px;
-  letter-spacing: 1px;
-}
-
-.svc-diploma-motto {
-  font-size: 12px;
-  margin-top: 4px;
-  border-bottom: 1px solid #d97706;
-  width: 160px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-bottom: 4px;
-}
-
-.svc-diploma-title {
-  text-align: center;
-  color: #92400e;
-  font-size: 22px;
-  font-weight: 800;
-  margin: 16px 0;
-  font-family: 'Times New Roman', serif;
-}
-
-.svc-diploma-body {
-  font-family: 'Times New Roman', serif;
-  font-size: 14px;
-  line-height: 1.8;
-  color: #451a03;
-  margin-bottom: 24px;
-}
-
-.svc-diploma-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-top: 40px;
-  font-family: 'Times New Roman', serif;
-}
-
-.svc-diploma-sign {
   text-align: center;
 }
 
-.svc-diploma-seal-spot {
-  position: relative;
-  width: 70px;
-  height: 70px;
-}
-
-.svc-diploma-seal {
-  position: absolute;
-  top: -15px;
-  left: 10px;
-  width: 60px;
-  height: 60px;
-  border: 2px dashed #ef4444;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ef4444;
-  font-size: 8px;
-  font-weight: bold;
-  transform: rotate(-10deg);
-  opacity: 0.7;
-}
-
-/* MetaMask Simulator popup */
-.svc-metamask-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: svcFadeIn 0.2s ease;
-}
-
-.svc-metamask-card {
-  width: 360px;
-  background-color: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.25);
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-  font-family: 'Inter', sans-serif;
-  animation: svcPopupZoom 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes svcPopupZoom {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.svc-mm-header {
-  background-color: #f8fafc;
-  padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.svc-mm-logo-area {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.svc-mm-fox {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.svc-mm-net-badge {
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-weight: 600;
-}
-
-.svc-mm-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  text-align: center;
-}
-
-.svc-mm-account {
-  font-size: 12px;
-  background-color: #f1f5f9;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-family: monospace;
+.svc-preview-message {
   color: #475569;
-  border: 1px solid #e2e8f0;
-  width: 100%;
+  background: #f8fafc;
 }
 
-.svc-mm-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.svc-mm-desc {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.5;
-}
-
-.svc-mm-box {
-  background-color: #fffbeb;
-  border: 1px dashed #f59e0b;
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 11.5px;
-  color: #b45309;
-  text-align: left;
-  max-height: 100px;
-  overflow-y: auto;
-  font-family: monospace;
-  width: 100%;
-}
-
-.svc-mm-footer {
-  display: flex;
-  border-top: 1px solid #e2e8f0;
-}
-
-.svc-mm-btn {
-  flex: 1;
-  padding: 14px;
-  border: none;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.2s;
-  background-color: #ffffff;
-}
-
-.svc-mm-btn.reject {
-  color: #ef4444;
-  border-right: 1px solid #e2e8f0;
-}
-
-.svc-mm-btn.reject:hover {
-  background-color: #fef2f2;
-}
-
-.svc-mm-btn.confirm {
-  color: #ffffff;
-  background-color: #f97316;
-}
-
-.svc-mm-btn.confirm:hover {
-  background-color: #ea580c;
+.svc-preview-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
 }
 
 /* Steps execution layout */
@@ -786,4 +597,3 @@
   color: #1d4ed8;
   cursor: pointer;
 }
-

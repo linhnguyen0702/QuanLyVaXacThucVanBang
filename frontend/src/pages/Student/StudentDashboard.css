@@ -986,6 +986,12 @@
   overflow-y: auto;
 }
 
+.std-cert-view-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .std-modal-footer {
   padding: 16px 24px;
   border-top: 1px solid #e2e8f0;
@@ -1116,54 +1122,6 @@
   font-size: 10px;
   color: #64748b;
   font-family: 'Inter', sans-serif;
-}
-
-/* Blockchain section in modal */
-.std-cert-bc-box {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px 20px;
-}
-
-.std-cert-bc-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.std-cert-bc-grid {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  row-gap: 8px;
-  column-gap: 16px;
-  font-size: 13px;
-}
-
-.std-cert-bc-lbl {
-  color: #64748b;
-  font-weight: 500;
-}
-
-.std-cert-bc-val {
-  color: #334155;
-  font-weight: 600;
-  word-break: break-all;
-}
-
-.std-cert-bc-val.mono {
-  font-family: monospace;
-}
-
-.std-cert-bc-val.status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #10b981;
 }
 
 /* ── ANIMATIONS ── */
@@ -1317,16 +1275,16 @@
   .std-modal-overlay * {
     visibility: hidden;
   }
-  .std-cert-view-container,
-  .std-cert-view-container * {
+  .certificate-diploma,
+  .certificate-diploma * {
     visibility: visible;
   }
-  .std-cert-view-container {
+  .certificate-diploma {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
-    border: 10px double #b89742 !important;
+    border: 10px double #d6a829 !important;
     box-shadow: none !important;
     margin: 0 !important;
     padding: 30px !important;
