@@ -5,6 +5,7 @@ import {
 } from 'react-icons/fa';
 import CertificateDiplomaPreview from '../../components/CertificateDiplomaPreview';
 import CertificateBlockchainInfo from '../../components/CertificateBlockchainInfo';
+import { downloadCertificatePdf } from '../../utils/downloadCertificatePdf';
 
 const StudentCertificates = ({ 
   certificates = [], 
@@ -43,12 +44,18 @@ const StudentCertificates = ({
     setTimeout(() => setToastMsg(''), 3000);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadCertificate = async (cert) => {
+    try {
+      await downloadCertificatePdf(cert);
+    } catch (error) {
+      console.error('Failed to download student certificate PDF:', error);
+      showToast(error.message || 'Không thể tạo PDF văn bằng.');
+    }
   };
 
   const handleDownloadQR = (cert) => {
-    if (!cert?.certificateHash) {
+    const qrValue = cert?.certificateHash || cert?.certificateCode || cert?.id;
+    if (!qrValue) {
       showToast('Văn bằng chưa có mã QR.');
       return;
     }
@@ -68,10 +75,6 @@ const StudentCertificates = ({
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-  };
-
-  const handleDownloadMockPDF = (certTitle) => {
-    showToast(`Đang tạo và tải bản PDF ký số cho "${certTitle}"...`);
   };
 
   // Filter logic
@@ -140,11 +143,11 @@ const StudentCertificates = ({
                   <span className="std-badge green">
                     <FaCheckCircle /> Đã ghi Blockchain
                   </span>
-                ) : activeCert.certificateStatus === 'issued' ? (
+                ) : cert.certificateStatus === 'issued' ? (
                   <span className="std-badge amber">
                     <FaClock /> Đã duyệt, chưa xác nhận Blockchain
                   </span>
-                ) : activeCert.certificateStatus === 'revoked' ? (
+                ) : cert.certificateStatus === 'revoked' ? (
                   <span className="std-badge amber">
                     <FaClock /> Đã thu hồi
                   </span>
@@ -171,8 +174,8 @@ const StudentCertificates = ({
                   </button>
                   <button 
                     className="std-icon-btn" 
-                    title="Tải PDF ký số"
-                    onClick={() => handleDownloadMockPDF(cert.title)}
+                    title="Tải PDF văn bằng"
+                    onClick={() => handleDownloadCertificate(cert)}
                   >
                     <FaDownload />
                   </button>
@@ -241,7 +244,7 @@ const StudentCertificates = ({
               </button>
               <button 
                 className="std-btn-primary" 
-                onClick={handlePrint}
+                onClick={() => handleDownloadCertificate(activeCert)}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <FaPrint /> In hoặc Lưu PDF

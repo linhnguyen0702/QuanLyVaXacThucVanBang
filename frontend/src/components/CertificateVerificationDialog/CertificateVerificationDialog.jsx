@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import {
-  FaCheckCircle,
   FaExclamationTriangle,
-  FaExternalLinkAlt,
   FaSpinner,
   FaTimes,
 } from "react-icons/fa";
+import CertificateBlockchainInfo from "../CertificateBlockchainInfo";
+import CertificateDiplomaPreview from "../CertificateDiplomaPreview";
+import { formatDateDisplay } from "../../utils/dateUtils";
 import "./CertificateVerificationDialog.css";
 
 const CertificateVerificationDialog = ({
@@ -29,20 +30,6 @@ const CertificateVerificationDialog = ({
 
   const certificate = result?.certificate;
   const blockchain = result?.blockchainVerification;
-  const status = result?.isRevoked
-    ? "revoked"
-    : result?.integrityIssues?.length
-      ? "mismatch"
-      : result?.isPending || certificate?.status === "pending"
-        ? "pending"
-        : result?.verified
-          ? "valid"
-          : "invalid";
-  const statusIcon = status === "valid" ? <FaCheckCircle /> : <FaExclamationTriangle />;
-  const issueDate = certificate?.issue_date
-    ? new Date(certificate.issue_date).toLocaleDateString("vi-VN")
-    : "—";
-
   return (
     <div
       className="certificate-verification-overlay"
@@ -84,14 +71,6 @@ const CertificateVerificationDialog = ({
             </div>
           ) : certificate ? (
             <>
-              <div className={`certificate-verification-status certificate-verification-status--${status}`}>
-                {statusIcon}
-                <div>
-                  <strong>{result.message}</strong>
-                  <span>Mã văn bằng: {certificate.certificate_code || "—"}</span>
-                </div>
-              </div>
-
               {result.integrityIssues?.length > 0 && (
                 <div className="certificate-verification-issues" role="alert">
                   <strong>Phát hiện dữ liệu không khớp:</strong>
@@ -102,40 +81,36 @@ const CertificateVerificationDialog = ({
                 </div>
               )}
 
-              <div className="certificate-verification-details">
-                <div><span>Họ và tên sinh viên</span><strong>{certificate.student_name || "—"}</strong></div>
-                <div><span>Mã sinh viên</span><strong>{certificate.student_code || "—"}</strong></div>
-                <div><span>Trường cấp bằng</span><strong>{certificate.school_name || "—"}</strong></div>
-                <div><span>Ngành đào tạo</span><strong>{certificate.major || "—"}</strong></div>
-                <div><span>Loại văn bằng / Xếp loại</span><strong>{certificate.degree_type || "—"}{certificate.classification ? ` - ${certificate.classification}` : ""}{certificate.gpa !== null && certificate.gpa !== undefined ? ` (GPA: ${certificate.gpa})` : ""}</strong></div>
-                <div><span>Ngày cấp / Quyết định</span><strong>{issueDate}{certificate.decision_number ? ` (${certificate.decision_number})` : ""}</strong></div>
+              <div className="certificate-verification-diploma">
+                <CertificateDiplomaPreview certificate={{
+                  code: certificate.certificate_code,
+                  schoolName: certificate.school_name,
+                  degreeType: certificate.degree_type,
+                  major: certificate.major,
+                  studentName: certificate.student_name,
+                  studentCode: certificate.student_code,
+                  dateOfBirth: formatDateDisplay(certificate.date_of_birth),
+                  classification: certificate.classification,
+                  educationMode: certificate.education_mode,
+                  issueDate: formatDateDisplay(certificate.issue_date),
+                  status: certificate.status,
+                  certificateHash: certificate.certificate_hash
+                }} />
               </div>
 
               {blockchain && (
-                <div className="certificate-verification-blockchain">
-                  <div className="certificate-verification-blockchain__heading">
-                    <strong>Xác thực Blockchain — {blockchain.network}</strong>
-                    <span className={blockchain.verifiedOnChain ? "is-valid" : ""}>
-                      {blockchain.verifiedOnChain
-                        ? "Đã xác thực on-chain"
-                        : blockchain.txHash
-                          ? "Đang xác nhận giao dịch"
-                          : "Chỉ lưu trong CSDL"}
-                    </span>
-                  </div>
-                  {blockchain.txHash ? (
-                    <>
-                      <p><span>Transaction Hash:</span><code>{blockchain.txHash}</code></p>
-                      {blockchain.explorerUrl && (
-                        <a href={blockchain.explorerUrl} target="_blank" rel="noopener noreferrer">
-                          <FaExternalLinkAlt /> Xem giao dịch trên Sepolia Etherscan
-                        </a>
-                      )}
-                    </>
-                  ) : (
-                    <p>Văn bằng chưa có giao dịch trên Blockchain.</p>
-                  )}
-                </div>
+                <CertificateBlockchainInfo
+                  title={`Xác thực Blockchain — ${blockchain.network}`}
+                  certificate={{
+                    status: certificate.status,
+                    blockchain_confirmed: blockchain.verifiedOnChain,
+                    blockchain_network: blockchain.network,
+                    blockchain_tx_hash: blockchain.txHash,
+                    blockchain_explorer_url: blockchain.explorerUrl,
+                    blockchain_block_number: blockchain.blockNumber,
+                    blockchain_timestamp: blockchain.timestamp
+                  }}
+                />
               )}
             </>
           ) : null}

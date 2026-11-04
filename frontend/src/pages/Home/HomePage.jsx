@@ -116,7 +116,7 @@ const HomePage = () => {
 
     const loadRecentCertificates = async () => {
       try {
-        const response = await api.getCertificates({
+        const response = await api.getPublicCertificates({
           status: "issued",
           page: 1,
           limit: 3,

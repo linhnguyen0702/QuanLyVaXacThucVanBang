@@ -7,6 +7,7 @@ import { api } from '../../services/api';
 import CertificateDiplomaPreview from '../../components/CertificateDiplomaPreview';
 import CertificateBlockchainInfo from '../../components/CertificateBlockchainInfo';
 import { formatDateForInput, formatDateDisplay, getTodayDateInput } from '../../utils/dateUtils';
+import { downloadCertificatePdf } from '../../utils/downloadCertificatePdf';
 import Pagination from '../../components/Pagination/Pagination';
 
 const PAGE_SIZE = 10;
@@ -128,6 +129,15 @@ const SchoolCertificates = () => {
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const handleDownloadCertificate = async () => {
+    try {
+      await downloadCertificatePdf(selectedCert);
+    } catch (error) {
+      console.error('Failed to download certificate PDF:', error);
+      showToast(error.message || 'Không thể tạo PDF văn bằng.');
+    }
   };
 
   // Xử lý thay đổi GPA và tự gợi ý / phân loại xếp loại tốt nghiệp
@@ -1085,7 +1095,7 @@ const SchoolCertificates = () => {
             </div>
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsViewOpen(false)}>Đóng</button>
-              <button className="sd-btn-primary" onClick={() => showToast('Đang tải văn bằng số PDF...')}><FaDownload /> Tải bản thể hiện PDF</button>
+              <button className="sd-btn-primary" onClick={handleDownloadCertificate}><FaDownload /> Tải bản thể hiện PDF</button>
             </div>
           </div>
         </div>

@@ -225,6 +225,7 @@
 .cert-card-actions {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .cert-action-btn {
@@ -260,6 +261,98 @@
   background: #1d4ed8;
 }
 
+.cert-list-message {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 2rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.cert-view-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.cert-view-modal {
+  width: min(100%, 980px);
+  max-height: 92vh;
+  overflow: auto;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.cert-view-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  color: #fff;
+  background: linear-gradient(135deg, #0b2e6d, #1557bc);
+}
+
+.cert-view-modal-header h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+}
+
+.cert-view-modal-header p {
+  margin: 0;
+  color: #dbeafe;
+}
+
+.cert-view-modal-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.cert-view-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 24px;
+}
+
+.cert-view-modal-body .certificate-blockchain-info {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cert-view-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 24px 20px;
+}
+
+.cert-view-modal-footer button {
+  padding: 0.55rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  color: #334155;
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 @media (max-width: 640px) {
   .cert-list-filters {
     flex-direction: column;
@@ -271,5 +364,22 @@
 
   .cert-list-grid {
     grid-template-columns: 1fr;
+  }
+
+  .cert-view-modal-overlay {
+    padding: 10px;
+  }
+
+  .cert-view-modal-header,
+  .cert-view-modal-body {
+    padding: 16px;
+  }
+
+  .cert-view-modal-footer {
+    padding: 0 16px 16px;
+  }
+
+  .cert-view-modal-body .certificate-diploma {
+    min-height: 520px;
   }
 }

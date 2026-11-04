@@ -10,8 +10,8 @@
 }
 
 .certificate-verification-dialog {
-  width: min(100%, 820px);
-  max-height: min(90vh, 800px);
+  width: min(100%, 960px);
+  max-height: min(92vh, 900px);
   overflow: auto;
   background: #fff;
   border-radius: 14px;
@@ -153,93 +153,13 @@
   margin: 8px 0 0;
 }
 
-.certificate-verification-details {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 16px;
-  border-radius: 9px;
-  background: #f8fafc;
+.certificate-verification-diploma {
+  width: 100%;
+  margin-bottom: 20px;
 }
 
-.certificate-verification-details > div {
-  min-width: 0;
-}
-
-.certificate-verification-details span,
-.certificate-verification-details strong {
-  display: block;
-  overflow-wrap: anywhere;
-}
-
-.certificate-verification-details span {
-  margin-bottom: 4px;
-  color: #64748b;
-  font-size: 0.76rem;
-}
-
-.certificate-verification-details strong {
-  color: #111827;
-  font-size: 0.9rem;
-}
-
-.certificate-verification-blockchain {
-  margin-top: 14px;
-  padding: 14px 16px;
-  border: 1px solid #cbd5e1;
-  border-radius: 9px;
-  color: #475569;
-  background: #f8fafc;
-  font-size: 0.83rem;
-}
-
-.certificate-verification-blockchain__heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-  color: #1e293b;
-}
-
-.certificate-verification-blockchain__heading span {
-  flex: 0 0 auto;
-  padding: 4px 9px;
-  border-radius: 20px;
-  color: #64748b;
-  background: #e2e8f0;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.certificate-verification-blockchain__heading span.is-valid {
-  color: #15803d;
-  background: #dcfce7;
-}
-
-.certificate-verification-blockchain p {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 6px 0;
-}
-
-.certificate-verification-blockchain code {
-  overflow-wrap: anywhere;
-  color: #1e293b;
-}
-
-.certificate-verification-blockchain a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #2563eb;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.certificate-verification-blockchain a:hover {
-  text-decoration: underline;
+.certificate-verification-diploma .certificate-diploma {
+  max-width: 600px;
 }
 
 @media (max-width: 600px) {
@@ -252,12 +172,7 @@
     padding: 16px;
   }
 
-  .certificate-verification-details {
-    grid-template-columns: 1fr;
-  }
-
-  .certificate-verification-blockchain__heading {
-    align-items: flex-start;
-    flex-direction: column;
+  .certificate-verification-diploma {
+    margin-bottom: 16px;
   }
 }

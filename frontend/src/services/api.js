@@ -98,6 +98,12 @@ export const api = {
     return res.json();
   },
 
+  getPublicCertificates: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE_URL}/certificates?${query}`);
+    return res.json();
+  },
+
   getCertificateById: async (id) => {
     const res = await fetch(`${API_BASE_URL}/certificates/${id}`, {
       headers: getHeaders()

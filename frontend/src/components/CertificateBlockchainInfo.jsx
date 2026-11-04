@@ -2,10 +2,13 @@ import React from 'react';
 import { FaCheckCircle, FaClock, FaExternalLinkAlt, FaLink } from 'react-icons/fa';
 import './CertificateBlockchainInfo.css';
 
-const CertificateBlockchainInfo = ({ certificate }) => {
+const CertificateBlockchainInfo = ({ certificate, title = 'Thông tin lưu trữ Blockchain' }) => {
   const isRecorded = Boolean(certificate.blockchain_confirmed);
   const isApproved = ['issued', 'revoked'].includes(certificate.status);
   const hasTransaction = Boolean(certificate.blockchain_tx_hash);
+  const hasBlockNumber = certificate.blockchain_block_number !== null
+    && certificate.blockchain_block_number !== undefined;
+  const hasBlockDetails = hasBlockNumber || Boolean(certificate.blockchain_timestamp);
 
   let statusMessage = 'Văn bằng đang chờ phê duyệt.';
   if (isRecorded) {
@@ -23,7 +26,7 @@ const CertificateBlockchainInfo = ({ certificate }) => {
   return (
     <section className="certificate-blockchain-info">
       <h4 className="certificate-blockchain-title">
-        <FaLink /> Thông tin lưu trữ Blockchain
+        <FaLink /> {title}
       </h4>
       <div className="certificate-blockchain-grid">
         <span className="certificate-blockchain-label">Trạng thái:</span>
@@ -57,11 +60,11 @@ const CertificateBlockchainInfo = ({ certificate }) => {
           </>
         )}
 
-        {isRecorded && (
+        {(isRecorded || hasBlockDetails) && (
           <>
             <span className="certificate-blockchain-label">Block ghi nhận:</span>
             <span className="certificate-blockchain-value mono">
-              {certificate.blockchain_block_number}
+              {certificate.blockchain_block_number ?? '—'}
             </span>
 
             <span className="certificate-blockchain-label">Thời gian ghi nhận:</span>

@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { verifyCertificateOnChain, verifyCertificateByHashOnChain, isBlockchainReady } = require('../config/blockchain');
+const { getProvider, verifyCertificateOnChain, verifyCertificateByHashOnChain, isBlockchainReady } = require('../config/blockchain');
 const { getPagination } = require('../utils/pagination');
 
 // @desc    Verify certificate by code, hash or QR URL
@@ -195,6 +195,8 @@ exports.verifyCertificate = async (req, res, next) => {
 
     let onChainResult = null;
     let onChainVerified = false;
+    let blockchainBlockNumber = null;
+    let blockchainTimestamp = null;
     if (isBlockchainReady() && certificate.status === 'issued') {
       try {
         // Thử xác thực theo mã số văn bằng trước
@@ -211,6 +213,24 @@ exports.verifyCertificate = async (req, res, next) => {
         }
       } catch (chainErr) {
         console.error('On-chain verification error (non-fatal):', chainErr.message);
+      }
+    }
+
+    if (txHash) {
+      const provider = getProvider();
+      if (provider) {
+        try {
+          const receipt = await provider.getTransactionReceipt(txHash);
+          if (receipt && Number(receipt.status) === 1) {
+            const block = await provider.getBlock(receipt.blockNumber);
+            if (block) {
+              blockchainBlockNumber = receipt.blockNumber;
+              blockchainTimestamp = new Date(Number(block.timestamp) * 1000).toISOString();
+            }
+          }
+        } catch (chainErr) {
+          console.error('Could not read certificate transaction block details:', chainErr.message);
+        }
       }
     }
 
@@ -236,6 +256,8 @@ exports.verifyCertificate = async (req, res, next) => {
       blockchainVerification: {
         network: 'Ethereum Sepolia Testnet',
         txHash: txHash || null,
+        blockNumber: blockchainBlockNumber,
+        timestamp: blockchainTimestamp,
         verifiedOnChain: txHash ? onChainVerified : false,
         onChainStatus: onChainResult ? (onChainResult.isValid ? 'VALID' : 'REVOKED') : (txHash ? 'PENDING_CHECK' : 'NOT_ON_CHAIN'),
         contractAddress: process.env.CONTRACT_ADDRESS || null,
