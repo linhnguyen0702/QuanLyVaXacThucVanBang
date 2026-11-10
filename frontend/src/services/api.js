@@ -71,6 +71,15 @@ export const api = {
     return res.json();
   },
 
+  updateStudentProfile: async (data) => {
+    const res = await fetch(`${API_BASE_URL}/auth/student-profile`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+
   connectWallet: async (wallet_address) => {
     const res = await fetch(`${API_BASE_URL}/auth/connect-wallet`, {
       method: 'POST',

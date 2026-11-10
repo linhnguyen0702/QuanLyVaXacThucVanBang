@@ -32,33 +32,24 @@ const StudentDashboard = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifyDropdown, setShowNotifyDropdown] = useState(false);
 
-  // User profile state loaded from logged-in user or localStorage
-  const [profileData, setProfileData] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      const u = JSON.parse(savedUser);
-      return {
-        name: u.full_name || "Sinh viên",
-        id: u.student_code || "20201123",
-        class: u.class_name || "CNTT-01 K65",
-        major: u.department || "Công nghệ thông tin",
-        department: u.department || "Khoa Công nghệ thông tin",
-        email: u.email || "student@school.edu.vn",
-        phone: u.phone || "0368 251 814",
-        avatar: u.avatar_url || "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150"
-      };
-    }
-    return {
-      name: "Trần Thị B",
-      id: "20201123",
-      class: "CNTT-01 K65",
-      major: "Công nghệ thông tin",
-      department: "Khoa Công nghệ thông tin",
-      email: "tranthib@school.edu.vn",
-      phone: "0368 251 814",
-      avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150"
-    };
+  const [profileData, setProfileData] = useState({
+    name: currentUser?.full_name || '',
+    id: '',
+    class: '',
+    department: '',
+    schoolName: '',
+    dateOfBirth: '',
+    gender: '',
+    placeOfBirth: '',
+    idNumber: '',
+    nationality: '',
+    graduationStatus: '',
+    hasIssuedCertificate: false,
+    email: currentUser?.email || '',
+    avatar: currentUser?.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150'
   });
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState('');
 
   const [certificates, setCertificates] = useState([]);
 
@@ -66,6 +57,57 @@ const StudentDashboard = () => {
   const [notificationError, setNotificationError] = useState('');
   const [selectedCert, setSelectedCert] = useState(null);
   const [showCertModal, setShowCertModal] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const response = await api.getMe();
+        if (!response?.success || !response.user) {
+          throw new Error(response?.message || 'Không thể tải hồ sơ sinh viên.');
+        }
+        if (!isMounted) return;
+
+        const user = response.user;
+        const student = response.student;
+        setCurrentUser(user);
+        localStorage.setItem('user', JSON.stringify(user));
+        setProfileData({
+          name: student?.full_name || user.full_name || '',
+          id: student?.student_code || '',
+          class: student?.class_name || '',
+          department: student?.department || '',
+          schoolName: student?.school_name || '',
+          dateOfBirth: student?.date_of_birth || '',
+          gender: student?.gender || '',
+          placeOfBirth: student?.place_of_birth || '',
+          idNumber: student?.id_number || '',
+          nationality: student?.nationality || '',
+          graduationStatus: student?.graduation_status || '',
+          hasIssuedCertificate: Number(student?.has_issued_certificate) === 1,
+          email: student?.email || user.email || '',
+          avatar: user.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150'
+        });
+        setProfileError(
+          student ? '' : 'Không tìm thấy hồ sơ sinh viên được liên kết với tài khoản này.'
+        );
+      } catch (error) {
+        console.error('Không thể tải hồ sơ sinh viên:', error);
+        if (isMounted) {
+          setProfileError(error.message || 'Không thể tải hồ sơ sinh viên.');
+        }
+      } finally {
+        if (isMounted) setProfileLoading(false);
+      }
+    };
+
+    fetchProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -167,8 +209,34 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleUpdateProfile = (updatedFields) => {
-    setProfileData(prev => ({ ...prev, ...updatedFields }));
+  const handleUpdateProfile = async (updatedFields) => {
+    const response = await api.updateStudentProfile(updatedFields);
+    if (!response?.success || !response.user || !response.student) {
+      throw new Error(response?.message || 'Không thể cập nhật hồ sơ sinh viên.');
+    }
+
+    const user = response.user;
+    const student = response.student;
+    localStorage.setItem('user', JSON.stringify(user));
+    setCurrentUser(user);
+    setProfileData({
+      name: student.full_name || user.full_name || '',
+      id: student.student_code || '',
+      class: student.class_name || '',
+      department: student.department || '',
+      schoolName: student.school_name || '',
+      dateOfBirth: student.date_of_birth || '',
+      gender: student.gender || '',
+      placeOfBirth: student.place_of_birth || '',
+      idNumber: student.id_number || '',
+      nationality: student.nationality || '',
+      graduationStatus: student.graduation_status || '',
+      hasIssuedCertificate: Number(student.has_issued_certificate) === 1,
+      email: student.email || user.email || '',
+      avatar: user.avatar_url || 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150'
+    });
+    setProfileError('');
+    return response;
   };
 
   const handleLogout = () => {
@@ -220,6 +288,8 @@ const StudentDashboard = () => {
           <StudentProfile 
             profileData={profileData}
             onUpdateProfile={handleUpdateProfile}
+            loading={profileLoading}
+            error={profileError}
           />
         );
       case 'password':

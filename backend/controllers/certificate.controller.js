@@ -577,12 +577,14 @@ exports.updateCertificate = async (req, res, next) => {
       }
 
       await db.query(
-        `UPDATE certificates 
-         SET status = 'issued',
-             blockchain_tx_hash = COALESCE(?, blockchain_tx_hash),
-             blockchain_certificate_id = COALESCE(?, blockchain_certificate_id),
-             qr_code_url = ?
-         WHERE id = ?`,
+        `UPDATE certificates c
+         INNER JOIN students st ON st.id = c.student_id
+         SET c.status = 'issued',
+             c.blockchain_tx_hash = COALESCE(?, c.blockchain_tx_hash),
+             c.blockchain_certificate_id = COALESCE(?, c.blockchain_certificate_id),
+             c.qr_code_url = ?,
+             st.graduation_status = 'issued'
+         WHERE c.id = ?`,
         [
           finalTxHash,
           finalBlockchainCertId,

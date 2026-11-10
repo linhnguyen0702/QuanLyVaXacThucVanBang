@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   FaSearch, FaEye, FaDownload, FaQrcode, FaPrint, 
   FaCheckCircle, FaClock, FaTimes
 } from 'react-icons/fa';
+import { QRCodeCanvas } from 'qrcode.react';
 import CertificateDiplomaPreview from '../../components/CertificateDiplomaPreview';
 import CertificateBlockchainInfo from '../../components/CertificateBlockchainInfo';
 import { downloadCertificatePdf } from '../../utils/downloadCertificatePdf';
@@ -17,6 +18,7 @@ const StudentCertificates = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('');
   const [toastMsg, setToastMsg] = useState('');
+  const qrCanvasRef = useRef(null);
 
   // Local state modal control (if not triggered from overview)
   const [localModal, setLocalModal] = useState(false);
@@ -60,21 +62,23 @@ const StudentCertificates = ({
       return;
     }
 
-    const qrSvg = document.querySelector('.certificate-diploma-qr svg');
-    if (!qrSvg) {
+    const qrCanvas = qrCanvasRef.current;
+    if (!qrCanvas) {
       showToast('Không thể tạo mã QR.');
       return;
     }
 
-    const svgContent = new XMLSerializer().serializeToString(qrSvg);
-    const objectUrl = URL.createObjectURL(new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = `${cert.id}-QR.svg`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    try {
+      const link = document.createElement('a');
+      link.href = qrCanvas.toDataURL('image/png');
+      link.download = `${cert.id || cert.certificateCode || 'certificate'}-QR.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Failed to download student certificate QR PNG:', error);
+      showToast('Không thể tải mã QR dưới dạng PNG.');
+    }
   };
 
   // Filter logic
@@ -255,6 +259,21 @@ const StudentCertificates = ({
       )}
 
       {/* Toast Notification */}
+      {activeCert && (
+        <div
+          aria-hidden="true"
+          style={{ position: 'fixed', left: '-10000px', top: 0, pointerEvents: 'none' }}
+        >
+          <QRCodeCanvas
+            ref={qrCanvasRef}
+            value={activeCert.certificateHash || activeCert.certificateCode || activeCert.id}
+            size={512}
+            level="H"
+            includeMargin
+          />
+        </div>
+      )}
+
       {toastMsg && (
         <div className="std-toast success">
           <FaCheckCircle /> {toastMsg}

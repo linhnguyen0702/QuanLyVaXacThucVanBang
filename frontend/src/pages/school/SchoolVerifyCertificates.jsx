@@ -12,41 +12,6 @@ import Pagination from '../../components/Pagination/Pagination';
 import { formatDateDisplay } from '../../utils/dateUtils';
 
 const PAGE_SIZE = 10;
-const SEPOLIA_CHAIN_ID = '0xaa36a7';
-
-const ensureSepoliaNetwork = async (ethereum) => {
-  const chainId = await ethereum.request({ method: 'eth_chainId' });
-  if (chainId === SEPOLIA_CHAIN_ID) return;
-
-  try {
-    await ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: SEPOLIA_CHAIN_ID }]
-    });
-  } catch (error) {
-    if (error.code !== 4902) throw error;
-
-    await ethereum.request({
-      method: 'wallet_addEthereumChain',
-      params: [{
-        chainId: SEPOLIA_CHAIN_ID,
-        chainName: 'Sepolia',
-        nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
-        rpcUrls: ['https://rpc.sepolia.org'],
-        blockExplorerUrls: ['https://sepolia.etherscan.io']
-      }]
-    });
-    await ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: SEPOLIA_CHAIN_ID }]
-    });
-  }
-
-  const activeChainId = await ethereum.request({ method: 'eth_chainId' });
-  if (activeChainId !== SEPOLIA_CHAIN_ID) {
-    throw new Error('Vui lòng chuyển MetaMask sang mạng Ethereum Sepolia để tiếp tục.');
-  }
-};
 
 const createApprovalChallenge = (certificate, account) => {
   const approvalNonce = Array.from(
@@ -185,16 +150,15 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
       throw new Error('Tài khoản chưa liên kết ví. Vui lòng kết nối ví MetaMask trong thanh bên trước.');
     }
 
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
     if (!accounts?.length) {
-      throw new Error('Không có tài khoản MetaMask nào được chọn.');
+      throw new Error('MetaMask chưa kết nối với ứng dụng. Hãy kết nối ví ở thanh bên trước rồi thử phê duyệt lại.');
     }
     const account = getAddress(accounts[0]);
     if (account.toLowerCase() !== getAddress(walletAddress).toLowerCase()) {
       throw new Error('Ví MetaMask đang chọn không khớp với ví đã liên kết tài khoản. Vui lòng chuyển sang đúng ví.');
     }
 
-    await ensureSepoliaNetwork(window.ethereum);
     return { ethereum: window.ethereum, account };
   };
 
@@ -397,7 +361,7 @@ const SchoolVerifyCertificates = ({ walletAddress }) => {
         <div className="sd-stat-card">
           <div className="sd-stat-icon-box green" style={{ backgroundColor: '#f0fdf4', color: '#16a34a' }}><FaCheckCircle /></div>
           <div className="sd-stat-content">
-            <span className="sd-stat-label">Đã xuất bản hôm nay</span>
+            <span className="sd-stat-label">Đã xuất bản </span>
             <div className="sd-stat-val-row">
               <span className="sd-stat-value">+{approvedToday}</span>
               <span className="sd-stat-badge green">Hoạt động tốt</span>

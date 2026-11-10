@@ -5,6 +5,30 @@ const { OAuth2Client } = require("google-auth-library");
 const nodemailer = require("nodemailer");
 const { getAddress, isAddress } = require("ethers");
 const { getDefaultPosition } = require("../utils/user-roles");
+const isValidStudentDateOfBirth = (dateOfBirth) => {
+  if (typeof dateOfBirth !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+    return false;
+  }
+
+  const [year, month, day] = dateOfBirth.split("-").map(Number);
+  const parsedDate = new Date(0);
+  parsedDate.setUTCHours(0, 0, 0, 0);
+  parsedDate.setUTCFullYear(year, month - 1, day);
+  return parsedDate.toISOString().slice(0, 10) === dateOfBirth;
+};
+
+const isStudentAtLeastEighteen = (dateOfBirth) => {
+  const [year, month, day] = dateOfBirth.split("-").map(Number);
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  if (
+    today.getMonth() + 1 < month ||
+    (today.getMonth() + 1 === month && today.getDate() < day)
+  ) {
+    age -= 1;
+  }
+  return age >= 18;
+};
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
@@ -119,7 +143,8 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Verify password with bcrypt or fallback for seed data / 123456
+    // Seed accounts may contain placeholder hashes; replace them after the
+    // first successful login with a hash of the supplied demo password.
     let isMatch = false;
     try {
       isMatch = await bcrypt.compare(password, user.password_hash);
@@ -127,8 +152,9 @@ exports.login = async (req, res, next) => {
       isMatch = false;
     }
 
-    // Allow default passwords for seed demo accounts if password is "123456"
-    if (!isMatch && (password === "123456" || password === "admin123")) {
+    const isLegacySeedPassword =
+      !isMatch && (password === "123456" || password === "admin123");
+    if (isLegacySeedPassword) {
       isMatch = true;
     }
 
@@ -159,6 +185,15 @@ exports.login = async (req, res, next) => {
           message: `Tài khoản '${email}' không thuộc vai trò 'Cán bộ đào tạo'. Vui lòng chọn lại đúng vai trò.`,
         });
       }
+    }
+
+    if (isLegacySeedPassword) {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+      await db.query(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        [passwordHash, user.id],
+      );
     }
 
     // Update last login
@@ -607,12 +642,324 @@ exports.sendContactSupportRequest = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res, next) => {
   try {
+    let student = null;
+    if (req.user.role === "student") {
+      const [students] = await db.query(
+        `SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name,
+                s.school_code,
+                EXISTS (
+                  SELECT 1 FROM certificates c
+                  WHERE c.student_id = st.id AND c.status = 'issued'
+                ) AS has_issued_certificate
+         FROM students st
+         LEFT JOIN schools s ON st.school_id = s.id
+         WHERE st.user_id = ?
+            OR (st.user_id IS NULL AND LOWER(TRIM(st.email)) = LOWER(TRIM(?)))
+         ORDER BY (st.user_id = ?) DESC, st.id ASC
+         LIMIT 1`,
+        [req.user.id, req.user.email, req.user.id],
+      );
+      student = students[0] || null;
+      if (student) {
+        await db.query(
+          "UPDATE students SET user_id = ? WHERE id = ? AND user_id IS NULL",
+          [req.user.id, student.id],
+        );
+        student.user_id = req.user.id;
+      }
+    }
+
     res.json({
       success: true,
       user: req.user,
+      student,
     });
   } catch (error) {
     next(error);
+  }
+};
+
+exports.updateStudentProfile = async (req, res, next) => {
+  let connection;
+  let transactionStarted = false;
+
+  try {
+    if (req.user.role !== "student") {
+      return res.status(403).json({
+        success: false,
+        message: "Chỉ tài khoản sinh viên mới có thể cập nhật hồ sơ sinh viên.",
+      });
+    }
+
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({
+        success: false,
+        message: "Thông tin cập nhật không hợp lệ.",
+      });
+    }
+
+    const editableFields = new Set([
+      "full_name",
+      "email",
+      "date_of_birth",
+      "gender",
+      "id_number",
+      "place_of_birth",
+      "nationality",
+      "department",
+      "class_name",
+      "avatar_url",
+    ]);
+    const submittedFields = Object.keys(req.body);
+    if (
+      submittedFields.length === 0 ||
+      submittedFields.some((field) => !editableFields.has(field))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Thông tin cập nhật không hợp lệ.",
+      });
+    }
+
+    const values = { ...req.body };
+    for (const field of ["full_name", "email", "id_number", "place_of_birth", "nationality", "department", "class_name"]) {
+      if (values[field] !== undefined && typeof values[field] !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Các thông tin hồ sơ phải có định dạng văn bản hợp lệ.",
+        });
+      }
+      if (typeof values[field] === "string") values[field] = values[field].trim();
+    }
+
+    if (
+      values.full_name !== undefined &&
+      (!values.full_name || values.full_name.length > 255)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Họ tên không được để trống và tối đa 255 ký tự.",
+      });
+    }
+    if (values.email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Email không đúng định dạng.",
+      });
+    }
+    if (values.email !== undefined && values.email.length > 255) {
+      return res.status(400).json({
+        success: false,
+        message: "Email không được vượt quá 255 ký tự.",
+      });
+    }
+    const maximumLengths = {
+      place_of_birth: 255,
+      nationality: 100,
+      department: 255,
+      class_name: 100,
+    };
+    for (const [field, maximumLength] of Object.entries(maximumLengths)) {
+      if (values[field] !== undefined && values[field].length > maximumLength) {
+        return res.status(400).json({
+          success: false,
+          message: `Thông tin ${field} không được vượt quá ${maximumLength} ký tự.`,
+        });
+      }
+    }
+    if (values.id_number !== undefined && !/^\d{12}$/.test(values.id_number)) {
+      return res.status(400).json({
+        success: false,
+        message: "Số CCCD phải gồm đúng 12 chữ số.",
+      });
+    }
+    if (values.date_of_birth !== undefined) {
+      if (!isValidStudentDateOfBirth(values.date_of_birth)) {
+        return res.status(400).json({
+          success: false,
+          message: "Ngày sinh không hợp lệ.",
+        });
+      }
+      if (!isStudentAtLeastEighteen(values.date_of_birth)) {
+        return res.status(400).json({
+          success: false,
+          message: "Sinh viên phải đủ 18 tuổi.",
+        });
+      }
+    }
+    if (
+      values.gender !== undefined &&
+      !["Nam", "Nữ", "Khác"].includes(values.gender)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Giới tính không hợp lệ.",
+      });
+    }
+    if (
+      values.avatar_url !== undefined &&
+      (typeof values.avatar_url !== "string" || values.avatar_url.length > 2000000)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Ảnh đại diện không hợp lệ hoặc có dung lượng quá lớn.",
+      });
+    }
+
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    transactionStarted = true;
+
+    const [students] = await connection.query(
+      `SELECT st.id,
+              EXISTS (
+                SELECT 1 FROM certificates c
+                WHERE c.student_id = st.id AND c.status = 'issued'
+              ) AS has_issued_certificate
+       FROM students st
+       WHERE st.user_id = ?
+          OR (st.user_id IS NULL AND LOWER(TRIM(st.email)) = LOWER(TRIM(?)))
+       ORDER BY (st.user_id = ?) DESC, st.id ASC
+       LIMIT 1
+       FOR UPDATE`,
+      [req.user.id, req.user.email, req.user.id],
+    );
+    if (students.length === 0) {
+      await connection.rollback();
+      transactionStarted = false;
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy hồ sơ sinh viên được liên kết với tài khoản này.",
+      });
+    }
+
+    const studentId = students[0].id;
+    const hasIssuedCertificate = Number(students[0].has_issued_certificate) === 1;
+    if (
+      hasIssuedCertificate &&
+      submittedFields.some(
+        (field) =>
+          !["email", "id_number", "avatar_url"].includes(field),
+      )
+    ) {
+      await connection.rollback();
+      transactionStarted = false;
+      return res.status(400).json({
+        success: false,
+        message:
+          "Sinh viên đã được cấp văn bằng, chỉ có thể chỉnh sửa email, CCCD và ảnh đại diện.",
+      });
+    }
+
+    if (values.email !== undefined) {
+      const [duplicateUsers] = await connection.query(
+        "SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id <> ? LIMIT 1",
+        [values.email, req.user.id],
+      );
+      const [duplicateStudents] = await connection.query(
+        "SELECT id FROM students WHERE LOWER(email) = LOWER(?) AND id <> ? LIMIT 1",
+        [values.email, studentId],
+      );
+      if (duplicateUsers.length > 0 || duplicateStudents.length > 0) {
+        await connection.rollback();
+        transactionStarted = false;
+        return res.status(409).json({
+          success: false,
+          message: "Email này đã được sử dụng.",
+        });
+      }
+    }
+    if (values.id_number !== undefined) {
+      const [duplicateIds] = await connection.query(
+        "SELECT id FROM students WHERE id_number = ? AND id <> ? LIMIT 1",
+        [values.id_number, studentId],
+      );
+      if (duplicateIds.length > 0) {
+        await connection.rollback();
+        transactionStarted = false;
+        return res.status(409).json({
+          success: false,
+          message: "Số CCCD này đã tồn tại trong hệ thống.",
+        });
+      }
+    }
+
+    const studentColumns = [
+      "full_name",
+      "email",
+      "date_of_birth",
+      "gender",
+      "id_number",
+      "place_of_birth",
+      "nationality",
+      "department",
+      "class_name",
+    ];
+    const studentUpdates = studentColumns.filter(
+      (field) => values[field] !== undefined,
+    );
+    if (studentUpdates.length > 0) {
+      const assignments = studentUpdates.map((field) => `\`${field}\` = ?`).join(", ");
+      const updateValues = studentUpdates.map((field) => values[field]);
+      await connection.query(
+        `UPDATE students SET ${assignments}, user_id = ? WHERE id = ?`,
+        [...updateValues, req.user.id, studentId],
+      );
+    } else {
+      await connection.query(
+        "UPDATE students SET user_id = ? WHERE id = ? AND user_id IS NULL",
+        [req.user.id, studentId],
+      );
+    }
+
+    const userColumns = ["full_name", "email", "avatar_url"].filter(
+      (field) => values[field] !== undefined,
+    );
+    if (userColumns.length > 0) {
+      const assignments = userColumns.map((field) => `\`${field}\` = ?`).join(", ");
+      const updateValues = userColumns.map((field) => values[field]);
+      await connection.query(
+        `UPDATE users SET ${assignments} WHERE id = ?`,
+        [...updateValues, req.user.id],
+      );
+    }
+
+    const [updatedStudents] = await connection.query(
+      `SELECT st.*, COALESCE(s.school_name, st.school_name) AS school_name,
+              s.school_code,
+              EXISTS (
+                SELECT 1 FROM certificates c
+                WHERE c.student_id = st.id AND c.status = 'issued'
+              ) AS has_issued_certificate
+       FROM students st
+       LEFT JOIN schools s ON st.school_id = s.id
+       WHERE st.id = ?`,
+      [studentId],
+    );
+    const [updatedUsers] = await connection.query(
+      "SELECT id, email, full_name, role, phone, department, position, address, avatar_url, wallet_address FROM users WHERE id = ?",
+      [req.user.id],
+    );
+
+    await connection.commit();
+    transactionStarted = false;
+    return res.json({
+      success: true,
+      message: "Cập nhật hồ sơ cá nhân thành công.",
+      user: updatedUsers[0],
+      student: updatedStudents[0],
+    });
+  } catch (error) {
+    if (transactionStarted) await connection.rollback();
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        success: false,
+        message: "Email hoặc số CCCD đã được sử dụng.",
+      });
+    }
+    return next(error);
+  } finally {
+    if (connection) connection.release();
   }
 };
 
@@ -771,12 +1118,36 @@ exports.connectWallet = async (req, res, next) => {
 // @access  Private
 exports.changePassword = async (req, res, next) => {
   try {
-    const { current_password, new_password } = req.body;
+    const { current_password, new_password } = req.body || {};
 
-    if (!current_password || !new_password) {
+    if (
+      typeof current_password !== "string" ||
+      typeof new_password !== "string" ||
+      !current_password ||
+      !new_password
+    ) {
       return res.status(400).json({
         success: false,
         message: "Vui lòng cung cấp đầy đủ mật khẩu cũ và mới.",
+      });
+    }
+
+    if (new_password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới phải chứa ít nhất 8 ký tự.",
+      });
+    }
+    if (Buffer.byteLength(new_password, "utf8") > 72) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới không được vượt quá 72 byte.",
+      });
+    }
+    if (new_password === current_password) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới phải khác mật khẩu hiện tại.",
       });
     }
 
@@ -785,19 +1156,14 @@ exports.changePassword = async (req, res, next) => {
       [req.user.id],
     );
     const user = users[0];
-
-    let isMatch = false;
-    try {
-      isMatch = await bcrypt.compare(current_password, user.password_hash);
-    } catch (e) {
-      isMatch = false;
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy tài khoản.",
+      });
     }
 
-    if (!isMatch && current_password === "123456") {
-      isMatch = true;
-    }
-
-    if (!isMatch) {
+    if (!(await bcrypt.compare(current_password, user.password_hash))) {
       return res
         .status(400)
         .json({ success: false, message: "Mật khẩu hiện tại không đúng." });
@@ -806,10 +1172,16 @@ exports.changePassword = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const new_hash = await bcrypt.hash(new_password, salt);
 
-    await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [
-      new_hash,
-      req.user.id,
-    ]);
+    const [updateResult] = await db.query(
+      "UPDATE users SET password_hash = ? WHERE id = ? AND password_hash = ?",
+      [new_hash, req.user.id, user.password_hash],
+    );
+    if (updateResult.affectedRows === 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Mật khẩu đã được thay đổi ở nơi khác. Vui lòng thử lại.",
+      });
+    }
 
     res.json({
       success: true,

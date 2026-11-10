@@ -92,6 +92,12 @@ Hoặc import trực tiếp trong MySQL Workbench/phpMyAdmin.
 Nếu database đã có tài khoản admin với email `admin@school.edu.vn`, chạy một lần migration
 `database/migrations/20261028_update_admin_email.sql` để đổi sang `linhyang0702@gmail.com`.
 
+Nếu database đã có văn bằng được phê duyệt, chạy một lần migration
+`database/migrations/20261110_sync_issued_student_status.sql` để đồng bộ trạng thái sinh viên thành `issued`:
+```bash
+mysql -u root -p certificate_verification < database/migrations/20261110_sync_issued_student_status.sql
+```
+
 ### 5. Cài đặt Blockchain (Hardhat)
 
 ```bash

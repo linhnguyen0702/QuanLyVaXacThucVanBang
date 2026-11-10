@@ -10,6 +10,7 @@ router.post('/support-request', authController.sendSupportRequest);
 router.post('/contact-support', authController.sendContactSupportRequest);
 router.get('/me', protect, authController.getMe);
 router.put('/update-profile', protect, authController.updateProfile);
+router.put('/student-profile', protect, authController.updateStudentProfile);
 router.post('/connect-wallet', protect, authController.connectWallet);
 router.put('/change-password', protect, authController.changePassword);
 
