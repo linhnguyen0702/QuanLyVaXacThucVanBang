@@ -30,9 +30,9 @@ const INITIAL_ROLES = [
   },
   {
     id: 3,
-    name: 'Nhân viên tra cứu',
-    code: 'viewer',
-    desc: 'Chỉ được xem danh sách và tra cứu văn bằng',
+    name: 'Sinh viên',
+    code: 'student',
+    desc: 'Tra cứu và xem thông tin văn bằng của sinh viên',
     permissions: {
       viewCert: true,
       createCert: false,
@@ -46,7 +46,18 @@ const INITIAL_ROLES = [
 const SchoolRoles = () => {
   const [roles, setRoles] = useState(() => {
     const saved = localStorage.getItem('school_roles');
-    return saved ? JSON.parse(saved) : INITIAL_ROLES;
+    if (!saved) return INITIAL_ROLES;
+
+    return JSON.parse(saved).map(role => (
+      role.code === 'viewer'
+        ? {
+            ...role,
+            name: 'Sinh viên',
+            code: 'student',
+            desc: 'Tra cứu và xem thông tin văn bằng của sinh viên'
+          }
+        : role
+    ));
   });
 
   const [isAddOpen, setIsAddOpen] = useState(false);

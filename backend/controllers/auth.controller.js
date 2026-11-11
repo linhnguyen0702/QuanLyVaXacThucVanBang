@@ -75,7 +75,7 @@ exports.register = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    const userRole = role || "viewer";
+    const userRole = role || "student";
     const [result] = await db.query(
       `INSERT INTO users (email, password_hash, full_name, role, phone, department, position, wallet_address, is_active)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,

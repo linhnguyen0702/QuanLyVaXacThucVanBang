@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FaShieldAlt, FaBell, FaChevronDown, FaBars, FaTimes,
   FaChartPie, FaList, FaUserGraduate, FaBook, FaHistory,
-  FaFileAlt, FaCog, FaDatabase, FaUser, FaLock, FaSignOutAlt, FaUniversity
+  FaFileAlt, FaCog, FaDatabase, FaUser, FaSignOutAlt, FaUniversity
 } from 'react-icons/fa';
 import './SchoolDashboard.css';
 import { WalletConnectButton } from '../../components/WalletConnection/WalletConnection';

@@ -39,7 +39,7 @@ CREATE TABLE users (
     google_id VARCHAR(255) NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'school', 'officer', 'viewer', 'student') NOT NULL DEFAULT 'viewer',
+    role ENUM('admin', 'school', 'officer', 'student') NOT NULL DEFAULT 'student',
     phone VARCHAR(20),
     department VARCHAR(255) DEFAULT 'Phòng Đào tạo',
     position VARCHAR(255) DEFAULT 'Cán bộ quản lý',
@@ -295,7 +295,7 @@ CREATE TABLE sessions (
 INSERT INTO users (email, password_hash, full_name, role, phone, department, position, wallet_address, is_active) VALUES 
 ('linhyang0702@gmail.com', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Nguyễn Văn An', 'admin', '0368 251 814', 'Phòng Đào tạo', 'Quản trị viên Hệ thống Văn bằng số', NULL, TRUE),
 ('officer@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Lê Hoài Nam', 'officer', '0912 345 678', 'Phòng Đào tạo', 'Cán bộ nhập liệu văn bằng', NULL, TRUE),
-('viewer@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Phạm Thị D', 'viewer', '0988 777 666', 'Khoa Công nghệ thông tin', 'Nhân viên tra cứu', NULL, TRUE);
+('viewer@school.edu.vn', '$2a$10$rBV2VZ3Z0HkV9qQ5V5pZ3e5YZ0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z0Z3Z', 'Phạm Thị D', 'student', '0988 777 666', NULL, 'Sinh viên', NULL, TRUE);
 
 -- 2. Thêm trường học mẫu
 INSERT INTO schools (user_id, school_name, school_code, school_type, establishment_year, license_number, website, wallet_address, is_verified, certificate_count) VALUES 
@@ -326,6 +326,12 @@ INSERT INTO roles (role_name, role_code, description, is_system) VALUES
 ('Quản trị viên (Admin)', 'admin', 'Quyền cao nhất hệ thống, toàn quyền quản lý nhà trường', TRUE),
 ('Cán bộ đào tạo', 'officer', 'Cán bộ phòng đào tạo được cấp quyền duyệt & phát hành văn bằng', TRUE),
 ('Nhân viên tra cứu', 'viewer', 'Chỉ được xem danh sách và tra cứu văn bằng', TRUE);
+
+UPDATE roles
+SET role_name = 'Sinh viên',
+    role_code = 'student',
+    description = 'Tra cứu và xem thông tin văn bằng của sinh viên'
+WHERE role_code = 'viewer';
 
 -- 7. Thêm phân quyền ma trận mẫu
 INSERT INTO role_permissions (role_id, view_cert, create_cert, edit_config, view_logs) VALUES 

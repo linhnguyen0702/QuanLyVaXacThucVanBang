@@ -78,9 +78,9 @@ const SchoolUsers = () => {
         return <span className="sd-badge blue">Quản lý trường</span>;
       case 'officer':
         return <span className="sd-badge orange">Cán bộ nhập liệu</span>;
-      case 'viewer':
-        return <span className="sd-badge green">Nhân viên tra cứu</span>;
       case 'student':
+        return <span className="sd-badge teal">Sinh viên</span>;
+      case 'viewer':
         return <span className="sd-badge teal">Sinh viên</span>;
       default:
         return <span className="sd-badge gray">Người dùng</span>;
@@ -169,7 +169,7 @@ const SchoolUsers = () => {
       email: user.email || '',
       password: '',
       department: user.role === 'student' ? '' : user.department || 'Phòng Đào tạo',
-      role: user.role || 'viewer',
+      role: user.role === 'viewer' ? 'student' : user.role || 'student',
       status: user.is_active ? 'active' : 'inactive'
     });
     setFormError('');
@@ -293,7 +293,6 @@ const SchoolUsers = () => {
               <option value="">Tất cả vai trò</option>
               <option value="admin">Quản trị viên</option>
               <option value="officer">Cán bộ nhập liệu</option>
-              <option value="viewer">Nhân viên tra cứu</option>
               <option value="student">Sinh viên</option>
             </select>
           </div>
@@ -442,7 +441,6 @@ const SchoolUsers = () => {
                       <option value="" disabled>Chọn vai trò</option>
                       <option value="admin">Quản trị viên (Admin)</option>
                       <option value="officer">Cán bộ nhập liệu</option>
-                      <option value="viewer">Nhân viên tra cứu</option>
                       <option value="student">Sinh viên</option>
                     </select>
                   </div>
@@ -525,7 +523,6 @@ const SchoolUsers = () => {
                     })}>
                       <option value="admin">Quản trị viên (Admin)</option>
                       <option value="officer">Cán bộ nhập liệu</option>
-                      <option value="viewer">Nhân viên tra cứu</option>
                       <option value="student">Sinh viên</option>
                     </select>
                   </div>
