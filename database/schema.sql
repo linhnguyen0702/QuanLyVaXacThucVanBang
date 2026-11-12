@@ -209,10 +209,14 @@ CREATE TABLE reports (
     type_key ENUM('issuance', 'blockchain', 'revoked', 'verification', 'external') NOT NULL DEFAULT 'issuance',
     format ENUM('XLSX', 'PDF', 'CSV', 'DOCX') NOT NULL DEFAULT 'XLSX',
     creator_name VARCHAR(255) NOT NULL,
+    created_by INT,
     record_count INT DEFAULT 0,
     file_size VARCHAR(50) DEFAULT '1.5 MB',
     file_url VARCHAR(500),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    report_filters JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_reports_created_by (created_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================================================

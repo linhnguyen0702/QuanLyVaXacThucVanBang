@@ -28,6 +28,7 @@ Hệ thống quản lý và xác thực văn bằng, chứng chỉ số sử d�
 - Upload thông tin sinh viên tốt nghiệp
 - Ký số văn bằng
 - Quản lý danh sách văn bằng đã cấp
+- Lọc, xem trước và xuất báo cáo phát hành, Blockchain, thu hồi và xác thực (CSV/PDF)
 
 ### Phía Sinh viên
 - Nhận chứng chỉ số (NFT)
@@ -54,6 +55,9 @@ cd backend
 npm install
 npm run dev
 ```
+
+### Database
+Khởi tạo CSDL mới bằng `database/schema.sql`. Với CSDL đang chạy, áp dụng migration `database/migrations/20261112_enable_functional_reports.sql` để lưu chủ sở hữu và bộ lọc của các báo cáo đã tạo.
 
 ### Blockchain
 ```bash

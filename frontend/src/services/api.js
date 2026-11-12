@@ -8,6 +8,11 @@ const getHeaders = () => {
   };
 };
 
+const getReportPayload = (filters) => {
+  const { reportType, ...payload } = filters;
+  return { ...payload, type_key: payload.type_key || reportType };
+};
+
 export const api = {
   // Auth
   login: async (email, password, role) => {
@@ -333,7 +338,60 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/reports`, {
       headers: getHeaders()
     });
-    return res.json();
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Không thể tải lịch sử báo cáo.');
+    }
+    return data;
+  },
+
+  previewReport: async (filters) => {
+    const res = await fetch(`${API_BASE_URL}/reports/preview`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(getReportPayload(filters))
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Không thể xem trước báo cáo.');
+    }
+    return data;
+  },
+
+  generateReport: async (filters) => {
+    const res = await fetch(`${API_BASE_URL}/reports/generate`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(getReportPayload(filters))
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Không thể tạo báo cáo.');
+    }
+    return data;
+  },
+
+  getReportData: async (id) => {
+    const res = await fetch(`${API_BASE_URL}/reports/${id}/data`, {
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Không thể tải dữ liệu báo cáo.');
+    }
+    return data;
+  },
+
+  deleteReport: async (id) => {
+    const res = await fetch(`${API_BASE_URL}/reports/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Không thể xóa báo cáo.');
+    }
+    return data;
   },
 
   // Audit Logs

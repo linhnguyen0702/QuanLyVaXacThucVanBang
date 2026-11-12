@@ -3,22 +3,144 @@ import {
   FaDownload, FaEye, FaTrash, FaSearch, FaFilter, 
   FaFilePdf, FaFileExcel, FaFileWord, FaTimes, FaCheck, 
   FaCertificate, FaShieldAlt, FaExclamationTriangle, FaQrcode, 
-  FaFileUpload, FaSpinner 
+  FaSpinner
 } from 'react-icons/fa';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { api } from '../../services/api';
+
+const reportColumns = {
+  issuance: ['certificate_code', 'student_code', 'student_name', 'major', 'degree_type', 'education_mode', 'gpa', 'classification', 'issue_date', 'decision_number', 'school_name', 'program_name', 'blockchain_tx_hash', 'certificate_hash'],
+  blockchain: ['certificate_code', 'student_code', 'student_name', 'major', 'degree_type', 'issue_date', 'blockchain_status', 'blockchain_tx_hash', 'certificate_hash', 'school_name', 'program_name'],
+  revoked: ['certificate_code', 'student_code', 'student_name', 'major', 'degree_type', 'revoked_at', 'revoke_reason', 'school_name', 'program_name'],
+  verification: ['verified_at', 'certificate_code', 'student_code', 'student_name', 'major', 'degree_type', 'verification_method', 'verification_result', 'school_name']
+};
+
+const columnLabels = {
+  certificate_code: 'Mã văn bằng',
+  student_code: 'Mã sinh viên',
+  student_name: 'Họ và tên',
+  major: 'Ngành',
+  degree_type: 'Trình độ',
+  education_mode: 'Hình thức đào tạo',
+  gpa: 'Điểm trung bình',
+  classification: 'Xếp loại',
+  issue_date: 'Ngày cấp',
+  decision_number: 'Số quyết định',
+  school_name: 'Trường',
+  program_name: 'Chương trình',
+  blockchain_tx_hash: 'Mã giao dịch Blockchain',
+  certificate_hash: 'Mã băm văn bằng',
+  blockchain_status: 'Trạng thái Blockchain',
+  revoked_at: 'Ngày cập nhật thu hồi',
+  revoke_reason: 'Lý do thu hồi',
+  verified_at: 'Thời gian xác thực',
+  verification_method: 'Phương thức xác thực',
+  verification_result: 'Kết quả'
+};
+
+const toLocalDateInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getCellValue = (key, value) => {
+  if (key === 'verification_result') return value ? 'Thành công' : 'Thất bại';
+  if (value === null || value === undefined) return '';
+  if (value instanceof Date) return value.toLocaleString('vi-VN');
+  return String(value);
+};
+
+const downloadReportFile = async (rows, format, fileName, title, typeKey) => {
+  const keys = rows.length ? Object.keys(rows[0]) : reportColumns[typeKey] || [];
+
+  if (format !== 'CSV' && format !== 'PDF') {
+    throw new Error('Định dạng của báo cáo cũ không được hỗ trợ tải xuống.');
+  }
+
+  if (format === 'CSV') {
+    const escapeCsv = (value) => `"${String(value).replace(/"/g, '""')}"`;
+    const csvRows = [
+      keys.map((key) => escapeCsv(columnLabels[key] || key)).join(','),
+      ...rows.map((row) => keys.map((key) => escapeCsv(getCellValue(key, row[key]))).join(','))
+    ];
+    const blob = new Blob([`\uFEFF${csvRows.join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return;
+  }
+
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-10000px;top:0;width:1120px;padding:24px;background:#fff;color:#111827;font:14px Arial,sans-serif;';
+  const heading = document.createElement('h2');
+  heading.textContent = title;
+  heading.style.cssText = 'margin:0 0 16px;font-size:20px;';
+  container.appendChild(heading);
+  const table = document.createElement('table');
+  table.style.cssText = 'width:100%;border-collapse:collapse;font-size:10px;';
+  const head = document.createElement('tr');
+  keys.forEach((key) => {
+    const cell = document.createElement('th');
+    cell.textContent = columnLabels[key] || key;
+    cell.style.cssText = 'border:1px solid #cbd5e1;padding:6px;background:#eff6ff;text-align:left;';
+    head.appendChild(cell);
+  });
+  table.appendChild(head);
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    keys.forEach((key) => {
+      const cell = document.createElement('td');
+      cell.textContent = getCellValue(key, row[key]);
+      cell.style.cssText = 'border:1px solid #cbd5e1;padding:6px;vertical-align:top;word-break:break-word;';
+      tr.appendChild(cell);
+    });
+    table.appendChild(tr);
+  });
+  container.appendChild(table);
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#ffffff' });
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const margin = 8;
+    const width = pdf.internal.pageSize.getWidth() - margin * 2;
+    const height = canvas.height * width / canvas.width;
+    const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
+    const pageCount = Math.max(1, Math.ceil(height / pageHeight));
+    for (let page = 0; page < pageCount; page += 1) {
+      if (page) pdf.addPage();
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin - page * pageHeight, width, height);
+    }
+    pdf.save(fileName);
+  } finally {
+    container.remove();
+  }
+};
 
 const SchoolReports = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [previewRows, setPreviewRows] = useState([]);
+  const [previewFilters, setPreviewFilters] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [reportError, setReportError] = useState('');
 
   // Generator Filter Form State
   const [genForm, setGenForm] = useState({
     reportType: 'issuance',
-    startDate: '2026-09-01',
-    endDate: '2026-09-30',
+    startDate: toLocalDateInput(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+    endDate: toLocalDateInput(new Date()),
     department: 'Tất cả khoa',
     subFilter: 'Tất cả',
-    format: 'XLSX'
+    format: 'CSV'
   });
 
   // History List Search & Filters
@@ -28,19 +150,10 @@ const SchoolReports = () => {
 
   // Modals State
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   
   const [selectedReportFile, setSelectedReportFile] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
-
-  // External Upload Form State
-  const [uploadForm, setUploadForm] = useState({
-    title: '',
-    type: 'Báo cáo phát hành văn bằng',
-    format: 'PDF',
-    fileObj: null
-  });
 
   const fetchReports = async () => {
     setLoading(true);
@@ -48,9 +161,10 @@ const SchoolReports = () => {
       const res = await api.getReports();
       if (res && res.success) {
         setHistory(res.reports || []);
+        setReportError('');
       }
     } catch (err) {
-      console.error('Failed to load reports:', err);
+      setReportError(err.message || 'Không thể tải lịch sử báo cáo.');
     } finally {
       setLoading(false);
     }
@@ -79,6 +193,8 @@ const SchoolReports = () => {
     switch (fmt) {
       case 'XLSX':
         return <span className="sd-badge green" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><FaFileExcel /> XLSX</span>;
+      case 'CSV':
+        return <span className="sd-badge green" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><FaFileExcel /> CSV</span>;
       case 'PDF':
         return <span className="sd-badge red" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><FaFilePdf /> PDF</span>;
       case 'DOCX':
@@ -88,40 +204,81 @@ const SchoolReports = () => {
     }
   };
 
-  // Open Data Preview Modal before downloading
-  const handleOpenGeneratorPreview = (e) => {
-    e.preventDefault();
+  const handleOpenGeneratorPreview = async (e) => {
+    if (e) e.preventDefault();
+    setSelectedReportFile(null);
+    setPreviewFilters(genForm);
+    setPreviewRows([]);
+    setReportError('');
+    setPreviewLoading(true);
     setIsPreviewOpen(true);
-  };
-
-  // Execute Report Generation & Download
-  const handleGenerateAndDownload = async () => {
-    const typeLabel = getReportTypeLabel(genForm.reportType);
-    const timeStamp = new Date().toISOString().slice(0, 10);
-    const fileName = `Bao_Cao_${genForm.reportType.toUpperCase()}_${timeStamp}.${genForm.format.toLowerCase()}`;
-
     try {
-      const res = await api.createReport({
-        file_name: fileName,
-        report_type: typeLabel,
-        type_key: genForm.reportType,
-        format: genForm.format,
-        record_count: Math.floor(100 + Math.random() * 900),
-        file_size: (Math.random() * 2 + 0.8).toFixed(1) + ' MB'
-      });
-
-      if (res && res.success) {
-        setIsPreviewOpen(false);
-        showToast(`Đã khởi tạo và ghi nhận file ${fileName} vào CSDL thành công!`);
-        fetchReports();
-      }
+      const res = await api.previewReport(genForm);
+      setPreviewRows(res.rows || []);
     } catch (err) {
-      alert('Không thể tạo báo cáo.');
+      setReportError(err.message || 'Không thể xem trước báo cáo.');
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
-  const handleDownloadHistoryFile = (rep) => {
-    showToast(`Đang tải tệp ${rep.file_name || rep.fileName} xuống...`);
+  const handleGenerateAndDownload = async () => {
+    try {
+      setReportError('');
+      const res = await api.generateReport(genForm);
+      if (res && res.success) {
+        setIsPreviewOpen(false);
+        await fetchReports();
+        await downloadReportFile(
+          res.rows || [],
+          genForm.format,
+          res.report.file_name,
+          res.report.report_type,
+          genForm.reportType
+        );
+        showToast(`Đã tạo báo cáo ${res.report.file_name} (${res.count} bản ghi).`);
+      }
+    } catch (err) {
+      setReportError(err.message || 'Không thể tạo báo cáo.');
+    }
+  };
+
+  const handleDownloadHistoryFile = async (rep) => {
+    try {
+      setReportError('');
+      const res = await api.getReportData(rep.id);
+      const filters = typeof res.report.report_filters === 'string'
+        ? JSON.parse(res.report.report_filters)
+        : res.report.report_filters;
+      await downloadReportFile(
+        res.rows || [],
+        rep.format,
+        rep.file_name,
+        rep.report_type,
+        filters.type_key
+      );
+    } catch (err) {
+      setReportError(err.message || 'Không thể tải tệp báo cáo.');
+    }
+  };
+
+  const handleOpenHistoryPreview = async (rep) => {
+    setSelectedReportFile(rep);
+    setPreviewRows([]);
+    setReportError('');
+    setPreviewLoading(true);
+    setIsPreviewOpen(true);
+    try {
+      setPreviewFilters(typeof rep.report_filters === 'string'
+        ? JSON.parse(rep.report_filters)
+        : rep.report_filters);
+      const res = await api.getReportData(rep.id);
+      setPreviewRows(res.rows || []);
+    } catch (err) {
+      setReportError(err.message || 'Không thể tải dữ liệu báo cáo.');
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
   const handleOpenDeleteModal = (rep) => {
@@ -129,35 +286,15 @@ const SchoolReports = () => {
     setIsDeleteOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    setIsDeleteOpen(false);
-    showToast(`Đã xóa file báo cáo`);
-    fetchReports();
-  };
-
-  const handleUploadSubmit = async (e) => {
-    e.preventDefault();
-    if (!uploadForm.title) {
-      alert('Vui lòng nhập tên tệp báo cáo!');
-      return;
-    }
+  const handleDeleteConfirm = async () => {
     try {
-      const res = await api.createReport({
-        file_name: `${uploadForm.title.replace(/\s+/g, '_')}.${uploadForm.format.toLowerCase()}`,
-        report_type: uploadForm.type,
-        type_key: 'external',
-        format: uploadForm.format,
-        record_count: 0,
-        file_size: '2.4 MB'
-      });
-
-      if (res && res.success) {
-        setIsUploadOpen(false);
-        showToast('Tải lên tệp báo cáo thành công!');
-        fetchReports();
-      }
+      await api.deleteReport(selectedReportFile.id);
+      setIsDeleteOpen(false);
+      setSelectedReportFile(null);
+      showToast('Đã xóa báo cáo.');
+      await fetchReports();
     } catch (err) {
-      alert('Lỗi tải lên.');
+      setReportError(err.message || 'Không thể xóa báo cáo.');
     }
   };
 
@@ -170,6 +307,13 @@ const SchoolReports = () => {
     const matchesFormat = historyFormatFilter === '' || h.format === historyFormatFilter;
     return matchesSearch && matchesType && matchesFormat;
   });
+  const previewType = selectedReportFile ? selectedReportFile.type_key : genForm.reportType;
+  const previewTitle = selectedReportFile
+    ? selectedReportFile.report_type
+    : getReportTypeLabel(genForm.reportType);
+  const previewKeys = previewRows.length
+    ? Object.keys(previewRows[0])
+    : reportColumns[previewType] || [];
 
   return (
     <div className="sd-view">
@@ -177,12 +321,7 @@ const SchoolReports = () => {
       <div className="sd-page-header">
         <div className="sd-page-title-area">
           <h2>Quản lý Báo cáo động</h2>
-          <p>Trích xuất báo cáo theo tiêu chí bộ lọc & Quản lý lịch sử </p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="sd-btn-secondary" onClick={() => setIsUploadOpen(true)}>
-            <FaFileUpload /> Tải lên báo cáo
-          </button>
+          <p>Trích xuất dữ liệu văn bằng và hoạt động xác thực theo bộ lọc</p>
         </div>
       </div>
 
@@ -273,6 +412,7 @@ const SchoolReports = () => {
               <input 
                 type="date" 
                 className="sd-input" 
+                required
                 value={genForm.startDate} 
                 onChange={(e) => setGenForm({ ...genForm, startDate: e.target.value })} 
               />
@@ -283,6 +423,7 @@ const SchoolReports = () => {
               <input 
                 type="date" 
                 className="sd-input" 
+                required
                 value={genForm.endDate} 
                 onChange={(e) => setGenForm({ ...genForm, endDate: e.target.value })} 
               />
@@ -323,11 +464,11 @@ const SchoolReports = () => {
                   <input 
                     type="radio" 
                     name="genFormat" 
-                    value="XLSX" 
-                    checked={genForm.format === 'XLSX'} 
+                    value="CSV"
+                    checked={genForm.format === 'CSV'}
                     onChange={(e) => setGenForm({ ...genForm, format: e.target.value })} 
                   />
-                  <FaFileExcel style={{ color: '#16a34a' }} /> File Excel (.xlsx)
+                  <FaFileExcel style={{ color: '#16a34a' }} /> Tệp CSV (mở được bằng Excel)
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13.5px' }}>
                   <input 
@@ -351,6 +492,9 @@ const SchoolReports = () => {
               <FaDownload /> Tạo & Tải báo cáo
             </button>
           </div>
+          {reportError && (
+            <p role="alert" style={{ color: '#b91c1c', marginTop: '12px' }}>{reportError}</p>
+          )}
         </form>
       </div>
 
@@ -385,9 +529,10 @@ const SchoolReports = () => {
               onChange={(e) => setHistoryFormatFilter(e.target.value)}
             >
               <option value="">Tất cả định dạng</option>
-              <option value="XLSX">Excel (.xlsx)</option>
+              <option value="CSV">CSV</option>
               <option value="PDF">PDF (.pdf)</option>
-              <option value="DOCX">Word (.docx)</option>
+              <option value="XLSX">Excel (.xlsx) - báo cáo cũ</option>
+              <option value="DOCX">Word (.docx) - báo cáo cũ</option>
             </select>
           </div>
         </div>
@@ -416,7 +561,7 @@ const SchoolReports = () => {
                   <tr key={rep.id}>
                     <td className="sd-td-bold">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {rep.format === 'XLSX' ? <FaFileExcel style={{ color: '#16a34a', fontSize: '16px' }} /> : 
+                        {rep.format === 'XLSX' || rep.format === 'CSV' ? <FaFileExcel style={{ color: '#16a34a', fontSize: '16px' }} /> :
                          rep.format === 'PDF' ? <FaFilePdf style={{ color: '#dc2626', fontSize: '16px' }} /> : 
                          <FaFileWord style={{ color: '#0f4cf5', fontSize: '16px' }} />}
                         {rep.file_name || rep.fileName}
@@ -430,7 +575,7 @@ const SchoolReports = () => {
                       <button 
                         className="sd-action-btn" 
                         title="Xem trước" 
-                        onClick={() => { setSelectedReportFile(rep); setIsPreviewOpen(true); }}
+                        onClick={() => handleOpenHistoryPreview(rep)}
                       >
                         <FaEye />
                       </button>
@@ -481,95 +626,65 @@ const SchoolReports = () => {
                 <div className="sd-detail-grid">
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Loại báo cáo:</span>
-                    <span className="sd-detail-value">{getReportTypeLabel(genForm.reportType)}</span>
+                    <span className="sd-detail-value">{previewTitle}</span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Khoảng thời gian:</span>
-                    <span className="sd-detail-value">{genForm.startDate} đến {genForm.endDate}</span>
+                    <span className="sd-detail-value">
+                      {(previewFilters && previewFilters.startDate) || 'Không giới hạn'} đến {(previewFilters && previewFilters.endDate) || 'Không giới hạn'}
+                    </span>
                   </div>
                   <div className="sd-detail-item">
                     <span className="sd-detail-label">Khoa / Phạm vi:</span>
-                    <span className="sd-detail-value">{genForm.department}</span>
+                    <span className="sd-detail-value">{(previewFilters && previewFilters.department) || 'Tất cả khoa'}</span>
                   </div>
                   <div className="sd-detail-item">
-                    <span className="sd-detail-label">Định dạng file xuất:</span>
-                    <span className="sd-detail-value">{getFormatBadge(genForm.format)}</span>
+                    <span className="sd-detail-label">Số bản ghi:</span>
+                    <span className="sd-detail-value">{previewRows.length}</span>
                   </div>
                 </div>
               </div>
+              {reportError && <p role="alert" style={{ color: '#b91c1c' }}>{reportError}</p>}
+              {previewLoading ? (
+                <p style={{ textAlign: 'center', padding: '24px' }}>
+                  <FaSpinner className="fa-spin" /> Đang truy vấn dữ liệu...
+                </p>
+              ) : (
+                <div className="sd-table-container" style={{ maxHeight: '360px', overflow: 'auto' }}>
+                  <table className="sd-table">
+                    <thead>
+                      <tr>{previewKeys.map((key) => <th key={key}>{columnLabels[key] || key}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {previewRows.length ? previewRows.map((row, rowIndex) => (
+                        <tr key={`${row.certificate_code || row.id || 'row'}-${rowIndex}`}>
+                          {previewKeys.map((key) => <td key={key}>{getCellValue(key, row[key]) || '—'}</td>)}
+                        </tr>
+                      )) : (
+                        <tr><td colSpan={Math.max(previewKeys.length, 1)} style={{ textAlign: 'center' }}>Không có dữ liệu phù hợp với bộ lọc.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
             <div className="sd-modal-footer">
               <button className="sd-btn-secondary" onClick={() => setIsPreviewOpen(false)}>Đóng bản xem trước</button>
-              <button className="sd-btn-primary" onClick={handleGenerateAndDownload}>
-                <FaDownload /> Tạo & Tải file ngay
-              </button>
+              {selectedReportFile ? (
+                <button className="sd-btn-primary" onClick={() => handleDownloadHistoryFile(selectedReportFile)}>
+                  <FaDownload /> Tải lại báo cáo
+                </button>
+              ) : (
+                <button className="sd-btn-primary" onClick={handleGenerateAndDownload} disabled={previewLoading}>
+                  <FaDownload /> Tạo & Tải file ngay
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MODAL 2: UPLOAD EXTERNAL REPORT MODAL ── */}
-      {isUploadOpen && (
-        <div className="sd-modal-overlay">
-          <div className="sd-modal">
-            <div className="sd-modal-header">
-              <div className="sd-modal-title">
-                <div className="sd-modal-icon-badge"><FaFileUpload /></div>
-                <h3>Tải lên tệp báo cáo có sẵn</h3>
-              </div>
-              <button className="sd-modal-close-btn" onClick={() => setIsUploadOpen(false)}><FaTimes /></button>
-            </div>
-            <form onSubmit={handleUploadSubmit}>
-              <div className="sd-modal-body">
-                <div className="sd-form-grid">
-                  <div className="sd-form-group full-width">
-                    <label>Tên tệp báo cáo *</label>
-                    <input 
-                      type="text" 
-                      className="sd-input" 
-                      required 
-                      placeholder="Nhập tên tệp báo cáo..."
-                      value={uploadForm.title} 
-                      onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })} 
-                    />
-                  </div>
-                  <div className="sd-form-group">
-                    <label>Loại báo cáo</label>
-                    <select 
-                      className="sd-input" 
-                      value={uploadForm.type} 
-                      onChange={(e) => setUploadForm({ ...uploadForm, type: e.target.value })}
-                    >
-                      <option value="Báo cáo phát hành văn bằng">Báo cáo phát hành văn bằng</option>
-                      <option value="Báo cáo đối soát Blockchain">Báo cáo đối soát Blockchain</option>
-                      <option value="Báo cáo văn bằng thu hồi">Báo cáo văn bằng thu hồi</option>
-                      <option value="Báo cáo hoạt động xác thực">Báo cáo hoạt động xác thực</option>
-                    </select>
-                  </div>
-                  <div className="sd-form-group">
-                    <label>Định dạng file</label>
-                    <select 
-                      className="sd-input" 
-                      value={uploadForm.format} 
-                      onChange={(e) => setUploadForm({ ...uploadForm, format: e.target.value })}
-                    >
-                      <option value="PDF">PDF (.pdf)</option>
-                      <option value="XLSX">Excel (.xlsx)</option>
-                      <option value="DOCX">Word (.docx)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="sd-modal-footer">
-                <button type="button" className="sd-btn-secondary" onClick={() => setIsUploadOpen(false)}>Hủy</button>
-                <button type="submit" className="sd-btn-primary">Tải lên ngay</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL 3: DELETE REPORT FILE MODAL ── */}
+      {/* ── DELETE REPORT MODAL ── */}
       {isDeleteOpen && selectedReportFile && (
         <div className="sd-modal-overlay">
           <div className="sd-modal">
